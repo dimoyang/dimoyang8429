@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>医旅 Meditour · 手机端设计稿</title>
+<style>
+/* SECTION: base */
+:root {
+  --primary: #0d9488;
+  --primary-dark: #0f766e;
+  --primary-light: #ccfbf1;
+  --primary-bg: #f0fdfa;
+  --ink: #1e293b;
+  --ink-2: #64748b;
+  --ink-3: #94a3b8;
+  --bg: #f6f8fa;
+  --card: #ffffff;
+  --line: #e8edf2;
+  --danger: #ef4444;
+  --gold: #f59e0b;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --shadow-card: 0 2px 12px rgba(15, 23, 42, 0.06);
+  --shadow-float: 0 8px 24px rgba(13, 148, 136, 0.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", -apple-system, sans-serif;
+  background: linear-gradient(160deg, #eef6f5 0%, #e7eef2 100%);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+button { font-family: inherit; border: none; background: none; cursor: pointer; color: inherit; }
+input, textarea, select { font-family: inherit; font-size: 15px; }
+
+/* SECTION: phone-frame */
+.phone {
+  width: 390px;
+  height: 844px;
+  background: var(--bg);
+  border-radius: 44px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28), 0 0 0 10px #0f172a, 0 0 0 12px #334155;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .phone {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* SECTION: screens */
+.screen {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.screen.active { display: flex; }
+.screen-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.screen-scroll::-webkit-scrollbar { display: none; }
+
+/* SECTION: home-header */
+.home-head {
+  padding: 22px 20px 14px;
+  background: linear-gradient(165deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: #fff;
+  border-radius: 0 0 26px 26px;
+}
+.home-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-logo {
+  width: 38px; height: 38px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.brand-name { font-size: 19px; font-weight: 700; letter-spacing: 1px; }
+.brand-sub { font-size: 11px; opacity: 0.75; margin-top: 1px; }
+.lang-btn {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: 999px;
+}
+.home-greeting { font-size: 15px; opacity: 0.9; margin-bottom: 12px; line-height: 1.5; }
+.home-greeting b { font-size: 20px; display: block; margin-top: 2px; }
+.search-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: #fff;
+  border-radius: 999px;
+  padding: 11px 16px;
+  color: var(--ink-3);
+  font-size: 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+}
+.search-bar svg { flex-shrink: 0; }
+
+/* SECTION: home-hero */
+.hero {
+  margin: 16px 20px 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, var(--primary-light), #e2f6f3);
+  box-shadow: var(--shadow-card);
+}
+.hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-mask {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(13, 74, 68, 0.72) 100%);
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 14px 16px;
+  color: #fff;
+}
+.hero-title { font-size: 16px; font-weight: 700; }
+.hero-desc { font-size: 12px; opacity: 0.85; margin-top: 3px; }
+.img-fallback {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; color: var(--primary); font-size: 13px;
+  background: linear-gradient(135deg, var(--primary-light), #e2f6f3);
+}
+.img-fallback span.icon { font-size: 30px; }
+
+/* SECTION: category-tabs */
+.cats {
+  display: flex; gap: 10px;
+  padding: 18px 20px 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cats::-webkit-scrollbar { display: none; }
+.cat {
+  flex-shrink: 0;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink-2);
+  font-size: 14px;
+  border: 1px solid var(--line);
+  transition: all 0.18s;
+}
+.cat.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.28);
+}
+
+/* SECTION: section-title */
+.sec-title {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 10px;
+}
+.sec-title h3 { font-size: 17px; font-weight: 700; }
+.sec-title span { font-size: 12px; color: var(--ink-3); }
+
+/* SECTION: service-card */
+.card-list { padding: 0 20px 26px; display: flex; flex-direction: column; gap: 14px; }
+.svc-card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  text-align: left;
+  transition: transform 0.15s;
+}
+.svc-card:active { transform: scale(0.98); }
+.svc-thumb {
+  width: 128px;
+  min-height: 128px;
+  flex-shrink: 0;
+  position: relative;
+  background: linear-gradient(135deg, var(--primary-light), #e2f6f3);
+}
+.svc-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.svc-tag {
+  position: absolute; top: 8px; left: 8px;
+  background: rgba(13, 148, 136, 0.9);
+  color: #fff;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.svc-body { flex: 1; padding: 13px 14px; display: flex; flex-direction: column; }
+.svc-name { font-size: 16px; font-weight: 700; }
+.svc-hospital {
+  font-size: 12px; color: var(--ink-2);
+  margin-top: 4px;
+  display: flex; align-items: center; gap: 4px;
+}
+.svc-meta {
+  margin-top: auto;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding-top: 10px;
+}
+.svc-price { color: var(--primary); font-weight: 800; font-size: 18px; }
+.svc-price small { font-size: 11px; font-weight: 500; margin-left: 2px; }
+.svc-days {
+  font-size: 11px; color: var(--ink-3);
+  background: var(--bg);
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+.empty-state {
+  padding: 46px 20px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.empty-state .icon { font-size: 38px; display: block; margin-bottom: 8px; }
+
+/* SECTION: sub-nav */
+.sub-nav {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 16px 12px;
+  background: transparent;
+}
+.back-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.sub-nav h2 { font-size: 17px; font-weight: 700; }
+
+/* SECTION: detail */
+.detail-hero {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(135deg, var(--primary-light), #e2f6f3);
+  flex-shrink: 0;
+}
+.detail-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.detail-hero .sub-nav { position: absolute; top: 8px; left: 4px; right: 4px; z-index: 2; }
+.detail-body { padding: 20px; }
+.detail-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.detail-title { font-size: 22px; font-weight: 800; line-height: 1.35; }
+.detail-cat {
+  flex-shrink: 0;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 12px; font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  margin-top: 3px;
+}
+.detail-hospital {
+  margin-top: 8px;
+  font-size: 13px; color: var(--ink-2);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.hospital-badge {
+  background: #fef3c7; color: #b45309;
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 6px;
+}
+.detail-stats {
+  display: flex;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  margin-top: 16px;
+  padding: 16px 8px;
+}
+.stat { flex: 1; text-align: center; position: relative; }
+.stat + .stat::before {
+  content: "";
+  position: absolute; left: 0; top: 15%; bottom: 15%;
+  width: 1px; background: var(--line);
+}
+.stat b { font-size: 18px; color: var(--primary); font-weight: 800; display: block; }
+.stat span { font-size: 11px; color: var(--ink-3); margin-top: 4px; display: block; }
+.detail-sec { margin-top: 20px; }
+.detail-sec h4 {
+  font-size: 15px; font-weight: 700;
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 10px;
+}
+.detail-sec h4::before {
+  content: "";
+  width: 4px; height: 15px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+.detail-intro { font-size: 14px; line-height: 1.75; color: var(--ink-2); }
+.hl-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  font-size: 13.5px; line-height: 1.55; color: var(--ink);
+  box-shadow: var(--shadow-card);
+}
+.hl-item .tick {
+  width: 20px; height: 20px; flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  margin-top: 1px;
+}
+/* SECTION: process-timeline */
+.step-list { position: relative; padding-left: 6px; }
+.step {
+  display: flex; gap: 14px;
+  padding-bottom: 18px;
+  position: relative;
+}
+.step:last-child { padding-bottom: 0; }
+.step::before {
+  content: "";
+  position: absolute; left: 13px; top: 30px; bottom: 2px;
+  width: 2px; background: var(--line);
+}
+.step:last-child::before { display: none; }
+.step-no {
+  width: 28px; height: 28px; flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; z-index: 1;
+}
+.step-txt b { font-size: 14px; display: block; }
+.step-txt p { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; line-height: 1.5; }
+.detail-bottom-pad { height: 96px; }
+
+/* SECTION: fixed-cta */
+.fixed-cta {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  display: flex; align-items: center; gap: 16px;
+}
+.cta-price { min-width: 96px; }
+.cta-price span { font-size: 11px; color: var(--ink-3); display: block; }
+.cta-price b { font-size: 20px; color: var(--primary); font-weight: 800; }
+.cta-price b small { font-size: 11px; font-weight: 500; }
+.cta-btn {
+  flex: 1;
+  background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  font-size: 16px; font-weight: 700;
+  padding: 15px 0;
+  border-radius: 999px;
+  box-shadow: var(--shadow-float);
+  transition: transform 0.15s;
+}
+.cta-btn:active { transform: scale(0.97); }
+
+/* SECTION: booking-form */
+.booking-card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 18px;
+  margin: 0 20px 14px;
+}
+.booking-svc {
+  display: flex; gap: 12px; align-items: center;
+  background: var(--primary-bg);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.booking-svc-thumb {
+  width: 62px; height: 62px;
+  border-radius: 12px; overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--primary-light), #e2f6f3);
+}
+.booking-svc-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.booking-svc-info b { font-size: 14.5px; display: block; }
+.booking-svc-info span { font-size: 12px; color: var(--ink-2); margin-top: 3px; display: block; }
+.field { margin-bottom: 14px; }
+.field label {
+  display: block;
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  margin-bottom: 7px;
+}
+.field label i { color: var(--danger); font-style: normal; margin-left: 2px; }
+.field input, .field textarea, .field select {
+  width: 100%;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--bg);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.field textarea { resize: none; height: 88px; }
+.field input:focus, .field textarea:focus, .field select:focus {
+  border-color: var(--primary);
+  background: #fff;
+}
+.field.error input, .field.error textarea { border-color: var(--danger); background: #fef2f2; }
+.field .err-msg {
+  display: none;
+  font-size: 12px; color: var(--danger); margin-top: 5px;
+}
+.field.error .err-msg { display: block; }
+.form-tip {
+  font-size: 12px; color: var(--ink-3);
+  line-height: 1.6;
+  padding: 0 20px 20px;
+}
+.booking-bottom-pad { height: 90px; }
+
+/* SECTION: success */
+.success-wrap {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 32px;
+  text-align: center;
+}
+.success-icon {
+  width: 84px; height: 84px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 42px;
+  margin-bottom: 22px;
+  animation: pop 0.4s ease;
+}
+@keyframes pop { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.success-wrap h2 { font-size: 22px; font-weight: 800; }
+.success-wrap .sub { font-size: 13.5px; color: var(--ink-2); margin-top: 10px; line-height: 1.7; }
+.booking-no {
+  margin-top: 24px;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px 26px;
+  width: 100%;
+}
+.booking-no span { font-size: 12px; color: var(--ink-3); display: block; }
+.booking-no b { font-size: 20px; letter-spacing: 2px; color: var(--primary-dark); margin-top: 5px; display: block; }
+.success-actions { margin-top: 30px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.btn-primary {
+  background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+  color: #fff; font-size: 15px; font-weight: 700;
+  padding: 15px 0; border-radius: 999px;
+  box-shadow: var(--shadow-float);
+}
+.btn-ghost {
+  background: var(--card);
+  color: var(--ink-2); font-size: 15px;
+  padding: 15px 0; border-radius: 999px;
+  border: 1px solid var(--line);
+}
+
+/* SECTION: toast */
+.toast {
+  position: absolute; left: 50%; bottom: 120px;
+  transform: translateX(-50%) translateY(16px);
+  background: rgba(15, 23, 42, 0.88);
+  color: #fff;
+  font-size: 13px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s;
+  z-index: 60;
+  max-width: 82%;
+  text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+
+  <!-- SECTION: screen-home -->
+  <section class="screen active" id="screen-home">
+    <div class="screen-scroll">
+      <header class="home-head">
+        <div class="home-top">
+          <div class="brand">
+            <div class="brand-logo">🏥</div>
+            <div>
+              <div class="brand-name">医旅 Meditour</div>
+              <div class="brand-sub">国际医疗旅游服务平台</div>
+            </div>
+          </div>
+          <button class="lang-btn" type="button">🌐 中文</button>
+        </div>
+        <div class="home-greeting">
+          安心赴华就医，全程专属陪同
+          <b>为您甄选优质医疗方案</b>
+        </div>
+        <div class="search-bar" role="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+          <span>搜索医疗服务、医院…</span>
+        </div>
+      </header>
+
+      <div class="hero">
+        <img id="hero-img" alt="现代化医院国际医疗中心" onerror="window.heroFallback(this)">
+        <div class="hero-mask">
+          <div class="hero-title">国际医疗 · 一站无忧</div>
+          <div class="hero-desc">术前远程评估 · 专属医疗翻译 · 术后随访保障</div>
+        </div>
+      </div>
+
+      <div class="cats" id="cats"></div>
+
+      <div class="sec-title">
+        <h3>精选医疗服务</h3>
+        <span id="svc-count"></span>
+      </div>
+
+      <div class="card-list" id="card-list"></div>
+    </div>
+  </section>
+
+  <!-- SECTION: screen-detail -->
+  <section class="screen" id="screen-detail">
+    <div class="screen-scroll">
+      <div class="detail-hero">
+        <img id="detail-img" alt="" onerror="window.imgFallback(this)">
+        <div class="sub-nav">
+          <button class="back-btn" type="button" data-nav="home" aria-label="返回首页">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="detail-body">
+        <div class="detail-title-row">
+          <h2 class="detail-title" id="d-name"></h2>
+          <span class="detail-cat" id="d-cat"></span>
+        </div>
+        <div class="detail-hospital">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M14 9h1M14 13h1M10 21v-4h4v4"/></svg>
+          <span id="d-hospital"></span>
+          <span class="hospital-badge" id="d-level"></span>
+        </div>
+
+        <div class="detail-stats">
+          <div class="stat"><b id="d-price"></b><span>起步价格</span></div>
+          <div class="stat"><b id="d-days"></b><span>疗程天数</span></div>
+          <div class="stat"><b>100%</b><span>顾问陪同</span></div>
+        </div>
+
+        <div class="detail-sec">
+          <h4>服务简介</h4>
+          <p class="detail-intro" id="d-intro"></p>
+        </div>
+
+        <div class="detail-sec">
+          <h4>服务亮点</h4>
+          <div id="d-highlights"></div>
+        </div>
+
+        <div class="detail-sec">
+          <h4>就诊流程</h4>
+          <div class="step-list" id="d-process"></div>
+        </div>
+
+        <div class="detail-bottom-pad"></div>
+      </div>
+    </div>
+    <div class="fixed-cta">
+      <div class="cta-price">
+        <span>起步价格</span>
+        <b><span id="d-price-cta"></span></b>
+      </div>
+      <button class="cta-btn" type="button" data-primary-action data-nav="booking">预约咨询</button>
+    </div>
+  </section>
+
+  <!-- SECTION: screen-booking -->
+  <section class="screen" id="screen-booking">
+    <div class="screen-scroll">
+      <div class="sub-nav">
+        <button class="back-btn" type="button" data-nav="detail" aria-label="返回详情页">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2>预约咨询</h2>
+      </div>
+
+      <div class="booking-card">
+        <div class="booking-svc">
+          <div class="booking-svc-thumb"><img id="b-img" alt="" onerror="window.imgFallback(this)"></div>
+          <div class="booking-svc-info">
+            <b id="b-name"></b>
+            <span id="b-hospital"></span>
+          </div>
+        </div>
+
+        <form id="booking-form" novalidate>
+          <div class="field" id="f-name">
+            <label>姓名<i>*</i></label>
+            <input type="text" name="name" placeholder="请输入您的姓名" maxlength="30">
+            <p class="err-msg">请输入姓名</p>
+          </div>
+          <div class="field" id="f-contact">
+            <label>联系方式（邮箱 / 电话）<i>*</i></label>
+            <input type="text" name="contact" placeholder="用于顾问与您确认行程" maxlength="60">
+            <p class="err-msg">请输入有效的联系方式</p>
+          </div>
+          <div class="field" id="f-date">
+            <label>期望到诊日期</label>
+            <input type="date" name="date">
+            <p class="err-msg">请选择今天之后的日期</p>
+          </div>
+          <div class="field" id="f-note">
+            <label>病情 / 需求说明</label>
+            <textarea name="note" placeholder="简要描述您的健康状况与需求（选填）" maxlength="300"></textarea>
+            <p class="err-msg"></p>
+          </div>
+        </form>
+      </div>
+
+      <p class="form-tip">🔒 您的信息仅用于本次预约对接，医疗顾问将在 24 小时内与您联系。本设计稿中的提交流程为前端演示，不连接真实服务。</p>
+      <div class="booking-bottom-pad"></div>
+    </div>
+    <div class="fixed-cta">
+      <button class="cta-btn" type="button" style="width:100%" data-primary-action id="submit-booking">提交预约</button>
+    </div>
+  </section>
+
+  <!-- SECTION: screen-success -->
+  <section class="screen" id="screen-success">
+    <div class="success-wrap">
+      <div class="success-icon">✓</div>
+      <h2>预约提交成功</h2>
+      <p class="sub">感谢您的信任！医疗顾问将在 24 小时内通过您预留的联系方式与您确认行程细节。</p>
+      <div class="booking-no">
+        <span>预约编号</span>
+        <b id="s-no"></b>
+      </div>
+      <div class="success-actions">
+        <button class="btn-primary" type="button" data-nav="home">返回首页</button>
+        <button class="btn-ghost" type="button" data-nav="detail">查看服务详情</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="assets/services-data.js"></script>
+<script>
+/* SECTION: app-logic */
+(function () {
+  'use strict';
+
+  var data = window.SERVICES_DATA;
+  var currentService = null;
+  var currentCat = 'all';
+
+  /* ---- 图片降级 ---- */
+  window.imgFallback = function (img) {
+    var box = img.parentElement;
+    img.remove();
+    var div = document.createElement('div');
+    div.className = 'img-fallback';
+    div.innerHTML = '<span class="icon">🏥</span><span>图片加载中</span>';
+    box.appendChild(div);
+  };
+  window.heroFallback = function (img) { window.imgFallback(img); };
+
+  /* ---- 通用 ---- */
+  function fmtPrice(n, cur) {
+    return '€' + n.toLocaleString('zh-CN') + (cur === 'EUR' ? '' : ' ' + cur);
+  }
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.classList.remove('show'); }, 2200);
+  }
+  function goto(name) {
+    document.querySelectorAll('.screen').forEach(function (s) {
+      s.classList.toggle('active', s.id === 'screen-' + name);
+    });
+    var active = document.getElementById('screen-' + name);
+    var sc = active.querySelector('.screen-scroll');
+    if (sc) sc.scrollTop = 0;
+  }
+
+  /* ---- 首页：分类 ---- */
+  function renderCats() {
+    var box = document.getElementById('cats');
+    box.innerHTML = '';
+    data.categories.forEach(function (c) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cat' + (c.id === currentCat ? ' active' : '');
+      b.textContent = c.label;
+      b.addEventListener('click', function () {
+        currentCat = c.id;
+        renderCats();
+        renderCards();
+      });
+      box.appendChild(b);
+    });
+  }
+
+  /* ---- 首页：服务卡片 ---- */
+  function renderCards() {
+    var list = document.getElementById('card-list');
+    var items = data.services.filter(function (s) {
+      return currentCat === 'all' || s.category === currentCat;
+    });
+    document.getElementById('svc-count').textContent = '共 ' + items.length + ' 项';
+    list.innerHTML = '';
+    if (!items.length) {
+      list.innerHTML = '<div class="empty-state"><span class="icon">🩺</span>该分类下的服务即将上线，<br>敬请期待更多优质医疗资源</div>';
+      return;
+    }
+    items.forEach(function (s) {
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'svc-card';
+      card.innerHTML =
+        '<div class="svc-thumb"><img alt="' + s.name + '"><span class="svc-tag">' + s.categoryLabel + '</span></div>' +
+        '<div class="svc-body">' +
+          '<div class="svc-name">' + s.name + '</div>' +
+          '<div class="svc-hospital">🏥 ' + s.hospital + '</div>' +
+          '<div class="svc-meta">' +
+            '<div class="svc-price">' + fmtPrice(s.price, s.currency) + '<small>起</small></div>' +
+            '<div class="svc-days">⏱ ' + s.durationDays + ' 天疗程</div>' +
+          '</div>' +
+        '</div>';
+      var img = card.querySelector('img');
+      img.alt = s.name;
+      img.src = s.image;
+      img.onerror = function () { window.imgFallback(img); };
+      card.addEventListener('click', function () { openDetail(s); });
+      list.appendChild(card);
+    });
+  }
+
+  /* ---- 详情页 ---- */
+  function openDetail(s) {
+    currentService = s;
+    document.getElementById('d-name').textContent = s.name;
+    document.getElementById('d-cat').textContent = s.categoryLabel;
+    document.getElementById('d-hospital').textContent = s.hospital;
+    document.getElementById('d-level').textContent = s.hospitalLevel;
+    document.getElementById('d-price').textContent = fmtPrice(s.price, s.currency);
+    document.getElementById('d-price-cta').textContent = fmtPrice(s.price, s.currency) + ' 起';
+    document.getElementById('d-days').textContent = s.durationDays + ' 天';
+    document.getElementById('d-intro').textContent = s.intro;
+
+    var dimg = document.getElementById('detail-img');
+    dimg.alt = s.name;
+    dimg.onerror = function () { window.imgFallback(dimg); };
+    dimg.src = s.image;
+
+    var hls = document.getElementById('d-highlights');
+    hls.innerHTML = '';
+    s.highlights.forEach(function (h) {
+      var div = document.createElement('div');
+      div.className = 'hl-item';
+      div.innerHTML = '<span class="tick">✓</span><span>' + h + '</span>';
+      hls.appendChild(div);
+    });
+
+    var proc = document.getElementById('d-process');
+    proc.innerHTML = '';
+    s.process.forEach(function (p, i) {
+      var div = document.createElement('div');
+      div.className = 'step';
+      div.innerHTML =
+        '<div class="step-no">' + (i + 1) + '</div>' +
+        '<div class="step-txt"><b>' + p.step + '</b><p>' + p.desc + '</p></div>';
+      proc.appendChild(div);
+    });
+
+    goto('detail');
+  }
+
+  /* ---- 预约页 ---- */
+  function openBooking() {
+    if (!currentService) return;
+    var s = currentService;
+    document.getElementById('b-name').textContent = s.name;
+    document.getElementById('b-hospital').textContent = s.hospital + ' · ' + fmtPrice(s.price, s.currency) + ' 起';
+    var bimg = document.getElementById('b-img');
+    bimg.alt = s.name;
+    bimg.onerror = function () { window.imgFallback(bimg); };
+    bimg.src = s.image;
+    goto('booking');
+  }
+
+  /* ---- 表单校验与提交 ---- */
+  function setErr(id, on) {
+    document.getElementById(id).classList.toggle('error', on);
+  }
+  function submitBooking() {
+    var form = document.getElementById('booking-form');
+    var name = form.name.value.trim();
+    var contact = form.contact.value.trim();
+    var date = form.date.value;
+    var ok = true;
+
+    setErr('f-name', !name);
+    if (!name) ok = false;
+
+    var contactOk = contact.length >= 5 && /[@]/.test(contact) || /^[+\d][\d\s-]{4,}$/.test(contact);
+    setErr('f-contact', !contactOk);
+    if (!contactOk) ok = false;
+
+    var dateBad = false;
+    if (date) {
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      dateBad = new Date(date) <= today;
+    }
+    setErr('f-date', dateBad);
+    if (dateBad) ok = false;
+
+    if (!ok) {
+      showToast('请完善带 * 的必填信息');
+      return;
+    }
+
+    var no = 'MT' + Date.now().toString().slice(-6) +
+      Math.floor(10 + Math.random() * 90);
+    document.getElementById('s-no').textContent = no;
+    form.reset();
+    ['f-name', 'f-contact', 'f-date'].forEach(function (id) { setErr(id, false); });
+    goto('success');
+  }
+
+  /* ---- 事件绑定 ---- */
+  document.querySelectorAll('[data-nav]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var target = el.getAttribute('data-nav');
+      if (target === 'booking') { openBooking(); return; }
+      goto(target);
+    });
+  });
+  document.getElementById('submit-booking').addEventListener('click', submitBooking);
+
+  document.querySelector('.search-bar').addEventListener('click', function () {
+    showToast('搜索功能将在下一版本上线');
+  });
+  document.querySelector('.lang-btn').addEventListener('click', function () {
+    showToast('多语言切换（中 / EN / DE / FR）即将支持');
+  });
+
+  /* ---- 初始化 ---- */
+  var heroImg = document.getElementById('hero-img');
+  heroImg.src = data.heroImage;
+
+  renderCats();
+  renderCards();
+})();
+</script>
+</body>
+</html>

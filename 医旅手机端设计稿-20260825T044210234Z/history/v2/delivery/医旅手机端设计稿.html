@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>医旅 Meditour · 手机端设计稿</title>
+<style>
+/* SECTION: base */
+:root {
+  --primary: #0d9488;
+  --primary-dark: #0f766e;
+  --primary-light: #ccfbf1;
+  --primary-bg: #f0fdfa;
+  --ink: #1e293b;
+  --ink-2: #64748b;
+  --ink-3: #94a3b8;
+  --bg: #f6f8fa;
+  --card: #ffffff;
+  --line: #e8edf2;
+  --danger: #ef4444;
+  --gold: #f59e0b;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --shadow-card: 0 2px 12px rgba(15, 23, 42, 0.06);
+  --shadow-float: 0 8px 24px rgba(13, 148, 136, 0.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", -apple-system, sans-serif;
+  background: linear-gradient(160deg, #eef6f5 0%, #e7eef2 100%);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+button { font-family: inherit; border: none; background: none; cursor: pointer; color: inherit; }
+input, textarea, select { font-family: inherit; font-size: 15px; }
+
+/* SECTION: phone-frame */
+.phone {
+  width: 390px;
+  height: 844px;
+  background: var(--bg);
+  border-radius: 44px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28), 0 0 0 10px #0f172a, 0 0 0 12px #334155;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .phone {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* SECTION: screens */
+.screen {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.screen.active { display: flex; }
+.screen-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.screen-scroll::-webkit-scrollbar { display: none; }
+
+/* SECTION: home-header */
+.home-head {
+  padding: 22px 20px 16px;
+  background: linear-gradient(165deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: #fff;
+  border-radius: 0 0 26px 26px;
+}
+.home-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-logo {
+  width: 38px; height: 38px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.brand-name { font-size: 19px; font-weight: 700; letter-spacing: 1px; }
+.brand-sub { font-size: 11px; opacity: 0.75; margin-top: 1px; }
+.lang-btn {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: 999px;
+}
+.home-greeting { font-size: 14px; opacity: 0.9; margin-bottom: 12px; line-height: 1.5; }
+.home-greeting b { font-size: 21px; display: block; margin-top: 2px; }
+.search-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: #fff;
+  border-radius: 999px;
+  padding: 11px 16px;
+  color: var(--ink-3);
+  font-size: 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+}
+.search-bar svg { flex-shrink: 0; }
+
+/* SECTION: home-hero */
+.hero {
+  margin: 16px 20px 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: linear-gradient(135deg, var(--primary-light), #e2f6f3);
+  box-shadow: var(--shadow-card);
+}
+.hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-mask {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 35%, rgba(15, 42, 40, 0.72) 100%);
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 14px 16px;
+  color: #fff;
+}
+.hero-title { font-size: 17px; font-weight: 700; }
+.hero-desc { font-size: 12px; opacity: 0.88; margin-top: 3px; }
+.img-fallback {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; color: var(--primary); font-size: 13px;
+  background: linear-gradient(135deg, var(--primary-light), #e2f6f3);
+}
+.img-fallback span.icon { font-size: 30px; }
+
+/* SECTION: service-chips */
+.chips {
+  display: flex; gap: 9px;
+  padding: 16px 20px 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--ink-2);
+  box-shadow: var(--shadow-card);
+}
+
+/* SECTION: section-title */
+.sec-title {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 10px;
+}
+.sec-title h3 { font-size: 17px; font-weight: 700; }
+.sec-title span { font-size: 12px; color: var(--ink-3); }
+
+/* SECTION: dest-grid */
+.dest-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0 20px;
+}
+.dest-card {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  background: linear-gradient(135deg, var(--primary-light), #e2f6f3);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+  transition: transform 0.15s;
+}
+.dest-card:active { transform: scale(0.97); }
+.dest-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dest-mask {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 45%, rgba(15, 30, 28, 0.78) 100%);
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 12px 13px;
+  color: #fff;
+}
+.dest-name { font-size: 17px; font-weight: 800; }
+.dest-name small { font-size: 11px; font-weight: 400; opacity: 0.8; margin-left: 5px; }
+.dest-tag { font-size: 11px; opacity: 0.88; margin-top: 3px; line-height: 1.45; }
+
+/* SECTION: med-entry */
+.med-entry {
+  margin: 18px 20px 0;
+  display: flex; align-items: center; gap: 13px;
+  background: var(--card);
+  border: 1px dashed #c9e5e1;
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  text-align: left;
+  box-shadow: var(--shadow-card);
+  width: calc(100% - 40px);
+}
+.med-entry-icon {
+  width: 42px; height: 42px; flex-shrink: 0;
+  border-radius: 13px;
+  background: var(--primary-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.med-entry-txt { flex: 1; }
+.med-entry-txt b { font-size: 14.5px; display: block; }
+.med-entry-txt span { font-size: 12px; color: var(--ink-3); margin-top: 2px; display: block; }
+.med-entry-arrow { color: var(--ink-3); flex-shrink: 0; }
+.home-footer {
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-3);
+  padding: 22px 20px 26px;
+  line-height: 1.7;
+}
+
+/* SECTION: sub-nav */
+.sub-nav {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 16px 12px;
+  background: transparent;
+}
+.back-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.sub-nav h2 { font-size: 17px; font-weight: 700; }
+
+/* SECTION: dest-detail */
+.dest-hero {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(135deg, var(--primary-light), #e2f6f3);
+  flex-shrink: 0;
+}
+.dest-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dest-hero .sub-nav { position: absolute; top: 8px; left: 4px; right: 4px; z-index: 2; }
+.dest-body { padding: 20px; }
+.dest-title-row { display: flex; align-items: baseline; gap: 10px; }
+.dest-title { font-size: 24px; font-weight: 800; }
+.dest-en { font-size: 13px; color: var(--ink-3); }
+.dest-tagline { font-size: 13.5px; color: var(--ink-2); margin-top: 6px; }
+.stats-row {
+  display: flex; gap: 10px;
+  margin-top: 14px;
+}
+.stat-chip {
+  flex: 1;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 11px 13px;
+}
+.stat-chip span { font-size: 11px; color: var(--ink-3); display: block; }
+.stat-chip b { font-size: 13.5px; color: var(--primary-dark); margin-top: 3px; display: block; }
+.detail-sec { margin-top: 20px; }
+.detail-sec h4 {
+  font-size: 15px; font-weight: 700;
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 10px;
+}
+.detail-sec h4::before {
+  content: "";
+  width: 4px; height: 15px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+.detail-intro { font-size: 14px; line-height: 1.75; color: var(--ink-2); }
+.exp-item {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 13px 14px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-card);
+}
+.exp-icon {
+  width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 11px;
+  background: var(--primary-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.exp-item b { font-size: 14px; display: block; }
+.exp-item p { font-size: 12.5px; color: var(--ink-2); margin-top: 2px; line-height: 1.5; }
+.tip-item {
+  display: flex; gap: 8px;
+  font-size: 13px; color: var(--ink-2);
+  line-height: 1.6;
+  padding: 9px 13px;
+  background: #fffbeb;
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+}
+.tip-item .tip-dot { flex-shrink: 0; }
+
+/* SECTION: fixed-cta */
+.fixed-cta {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  display: flex; align-items: center; gap: 16px;
+}
+.cta-btn {
+  flex: 1;
+  background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  font-size: 16px; font-weight: 700;
+  padding: 15px 0;
+  border-radius: 999px;
+  box-shadow: var(--shadow-float);
+  transition: transform 0.15s;
+}
+.cta-btn:active { transform: scale(0.97); }
+.cta-price { min-width: 96px; }
+.cta-price span { font-size: 11px; color: var(--ink-3); display: block; }
+.cta-price b { font-size: 20px; color: var(--primary); font-weight: 800; }
+.cta-price b small { font-size: 11px; font-weight: 500; }
+
+/* SECTION: medical-list */
+.med-note {
+  margin: 0 20px 14px;
+  background: var(--primary-bg);
+  border-radius: var(--radius-md);
+  padding: 13px 15px;
+  font-size: 12.5px;
+  color: var(--primary-dark);
+  line-height: 1.65;
+  display: flex; gap: 9px;
+}
+.svc-card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  width: 100%;
+  text-align: left;
+  transition: transform 0.15s;
+}
+.svc-card:active { transform: scale(0.98); }
+.svc-thumb {
+  width: 128px;
+  min-height: 128px;
+  flex-shrink: 0;
+  position: relative;
+  background: linear-gradient(135deg, var(--primary-light), #e2f6f3);
+}
+.svc-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.svc-tag {
+  position: absolute; top: 8px; left: 8px;
+  background: rgba(13, 148, 136, 0.9);
+  color: #fff;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.svc-body { flex: 1; padding: 13px 14px; display: flex; flex-direction: column; }
+.svc-name { font-size: 16px; font-weight: 700; }
+.svc-hospital {
+  font-size: 12px; color: var(--ink-2);
+  margin-top: 4px;
+  display: flex; align-items: center; gap: 4px;
+}
+.svc-meta {
+  margin-top: auto;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding-top: 10px;
+}
+.svc-price { color: var(--primary); font-weight: 800; font-size: 18px; }
+.svc-price small { font-size: 11px; font-weight: 500; margin-left: 2px; }
+.svc-days {
+  font-size: 11px; color: var(--ink-3);
+  background: var(--bg);
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+.card-list { padding: 0 20px 26px; display: flex; flex-direction: column; gap: 14px; }
+
+/* SECTION: detail */
+.detail-hero {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(135deg, var(--primary-light), #e2f6f3);
+  flex-shrink: 0;
+}
+.detail-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.detail-hero .sub-nav { position: absolute; top: 8px; left: 4px; right: 4px; z-index: 2; }
+.detail-body { padding: 20px; }
+.detail-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.detail-title { font-size: 22px; font-weight: 800; line-height: 1.35; }
+.detail-cat {
+  flex-shrink: 0;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 12px; font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  margin-top: 3px;
+}
+.detail-hospital {
+  margin-top: 8px;
+  font-size: 13px; color: var(--ink-2);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.hospital-badge {
+  background: #fef3c7; color: #b45309;
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 6px;
+}
+.detail-stats {
+  display: flex;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  margin-top: 16px;
+  padding: 16px 8px;
+}
+.stat { flex: 1; text-align: center; position: relative; }
+.stat + .stat::before {
+  content: "";
+  position: absolute; left: 0; top: 15%; bottom: 15%;
+  width: 1px; background: var(--line);
+}
+.stat b { font-size: 18px; color: var(--primary); font-weight: 800; display: block; }
+.stat span { font-size: 11px; color: var(--ink-3); margin-top: 4px; display: block; }
+.hl-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  font-size: 13.5px; line-height: 1.55; color: var(--ink);
+  box-shadow: var(--shadow-card);
+}
+.hl-item .tick {
+  width: 20px; height: 20px; flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  margin-top: 1px;
+}
+/* SECTION: process-timeline */
+.step-list { position: relative; padding-left: 6px; }
+.step {
+  display: flex; gap: 14px;
+  padding-bottom: 18px;
+  position: relative;
+}
+.step:last-child { padding-bottom: 0; }
+.step::before {
+  content: "";
+  position: absolute; left: 13px; top: 30px; bottom: 2px;
+  width: 2px; background: var(--line);
+}
+.step:last-child::before { display: none; }
+.step-no {
+  width: 28px; height: 28px; flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; z-index: 1;
+}
+.step-txt b { font-size: 14px; display: block; }
+.step-txt p { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; line-height: 1.5; }
+.detail-bottom-pad { height: 96px; }
+
+/* SECTION: booking-form */
+.booking-card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 18px;
+  margin: 0 20px 14px;
+}
+.booking-svc {
+  display: flex; gap: 12px; align-items: center;
+  background: var(--primary-bg);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.booking-svc-thumb {
+  width: 62px; height: 62px;
+  border-radius: 12px; overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--primary-light), #e2f6f3);
+}
+.booking-svc-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.booking-svc-info b { font-size: 14.5px; display: block; }
+.booking-svc-info span { font-size: 12px; color: var(--ink-2); margin-top: 3px; display: block; }
+.field { margin-bottom: 14px; }
+.field label {
+  display: block;
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  margin-bottom: 7px;
+}
+.field label i { color: var(--danger); font-style: normal; margin-left: 2px; }
+.field input, .field textarea, .field select {
+  width: 100%;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--bg);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.field textarea { resize: none; height: 88px; }
+.field input:focus, .field textarea:focus, .field select:focus {
+  border-color: var(--primary);
+  background: #fff;
+}
+.field.error input, .field.error textarea { border-color: var(--danger); background: #fef2f2; }
+.field .err-msg {
+  display: none;
+  font-size: 12px; color: var(--danger); margin-top: 5px;
+}
+.field.error .err-msg { display: block; }
+.form-tip {
+  font-size: 12px; color: var(--ink-3);
+  line-height: 1.6;
+  padding: 0 20px 20px;
+}
+.booking-bottom-pad { height: 90px; }
+
+/* SECTION: success */
+.success-wrap {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 32px;
+  text-align: center;
+}
+.success-icon {
+  width: 84px; height: 84px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 42px;
+  margin-bottom: 22px;
+  animation: pop 0.4s ease;
+}
+@keyframes pop { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.success-wrap h2 { font-size: 22px; font-weight: 800; }
+.success-wrap .sub { font-size: 13.5px; color: var(--ink-2); margin-top: 10px; line-height: 1.7; }
+.booking-no {
+  margin-top: 24px;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px 26px;
+  width: 100%;
+}
+.booking-no span { font-size: 12px; color: var(--ink-3); display: block; }
+.booking-no b { font-size: 20px; letter-spacing: 2px; color: var(--primary-dark); margin-top: 5px; display: block; }
+.success-actions { margin-top: 30px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.btn-primary {
+  background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+  color: #fff; font-size: 15px; font-weight: 700;
+  padding: 15px 0; border-radius: 999px;
+  box-shadow: var(--shadow-float);
+}
+.btn-ghost {
+  background: var(--card);
+  color: var(--ink-2); font-size: 15px;
+  padding: 15px 0; border-radius: 999px;
+  border: 1px solid var(--line);
+}
+
+/* SECTION: toast */
+.toast {
+  position: absolute; left: 50%; bottom: 120px;
+  transform: translateX(-50%) translateY(16px);
+  background: rgba(15, 23, 42, 0.88);
+  color: #fff;
+  font-size: 13px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s;
+  z-index: 60;
+  max-width: 82%;
+  text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+
+  <!-- SECTION: screen-home -->
+  <section class="screen active" id="screen-home">
+    <div class="screen-scroll">
+      <header class="home-head">
+        <div class="home-top">
+          <div class="brand">
+            <div class="brand-logo">🐉</div>
+            <div>
+              <div class="brand-name">医旅 Meditour</div>
+              <div class="brand-sub">中国旅行一站式服务平台</div>
+            </div>
+          </div>
+          <button class="lang-btn" type="button">🌐 中文</button>
+        </div>
+        <div class="home-greeting">
+          从欧洲出发，遇见中国
+          <b>五千年文明，等你来探索</b>
+        </div>
+        <div class="search-bar" role="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+          <span>搜索目的地、景点、美食…</span>
+        </div>
+      </header>
+
+      <div class="hero">
+        <img id="hero-img" alt="八达岭长城蜿蜒于青山之间" onerror="window.imgFallback(this)">
+        <div class="hero-mask">
+          <div class="hero-title">登长城 · 逛故宫 · 吃火锅</div>
+          <div class="hero-desc">签证协助 · 交通预订 · 行程定制，一站搞定</div>
+        </div>
+      </div>
+
+      <div class="chips">
+        <button class="chip" type="button" data-toast="签证协助服务将在下一版本上线">🛂 签证协助</button>
+        <button class="chip" type="button" data-toast="交通预订服务将在下一版本上线">🚄 高铁与机票</button>
+        <button class="chip" type="button" data-toast="酒店预订服务将在下一版本上线">🏨 酒店预订</button>
+        <button class="chip" type="button" data-toast="行程定制服务将在下一版本上线">🗺️ 行程定制</button>
+      </div>
+
+      <div class="sec-title">
+        <h3>热门目的地</h3>
+        <span id="dest-count"></span>
+      </div>
+      <div class="dest-grid" id="dest-grid"></div>
+
+      <div class="sec-title">
+        <h3>旅行小贴士</h3>
+      </div>
+      <div style="padding: 0 20px;">
+        <div class="tip-item"><span class="tip-dot">💳</span><span>中国已全面普及移动支付，机场可兑换少量现金应急，大型酒店与免税店支持外卡</span></div>
+        <div class="tip-item"><span class="tip-dot">📱</span><span>建议出发前办好中国手机卡或 eSIM，方便扫码乘车、翻译导航</span></div>
+      </div>
+
+      <button class="med-entry" type="button" data-nav="medical">
+        <div class="med-entry-icon">💚</div>
+        <div class="med-entry-txt">
+          <b>特色服务 · 健康之旅</b>
+          <span>旅途中如有医疗照护需求，我们为您妥善安排</span>
+        </div>
+        <svg class="med-entry-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <div class="home-footer">
+        医旅 Meditour · 让每一次中国之旅都安心
+        <br>本设计稿内容均为演示数据
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: screen-dest -->
+  <section class="screen" id="screen-dest">
+    <div class="screen-scroll">
+      <div class="dest-hero">
+        <img id="dest-img" alt="" onerror="window.imgFallback(this)">
+        <div class="sub-nav">
+          <button class="back-btn" type="button" data-nav="home" aria-label="返回首页">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="dest-body">
+        <div class="dest-title-row">
+          <h2 class="dest-title" id="dest-name"></h2>
+          <span class="dest-en" id="dest-en"></span>
+        </div>
+        <p class="dest-tagline" id="dest-tagline"></p>
+
+        <div class="stats-row">
+          <div class="stat-chip"><span>最佳旅行季节</span><b id="dest-season"></b></div>
+          <div class="stat-chip"><span>建议游玩</span><b id="dest-days"></b></div>
+        </div>
+
+        <div class="detail-sec">
+          <h4>城市印象</h4>
+          <p class="detail-intro" id="dest-intro"></p>
+        </div>
+
+        <div class="detail-sec">
+          <h4>必玩体验</h4>
+          <div id="dest-exps"></div>
+        </div>
+
+        <div class="detail-sec">
+          <h4>旅行贴士</h4>
+          <div id="dest-tips"></div>
+        </div>
+
+        <div class="detail-bottom-pad"></div>
+      </div>
+    </div>
+    <div class="fixed-cta">
+      <button class="cta-btn" type="button" data-toast="行程定制咨询将在下一版本上线">咨询行程定制</button>
+    </div>
+  </section>
+
+  <!-- SECTION: screen-medical -->
+  <section class="screen" id="screen-medical">
+    <div class="screen-scroll">
+      <div class="sub-nav">
+        <button class="back-btn" type="button" data-nav="home" aria-label="返回首页">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2>健康之旅</h2>
+      </div>
+      <div class="med-note">
+        <span>💚</span>
+        <span>如果您在旅途中有医疗照护需求，我们可以为您对接优质医疗资源；若暂无需要，欢迎随时回来继续探索旅程。</span>
+      </div>
+      <div class="card-list" id="med-list"></div>
+    </div>
+  </section>
+
+  <!-- SECTION: screen-detail -->
+  <section class="screen" id="screen-detail">
+    <div class="screen-scroll">
+      <div class="detail-hero">
+        <img id="detail-img" alt="" onerror="window.imgFallback(this)">
+        <div class="sub-nav">
+          <button class="back-btn" type="button" data-nav="medical" aria-label="返回健康之旅">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="detail-body">
+        <div class="detail-title-row">
+          <h2 class="detail-title" id="d-name"></h2>
+          <span class="detail-cat" id="d-cat"></span>
+        </div>
+        <div class="detail-hospital">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M14 9h1M14 13h1M10 21v-4h4v4"/></svg>
+          <span id="d-hospital"></span>
+          <span class="hospital-badge" id="d-level"></span>
+        </div>
+
+        <div class="detail-stats">
+          <div class="stat"><b id="d-price"></b><span>起步价格</span></div>
+          <div class="stat"><b id="d-days"></b><span>疗程天数</span></div>
+          <div class="stat"><b>100%</b><span>顾问陪同</span></div>
+        </div>
+
+        <div class="detail-sec">
+          <h4>服务简介</h4>
+          <p class="detail-intro" id="d-intro"></p>
+        </div>
+
+        <div class="detail-sec">
+          <h4>服务亮点</h4>
+          <div id="d-highlights"></div>
+        </div>
+
+        <div class="detail-sec">
+          <h4>就诊流程</h4>
+          <div class="step-list" id="d-process"></div>
+        </div>
+
+        <div class="detail-bottom-pad"></div>
+      </div>
+    </div>
+    <div class="fixed-cta">
+      <div class="cta-price">
+        <span>起步价格</span>
+        <b><span id="d-price-cta"></span></b>
+      </div>
+      <button class="cta-btn" type="button" data-primary-action data-nav="booking">预约咨询</button>
+    </div>
+  </section>
+
+  <!-- SECTION: screen-booking -->
+  <section class="screen" id="screen-booking">
+    <div class="screen-scroll">
+      <div class="sub-nav">
+        <button class="back-btn" type="button" data-nav="detail" aria-label="返回详情页">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2>预约咨询</h2>
+      </div>
+
+      <div class="booking-card">
+        <div class="booking-svc">
+          <div class="booking-svc-thumb"><img id="b-img" alt="" onerror="window.imgFallback(this)"></div>
+          <div class="booking-svc-info">
+            <b id="b-name"></b>
+            <span id="b-hospital"></span>
+          </div>
+        </div>
+
+        <form id="booking-form" novalidate>
+          <div class="field" id="f-name">
+            <label>姓名<i>*</i></label>
+            <input type="text" name="name" placeholder="请输入您的姓名" maxlength="30">
+            <p class="err-msg">请输入姓名</p>
+          </div>
+          <div class="field" id="f-contact">
+            <label>联系方式（邮箱 / 电话）<i>*</i></label>
+            <input type="text" name="contact" placeholder="用于顾问与您确认行程" maxlength="60">
+            <p class="err-msg">请输入有效的联系方式</p>
+          </div>
+          <div class="field" id="f-date">
+            <label>期望到诊日期</label>
+            <input type="date" name="date">
+            <p class="err-msg">请选择今天之后的日期</p>
+          </div>
+          <div class="field" id="f-note">
+            <label>病情 / 需求说明</label>
+            <textarea name="note" placeholder="简要描述您的健康状况与需求（选填）" maxlength="300"></textarea>
+            <p class="err-msg"></p>
+          </div>
+        </form>
+      </div>
+
+      <p class="form-tip">🔒 您的信息仅用于本次预约对接，医疗顾问将在 24 小时内与您联系。本设计稿中的提交流程为前端演示，不连接真实服务。</p>
+      <div class="booking-bottom-pad"></div>
+    </div>
+    <div class="fixed-cta">
+      <button class="cta-btn" type="button" style="width:100%" data-primary-action id="submit-booking">提交预约</button>
+    </div>
+  </section>
+
+  <!-- SECTION: screen-success -->
+  <section class="screen" id="screen-success">
+    <div class="success-wrap">
+      <div class="success-icon">✓</div>
+      <h2>预约提交成功</h2>
+      <p class="sub">感谢您的信任！医疗顾问将在 24 小时内通过您预留的联系方式与您确认行程细节。</p>
+      <div class="booking-no">
+        <span>预约编号</span>
+        <b id="s-no"></b>
+      </div>
+      <div class="success-actions">
+        <button class="btn-primary" type="button" data-nav="home">返回首页</button>
+        <button class="btn-ghost" type="button" data-nav="detail">查看服务详情</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* SECTION: app-data */
+/* 医旅手机端设计稿 — 页面示例数据（图片来源：图片搜索结果，仅用于设计稿演示） */
+(function () {
+  'use strict';
+
+  window.APP_DATA = {
+    heroImage:
+      'https://agent.qianwen.com/service/e2da4fa3-c27e-4f/832861465aa0afce641df2da4babbb2c',
+
+    /* ---- 热门目的地 ---- */
+    destinations: [
+      {
+        id: 'beijing',
+        name: '北京',
+        en: 'Beijing',
+        tagline: '千年古都，历史与现代交汇',
+        image:
+          'https://agent.qianwen.com/service/37320046-bedd-4e/afbbffb6bdf6194f584bb626f1495045',
+        bestSeason: '4-5月 / 9-10月',
+        suggestDays: '4-6 天',
+        intro:
+          '北京是中国的首都，拥有七处世界文化遗产。从故宫、长城到胡同四合院，三千年的历史层层展开，798 艺术区与三里屯又为它注入年轻的活力。',
+        experiences: [
+          { icon: '🏯', title: '故宫漫步', desc: '世界最大的宫殿建筑群，清晨入内光线最佳' },
+          { icon: '🧗', title: '长城日出', desc: '慕田峪长城人少景美，可乘缆车往返' },
+          { icon: '🦆', title: '北京烤鸭', desc: '百年老店品尝皮脆肉嫩的挂炉烤鸭' },
+          { icon: '🛖', title: '胡同游', desc: '乘人力车穿行小巷，体验老北京生活' }
+        ],
+        tips: [
+          '故宫门票需提前 7 天在官方小程序预约',
+          '首都机场乘机场快轨 30 分钟直达市区',
+          '春季偶有沙尘，建议随身备口罩'
+        ]
+      },
+      {
+        id: 'shanghai',
+        name: '上海',
+        en: 'Shanghai',
+        tagline: '东方巴黎，黄浦江畔的摩登风情',
+        image:
+          'https://agent.qianwen.com/service/678e78be-3b65-49/8f0b9c0d07d33d6b79c0d698b2bdaa8a',
+        bestSeason: '4-5月 / 10-11月',
+        suggestDays: '3-4 天',
+        intro:
+          '上海是一座魔幻都市：黄浦江一侧是外滩百年万国建筑，对岸是陆家嘴的现代天际线。弄堂里藏着小笼包与咖啡香，朱家角的水乡摇橹船则让人恍若隔世。',
+        experiences: [
+          { icon: '🌃', title: '外滩夜景', desc: '江畔漫步，一次看尽两岸天际线' },
+          { icon: '🗼', title: '陆家嘴登高', desc: '上海中心观光厅俯瞰全城' },
+          { icon: '🥟', title: '城隍庙小笼包', desc: '老字号的蟹粉小笼，先开窗后喝汤' },
+          { icon: '🎢', title: '上海迪士尼', desc: '全球唯一疯狂动物城园区' }
+        ],
+        tips: [
+          '外滩灯光秀通常 22:00 关闭，建议提早前往',
+          '迪士尼建议提前一周购票并下载官方 App'
+        ]
+      },
+      {
+        id: 'xian',
+        name: '西安',
+        en: "Xi'an",
+        tagline: '一眼千年，梦回大唐长安',
+        image:
+          'https://agent.qianwen.com/service/fec8273c-25ef-4b/4739fc217fb36537d3a287db2b73d1fb',
+        bestSeason: '3-5月 / 9-11月',
+        suggestDays: '3-4 天',
+        intro:
+          '西安是丝绸之路的起点、十三朝古都。秦始皇兵马俑诉说两千年前的帝国雄风，古城墙上可以骑行，夜晚的大唐不夜城灯火如昼，西北风味美食遍布街巷。',
+        experiences: [
+          { icon: '🗿', title: '秦始皇兵马俑', desc: '世界第八大奇迹，建议请讲解更有故事' },
+          { icon: '🏮', title: '古城墙骑行', desc: '保存最完整的古代城墙，环骑 13.7 公里' },
+          { icon: '🍜', title: '回民街美食', desc: '肉夹馍、biangbiang 面、羊肉泡馍' },
+          { icon: '✨', title: '大唐不夜城', desc: '夜晚灯火通明，仿佛穿越回长安' }
+        ],
+        tips: [
+          '兵马俑门票需实名预约，旺季建议提前 3 天',
+          '景区讲解员或语音导览能让参观更有趣'
+        ]
+      },
+      {
+        id: 'chengdu',
+        name: '成都',
+        en: 'Chengdu',
+        tagline: '天府之国，把节奏慢下来',
+        image:
+          'https://agent.qianwen.com/service/821166ac-10cd-4a/daee43ebece6de5ffe99351a096fd29f',
+        bestSeason: '3-6月 / 9-11月',
+        suggestDays: '3-5 天',
+        intro:
+          '成都有"天府之国"的美誉：上午看憨态可掬的大熊猫，下午在人民公园喝一碗盖碗茶，夜晚用一顿麻辣火锅收尾，感受"来了就不想走"的悠闲气质。',
+        experiences: [
+          { icon: '🐼', title: '大熊猫繁育基地', desc: '上午前往，看熊猫最活跃的时段' },
+          { icon: '🍲', title: '川味火锅', desc: '地道麻辣，不能吃辣可选鸳鸯锅' },
+          { icon: '🍵', title: '人民公园盖碗茶', desc: '竹椅上一坐半天，体验本地慢生活' },
+          { icon: '🏔', title: '青城山与都江堰', desc: '世界文化遗产，高铁 30 分钟直达' }
+        ],
+        tips: [
+          '熊猫基地节假日需提前预约',
+          '辣度"微辣"已经是外国游客友好级别',
+          '成都到青城山乘高铁约 30 分钟'
+        ]
+      }
+    ],
+
+    /* ---- 医疗服务（隐藏入口内展示） ---- */
+    medicalServices: [
+      {
+        id: '1',
+        name: '膝关节置换手术',
+        hospital: '北京协和医院',
+        hospitalLevel: '三级甲等',
+        price: 15000,
+        currency: 'EUR',
+        durationDays: 21,
+        category: 'ortho',
+        categoryLabel: '骨科',
+        image:
+          'https://agent.qianwen.com/service/8592df0f-6d1b-42/995b8d4bd28907d633b884c738865ca4',
+        intro:
+          '由三甲医院骨科专家团队主刀，采用进口人工关节假体，帮助患者摆脱关节疼痛、恢复行走能力。',
+        highlights: [
+          '三甲医院骨科专家团队主刀，年手术量超千例',
+          '进口人工关节假体，预期使用寿命 15-20 年',
+          '费用包含术前评估、手术、住院及康复指导',
+          '专属医疗顾问全程陪同，提供翻译与行程协助'
+        ],
+        process: [
+          { step: '预约咨询', desc: '提交病历资料，医疗顾问 24 小时内响应' },
+          { step: '远程评估', desc: '专家团队视频问诊，确认手术方案与报价' },
+          { step: '赴华治疗', desc: '接机安排入住，完成手术与住院康复' },
+          { step: '术后随访', desc: '回国后 12 个月远程随访，指导康复训练' }
+        ]
+      },
+      {
+        id: '2',
+        name: '微创种植牙',
+        hospital: '北京大学口腔医院',
+        hospitalLevel: '三级甲等',
+        price: 2500,
+        currency: 'EUR',
+        durationDays: 7,
+        category: 'dental',
+        categoryLabel: '牙科',
+        image:
+          'https://agent.qianwen.com/service/da0776c0-90bf-40/43e2bbd5e2902157a3c287e6dff02659',
+        intro:
+          '数字化导板种植技术，微创精准，采用进口种植体，让缺牙患者重获自然咀嚼与美观笑容。',
+        highlights: [
+          '数字化导板种植，微创精准，恢复快',
+          '进口种植体，提供 10 年质保',
+          '费用含全景片检查、方案设计与种植体',
+          '独立诊室，全程无痛管理'
+        ],
+        process: [
+          { step: '预约咨询', desc: '提交口腔情况，医疗顾问 24 小时内响应' },
+          { step: '远程评估', desc: '医生视频看诊，确认种植方案与费用' },
+          { step: '赴华治疗', desc: '到院检查、植入种植体并完成牙冠修复' },
+          { step: '术后随访', desc: '定期远程回访，指导口腔维护' }
+        ]
+      }
+    ]
+  };
+})();
+
+</script>
+<script>
+/* SECTION: app-logic */
+(function () {
+  'use strict';
+
+  var data = window.APP_DATA;
+  var currentService = null;
+
+  /* ---- 图片降级 ---- */
+  window.imgFallback = function (img) {
+    var box = img.parentElement;
+    img.remove();
+    var div = document.createElement('div');
+    div.className = 'img-fallback';
+    div.innerHTML = '<span class="icon">🗺️</span><span>图片加载中</span>';
+    box.appendChild(div);
+  };
+
+  /* ---- 通用 ---- */
+  function fmtPrice(n, cur) {
+    return '€' + n.toLocaleString('zh-CN') + (cur === 'EUR' ? '' : ' ' + cur);
+  }
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.classList.remove('show'); }, 2200);
+  }
+  function goto(name) {
+    document.querySelectorAll('.screen').forEach(function (s) {
+      s.classList.toggle('active', s.id === 'screen-' + name);
+    });
+    var active = document.getElementById('screen-' + name);
+    var sc = active.querySelector('.screen-scroll');
+    if (sc) sc.scrollTop = 0;
+  }
+
+  /* ---- 首页：目的地宫格 ---- */
+  function renderDests() {
+    var grid = document.getElementById('dest-grid');
+    grid.innerHTML = '';
+    document.getElementById('dest-count').textContent =
+      data.destinations.length + ' 座城市精选';
+    data.destinations.forEach(function (d) {
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'dest-card';
+      card.innerHTML =
+        '<img alt="' + d.name + '">' +
+        '<div class="dest-mask">' +
+          '<div class="dest-name">' + d.name + '<small>' + d.en + '</small></div>' +
+          '<div class="dest-tag">' + d.tagline + '</div>' +
+        '</div>';
+      var img = card.querySelector('img');
+      img.src = d.image;
+      img.onerror = function () { window.imgFallback(img); };
+      card.addEventListener('click', function () { openDest(d); });
+      grid.appendChild(card);
+    });
+  }
+
+  /* ---- 目的地详情 ---- */
+  function openDest(d) {
+    document.getElementById('dest-name').textContent = d.name;
+    document.getElementById('dest-en').textContent = d.en;
+    document.getElementById('dest-tagline').textContent = d.tagline;
+    document.getElementById('dest-season').textContent = d.bestSeason;
+    document.getElementById('dest-days').textContent = d.suggestDays;
+    document.getElementById('dest-intro').textContent = d.intro;
+
+    var dimg = document.getElementById('dest-img');
+    dimg.alt = d.name;
+    dimg.onerror = function () { window.imgFallback(dimg); };
+    dimg.src = d.image;
+
+    var exps = document.getElementById('dest-exps');
+    exps.innerHTML = '';
+    d.experiences.forEach(function (e) {
+      var div = document.createElement('div');
+      div.className = 'exp-item';
+      div.innerHTML =
+        '<div class="exp-icon">' + e.icon + '</div>' +
+        '<div><b>' + e.title + '</b><p>' + e.desc + '</p></div>';
+      exps.appendChild(div);
+    });
+
+    var tips = document.getElementById('dest-tips');
+    tips.innerHTML = '';
+    d.tips.forEach(function (t) {
+      var div = document.createElement('div');
+      div.className = 'tip-item';
+      div.innerHTML = '<span class="tip-dot">💡</span><span>' + t + '</span>';
+      tips.appendChild(div);
+    });
+
+    goto('dest');
+  }
+
+  /* ---- 健康之旅：医疗列表 ---- */
+  function renderMedList() {
+    var list = document.getElementById('med-list');
+    list.innerHTML = '';
+    data.medicalServices.forEach(function (s) {
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'svc-card';
+      card.innerHTML =
+        '<div class="svc-thumb"><img alt="' + s.name + '"><span class="svc-tag">' + s.categoryLabel + '</span></div>' +
+        '<div class="svc-body">' +
+          '<div class="svc-name">' + s.name + '</div>' +
+          '<div class="svc-hospital">🏥 ' + s.hospital + '</div>' +
+          '<div class="svc-meta">' +
+            '<div class="svc-price">' + fmtPrice(s.price, s.currency) + '<small>起</small></div>' +
+            '<div class="svc-days">⏱ ' + s.durationDays + ' 天疗程</div>' +
+          '</div>' +
+        '</div>';
+      var img = card.querySelector('img');
+      img.src = s.image;
+      img.onerror = function () { window.imgFallback(img); };
+      card.addEventListener('click', function () { openDetail(s); });
+      list.appendChild(card);
+    });
+  }
+
+  /* ---- 医疗详情 ---- */
+  function openDetail(s) {
+    currentService = s;
+    document.getElementById('d-name').textContent = s.name;
+    document.getElementById('d-cat').textContent = s.categoryLabel;
+    document.getElementById('d-hospital').textContent = s.hospital;
+    document.getElementById('d-level').textContent = s.hospitalLevel;
+    document.getElementById('d-price').textContent = fmtPrice(s.price, s.currency);
+    document.getElementById('d-price-cta').textContent = fmtPrice(s.price, s.currency) + ' 起';
+    document.getElementById('d-days').textContent = s.durationDays + ' 天';
+    document.getElementById('d-intro').textContent = s.intro;
+
+    var dimg = document.getElementById('detail-img');
+    dimg.alt = s.name;
+    dimg.onerror = function () { window.imgFallback(dimg); };
+    dimg.src = s.image;
+
+    var hls = document.getElementById('d-highlights');
+    hls.innerHTML = '';
+    s.highlights.forEach(function (h) {
+      var div = document.createElement('div');
+      div.className = 'hl-item';
+      div.innerHTML = '<span class="tick">✓</span><span>' + h + '</span>';
+      hls.appendChild(div);
+    });
+
+    var proc = document.getElementById('d-process');
+    proc.innerHTML = '';
+    s.process.forEach(function (p, i) {
+      var div = document.createElement('div');
+      div.className = 'step';
+      div.innerHTML =
+        '<div class="step-no">' + (i + 1) + '</div>' +
+        '<div class="step-txt"><b>' + p.step + '</b><p>' + p.desc + '</p></div>';
+      proc.appendChild(div);
+    });
+
+    goto('detail');
+  }
+
+  /* ---- 预约页 ---- */
+  function openBooking() {
+    if (!currentService) return;
+    var s = currentService;
+    document.getElementById('b-name').textContent = s.name;
+    document.getElementById('b-hospital').textContent = s.hospital + ' · ' + fmtPrice(s.price, s.currency) + ' 起';
+    var bimg = document.getElementById('b-img');
+    bimg.alt = s.name;
+    bimg.onerror = function () { window.imgFallback(bimg); };
+    bimg.src = s.image;
+    goto('booking');
+  }
+
+  /* ---- 表单校验与提交 ---- */
+  function setErr(id, on) {
+    document.getElementById(id).classList.toggle('error', on);
+  }
+  function submitBooking() {
+    var form = document.getElementById('booking-form');
+    var name = form.name.value.trim();
+    var contact = form.contact.value.trim();
+    var date = form.date.value;
+    var ok = true;
+
+    setErr('f-name', !name);
+    if (!name) ok = false;
+
+    var contactOk = (contact.length >= 5 && contact.indexOf('@') > 0) ||
+      /^[+\d][\d\s-]{4,}$/.test(contact);
+    setErr('f-contact', !contactOk);
+    if (!contactOk) ok = false;
+
+    var dateBad = false;
+    if (date) {
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      dateBad = new Date(date) <= today;
+    }
+    setErr('f-date', dateBad);
+    if (dateBad) ok = false;
+
+    if (!ok) {
+      showToast('请完善带 * 的必填信息');
+      return;
+    }
+
+    var no = 'MT' + Date.now().toString().slice(-6) +
+      Math.floor(10 + Math.random() * 90);
+    document.getElementById('s-no').textContent = no;
+    form.reset();
+    ['f-name', 'f-contact', 'f-date'].forEach(function (id) { setErr(id, false); });
+    goto('success');
+  }
+
+  /* ---- 事件绑定 ---- */
+  document.querySelectorAll('[data-nav]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var target = el.getAttribute('data-nav');
+      if (target === 'booking') { openBooking(); return; }
+      goto(target);
+    });
+  });
+  document.querySelectorAll('[data-toast]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      showToast(el.getAttribute('data-toast'));
+    });
+  });
+  document.getElementById('submit-booking').addEventListener('click', submitBooking);
+
+  document.querySelector('.search-bar').addEventListener('click', function () {
+    showToast('搜索功能将在下一版本上线');
+  });
+  document.querySelector('.lang-btn').addEventListener('click', function () {
+    showToast('多语言切换（中 / EN / DE / FR）即将支持');
+  });
+
+  /* ---- 初始化 ---- */
+  var heroImg = document.getElementById('hero-img');
+  heroImg.src = data.heroImage;
+
+  renderDests();
+  renderMedList();
+})();
+</script>
+</body>
+</html>

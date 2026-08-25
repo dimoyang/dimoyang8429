@@ -1,0 +1,300 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for German (`de`).
+class AppLocalizationsDe extends AppLocalizations {
+  AppLocalizationsDe([String locale = 'de']) : super(locale);
+
+  @override
+  String get appTitle => 'Meditour';
+
+  @override
+  String get appSubtitle => 'Ihr Tor nach China';
+
+  @override
+  String get tagline => 'Von Europa nach China';
+
+  @override
+  String get taglineSubtitle => '5.000 Jahre Zivilisation, die auf Sie wartet';
+
+  @override
+  String get searchHint => 'Reiseziele, Sehenswürdigkeiten, Essen suchen…';
+
+  @override
+  String get searchComingSoon =>
+      'Die Suche wird in der nächsten Version verfügbar sein';
+
+  @override
+  String get heroTitle =>
+      'Große Mauer besteigen · Verbotene Stadt erkunden · Hot Pot genießen';
+
+  @override
+  String get heroSubtitle =>
+      'Visa-Hilfe · Transportbuchung · Maßgeschneiderte Reiserouten — alles aus einer Hand';
+
+  @override
+  String get chipVisa => 'Visa-Hilfe';
+
+  @override
+  String get chipTransport => 'Züge & Flüge';
+
+  @override
+  String get chipHotel => 'Hotelbuchung';
+
+  @override
+  String get chipItinerary => 'Reiseplanung';
+
+  @override
+  String get chipComingSoon => 'wird in der nächsten Version verfügbar sein';
+
+  @override
+  String get sectionDestinations => 'Beliebte Reiseziele';
+
+  @override
+  String get sectionDestinationsSub => '4 Städte ausgewählt';
+
+  @override
+  String get sectionTips => 'Reisetipps';
+
+  @override
+  String get tipPayment =>
+      'China ist mittlerweile bargeldlos — tauschen Sie am Flughafen einen kleinen Betrag für Notfälle; große Hotels und Duty-Free-Shops akzeptieren ausländische Karten';
+
+  @override
+  String get tipSim =>
+      'Besorgen Sie sich vor der Abreise eine chinesische SIM-Karte oder eSIM für einfaches Scannen, Übersetzen und Navigieren';
+
+  @override
+  String get medicalEntryTitle => 'Gesundheits-Assistent';
+
+  @override
+  String get medicalEntrySub =>
+      'Medizinische Versorgung während der Reise? Wir kümmern uns darum';
+
+  @override
+  String get footerText => 'Meditour · Jede Chinareise sorgenfrei';
+
+  @override
+  String get homeAppBarTitle => 'China entdecken';
+
+  @override
+  String get medicalListTitle => 'Gesundheits-Assistent';
+
+  @override
+  String get medicalListInfo =>
+      'Wenn Sie während der Reise medizinische Bedürfnisse haben, können wir Sie mit erstklassigen Gesundheitsdiensten verbinden. Keine Sorge, wenn nicht — kommen Sie jederzeit zurück, um Ihre Reise fortzusetzen.';
+
+  @override
+  String get destinationNotFound => 'Reiseziel nicht gefunden';
+
+  @override
+  String get serviceNotFound => 'Leistung nicht gefunden';
+
+  @override
+  String get sectionImpression => 'Stadtindruck';
+
+  @override
+  String get sectionExperiences => 'Must-Have Erlebnisse';
+
+  @override
+  String get sectionTravelTips => 'Reisetipps';
+
+  @override
+  String get sectionIntro => 'Leistungsübersicht';
+
+  @override
+  String get sectionHighlights => 'Highlights';
+
+  @override
+  String get sectionProcess => 'Ablauf';
+
+  @override
+  String get statBestSeason => 'Beste Saison';
+
+  @override
+  String get statSuggestDays => 'Empfohlene Tage';
+
+  @override
+  String get statBasePrice => 'Grundpreis';
+
+  @override
+  String get statDuration => 'Dauer';
+
+  @override
+  String get statCompanion => 'Begleitung';
+
+  @override
+  String get btnItinerary => 'Reiseplan anfragen';
+
+  @override
+  String get btnBookConsult => 'Beratung buchen';
+
+  @override
+  String get btnSubmit => 'Buchung absenden';
+
+  @override
+  String get btnBackHome => 'Zurück zur Startseite';
+
+  @override
+  String get btnViewService => 'Leistungsdetails ansehen';
+
+  @override
+  String get itineraryComingSoon =>
+      'Maßgeschneiderte Reiseplanung wird in der nächsten Version verfügbar sein';
+
+  @override
+  String get bookingSuccess => 'Buchung erfolgreich eingereicht!';
+
+  @override
+  String get bookingSuccessDesc =>
+      'Vielen Dank für Ihr Vertrauen! Ihr medizinischer Assistent wird sich innerhalb von 24 Stunden über Ihre angegebenen Kontaktdaten mit Ihnen in Verbindung setzen.';
+
+  @override
+  String get bookingNo => 'Buchungsnr.';
+
+  @override
+  String get bookingNote =>
+      '🔒 Ihre Informationen werden nur für diese Buchung verwendet. Ein medizinischer Assistent wird sich innerhalb von 24 Stunden mit Ihnen in Verbindung setzen. Diese Demo ist nicht mit einem echten Server verbunden.';
+
+  @override
+  String get formName => 'Name';
+
+  @override
+  String get formNameError => 'Bitte geben Sie Ihren Namen ein';
+
+  @override
+  String get formContact => 'Kontakt (E-Mail / Telefon)';
+
+  @override
+  String get formContactHint =>
+      'Für den Assistenten zur Bestätigung Ihrer Reise';
+
+  @override
+  String get formContactError => 'Bitte geben Sie einen gültigen Kontakt ein';
+
+  @override
+  String get formDate => 'Gewünschtes Datum';
+
+  @override
+  String get formDateHint => 'Datum auswählen';
+
+  @override
+  String get formNote => 'Zustand / Bedürfnisse';
+
+  @override
+  String get formNoteHint => 'Beschreiben Sie kurz Ihre Situation (optional)';
+
+  @override
+  String daysTreatment(int days) {
+    return '$days Tage Behandlung';
+  }
+
+  @override
+  String get hospitalLabel => 'Krankenhaus';
+
+  @override
+  String get priceLabel => 'Grundpreis';
+
+  @override
+  String get durationLabel => 'Dauer';
+
+  @override
+  String get startingFrom => 'ab';
+
+  @override
+  String get level3A => 'Klasse 3A';
+
+  @override
+  String get navDiscover => 'Entdecken';
+
+  @override
+  String get navItinerary => 'Reisen';
+
+  @override
+  String get navTravelTools => 'Reiseinfos';
+
+  @override
+  String get navProfile => 'Profil';
+
+  @override
+  String get itineraryTitle => 'Meine Reisen';
+
+  @override
+  String get itineraryEmptyTitle => 'Noch keine Reisen';
+
+  @override
+  String get itineraryEmptyBody =>
+      'Ihre gespeicherten und geplanten Chinareisen werden hier angezeigt.';
+
+  @override
+  String get travelToolsTitle => 'Reiseinformationen';
+
+  @override
+  String get travelToolsIntro =>
+      'Praktische Grundlagen für die Einreise und eine sichere Reise durch China.';
+
+  @override
+  String get toolVisaTitle => 'Visum & Einreise';
+
+  @override
+  String get toolVisaSummary => 'Dokumente und Vorbereitung der Ankunft';
+
+  @override
+  String get toolVisaDetail =>
+      'Die Einreisebestimmungen hängen von Ihrer Staatsangehörigkeit, Ihrem Reisedokument und Ihrer Route ab. Prüfen Sie vor der Buchung die aktuellen Anforderungen bei der chinesischen Botschaft oder dem Konsulat und bewahren Sie digitale und gedruckte Kopien von Reisepass, Visum, Unterkunft und Rückreiseplan auf.';
+
+  @override
+  String get toolPaymentTitle => 'Bezahlen';
+
+  @override
+  String get toolPaymentSummary =>
+      'Karten, mobiles Bezahlen und Bargeldreserve';
+
+  @override
+  String get toolPaymentDetail =>
+      'Klären Sie vor der Abreise mit Ihrer Bank, ob Zahlungen im Ausland möglich sind. Nehmen Sie mindestens eine internationale Karte und etwas Bargeld mit und richten Sie benötigte mobile Zahlungsdienste vorab ein.';
+
+  @override
+  String get toolTransportTitle => 'Bahn & Nahverkehr';
+
+  @override
+  String get toolTransportSummary => 'Tickets, Bahnhöfe und Passkontrollen';
+
+  @override
+  String get toolTransportDetail =>
+      'Tickets für Hochgeschwindigkeitszüge sind normalerweise mit dem bei der Buchung verwendeten Reisepass verknüpft. Planen Sie Zeit für die Identitätskontrolle ein, prüfen Sie den vollständigen Bahnhofsnamen und führen Sie das Originaldokument mit.';
+
+  @override
+  String get toolInternetTitle => 'Internet & SIM';
+
+  @override
+  String get toolInternetSummary => 'Roaming, eSIM und Verbindung';
+
+  @override
+  String get toolInternetDetail =>
+      'Organisieren Sie vor oder kurz nach der Ankunft internationales Roaming, eine eSIM oder eine lokale SIM-Karte. Laden Sie wichtige Reiseinformationen und Offline-Übersetzungen vorab herunter.';
+
+  @override
+  String get profileTitle => 'Profil';
+
+  @override
+  String get profilePreferences => 'Einstellungen';
+
+  @override
+  String get profileLanguage => 'Sprache';
+
+  @override
+  String get profileMoreAssistance => 'Weitere Unterstützung';
+
+  @override
+  String get profileAbout => 'Über die App';
+
+  @override
+  String get profileAppVersion => 'App-Version';
+
+  @override
+  String get profileLicenses => 'Open-Source-Lizenzen';
+}
