@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class StorageService {
   static const _keyLanguage = 'language_code';
   static const _keyFavoriteDestinations = 'favorite_destination_ids';
+  static const _keyItineraries = 'travel_itineraries';
 
   static Future<String?> getLanguageCode() async {
     final prefs = await SharedPreferences.getInstance();
@@ -26,5 +27,15 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     final sortedIds = destinationIds.toList()..sort();
     await prefs.setStringList(_keyFavoriteDestinations, sortedIds);
+  }
+
+  static Future<List<String>> getItineraryRecords() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_keyItineraries) ?? const [];
+  }
+
+  static Future<void> setItineraryRecords(List<String> records) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_keyItineraries, records);
   }
 }

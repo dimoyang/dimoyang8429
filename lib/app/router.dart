@@ -4,6 +4,7 @@ import 'package:meditour_app/presentation/screens/booking_screen.dart';
 import 'package:meditour_app/presentation/screens/destination_detail_screen.dart';
 import 'package:meditour_app/presentation/screens/destination_search_screen.dart';
 import 'package:meditour_app/presentation/screens/home_screen.dart';
+import 'package:meditour_app/presentation/screens/itinerary_editor_screen.dart';
 import 'package:meditour_app/presentation/screens/itinerary_screen.dart';
 import 'package:meditour_app/presentation/screens/main_shell_screen.dart';
 import 'package:meditour_app/presentation/screens/medical_list_screen.dart';
@@ -69,6 +70,18 @@ class AppRouter {
         path: '/search',
         name: 'destinationSearch',
         builder: (context, state) => const DestinationSearchScreen(),
+      ),
+      GoRoute(
+        path: '/trips/new',
+        name: 'itineraryCreate',
+        builder: (context, state) => const ItineraryEditorScreen(),
+      ),
+      GoRoute(
+        path: '/trips/:id/edit',
+        name: 'itineraryEdit',
+        builder: (context, state) => ItineraryEditorScreen(
+          itineraryId: state.pathParameters['id'],
+        ),
       ),
       GoRoute(
         path: '/destinations/:id',

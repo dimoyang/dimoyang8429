@@ -57,6 +57,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('还没有行程'), findsOneWidget);
 
+    await tester.tap(find.byKey(const Key('createItineraryButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('创建行程'), findsOneWidget);
+    expect(find.byKey(const Key('itineraryTitleField')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('itinerarySaveButton')));
+    await tester.pump();
+    expect(find.text('请输入行程名称'), findsOneWidget);
+    expect(find.text('请至少选择一个目的地'), findsOneWidget);
+    expect(find.text('请选择旅行日期'), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('旅行工具'));
     await tester.pumpAndSettle();
     expect(find.text('签证与入境'), findsOneWidget);

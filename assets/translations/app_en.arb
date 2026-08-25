@@ -106,5 +106,34 @@
   "favoriteEmptyTitle": "No saved destinations",
   "favoriteEmptyBody": "Tap the heart on a destination to keep it here.",
   "addToFavorites": "Save destination",
-  "removeFromFavorites": "Remove from saved"
+  "removeFromFavorites": "Remove from saved",
+  "itineraryCreateTitle": "Create Trip",
+  "itineraryEditTitle": "Edit Trip",
+  "itineraryNotFound": "Trip not found",
+  "itineraryNewButton": "New Trip",
+  "itineraryNameLabel": "Trip name",
+  "itineraryNameHint": "e.g. Spring in China",
+  "itineraryNameError": "Enter a trip name",
+  "itineraryDestinationsLabel": "Destinations",
+  "itineraryDestinationsError": "Select at least one destination",
+  "itineraryDatesLabel": "Travel dates",
+  "itineraryDatesHint": "Select start and end dates",
+  "itineraryDatesError": "Select your travel dates",
+  "itineraryNotesLabel": "Notes",
+  "itineraryNotesHint": "Transport, hotels, places to visit, or other plans",
+  "itinerarySave": "Save Trip",
+  "itineraryActions": "Trip actions",
+  "itineraryEditAction": "Edit",
+  "itineraryDeleteAction": "Delete",
+  "itineraryDeleteTitle": "Delete this trip?",
+  "itineraryDeleteBody": "This saved trip will be removed from this device.",
+  "cancel": "Cancel",
+  "itineraryDays": "{days} days",
+  "@itineraryDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

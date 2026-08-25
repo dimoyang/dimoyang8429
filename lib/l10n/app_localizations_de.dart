@@ -329,4 +329,75 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get removeFromFavorites => 'Aus Gespeichert entfernen';
+
+  @override
+  String get itineraryCreateTitle => 'Reise erstellen';
+
+  @override
+  String get itineraryEditTitle => 'Reise bearbeiten';
+
+  @override
+  String get itineraryNotFound => 'Reise nicht gefunden';
+
+  @override
+  String get itineraryNewButton => 'Neue Reise';
+
+  @override
+  String get itineraryNameLabel => 'Reisename';
+
+  @override
+  String get itineraryNameHint => 'z. B. Frühling in China';
+
+  @override
+  String get itineraryNameError => 'Bitte geben Sie einen Reisenamen ein';
+
+  @override
+  String get itineraryDestinationsLabel => 'Reiseziele';
+
+  @override
+  String get itineraryDestinationsError =>
+      'Wählen Sie mindestens ein Reiseziel';
+
+  @override
+  String get itineraryDatesLabel => 'Reisedaten';
+
+  @override
+  String get itineraryDatesHint => 'Start- und Enddatum auswählen';
+
+  @override
+  String get itineraryDatesError => 'Wählen Sie Ihre Reisedaten';
+
+  @override
+  String get itineraryNotesLabel => 'Notizen';
+
+  @override
+  String get itineraryNotesHint =>
+      'Transport, Hotels, Sehenswürdigkeiten oder andere Pläne';
+
+  @override
+  String get itinerarySave => 'Reise speichern';
+
+  @override
+  String get itineraryActions => 'Reiseaktionen';
+
+  @override
+  String get itineraryEditAction => 'Bearbeiten';
+
+  @override
+  String get itineraryDeleteAction => 'Löschen';
+
+  @override
+  String get itineraryDeleteTitle => 'Diese Reise löschen?';
+
+  @override
+  String get itineraryDeleteBody =>
+      'Diese gespeicherte Reise wird von diesem Gerät entfernt.';
+
+  @override
+  String get cancel => 'Abbrechen';
+
+  @override
+  String itineraryDays(int days) {
+    return '$days Tage';
+  }
 }

@@ -106,5 +106,34 @@
   "favoriteEmptyTitle": "Aucune destination enregistrée",
   "favoriteEmptyBody": "Touchez le cœur d'une destination pour la retrouver ici.",
   "addToFavorites": "Enregistrer la destination",
-  "removeFromFavorites": "Retirer des favoris"
+  "removeFromFavorites": "Retirer des favoris",
+  "itineraryCreateTitle": "Créer un voyage",
+  "itineraryEditTitle": "Modifier le voyage",
+  "itineraryNotFound": "Voyage introuvable",
+  "itineraryNewButton": "Nouveau voyage",
+  "itineraryNameLabel": "Nom du voyage",
+  "itineraryNameHint": "par ex. Printemps en Chine",
+  "itineraryNameError": "Saisissez un nom de voyage",
+  "itineraryDestinationsLabel": "Destinations",
+  "itineraryDestinationsError": "Sélectionnez au moins une destination",
+  "itineraryDatesLabel": "Dates du voyage",
+  "itineraryDatesHint": "Sélectionnez les dates de début et de fin",
+  "itineraryDatesError": "Sélectionnez vos dates de voyage",
+  "itineraryNotesLabel": "Notes",
+  "itineraryNotesHint": "Transports, hôtels, lieux à visiter ou autres projets",
+  "itinerarySave": "Enregistrer le voyage",
+  "itineraryActions": "Actions du voyage",
+  "itineraryEditAction": "Modifier",
+  "itineraryDeleteAction": "Supprimer",
+  "itineraryDeleteTitle": "Supprimer ce voyage ?",
+  "itineraryDeleteBody": "Ce voyage enregistré sera supprimé de cet appareil.",
+  "cancel": "Annuler",
+  "itineraryDays": "{days} jours",
+  "@itineraryDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

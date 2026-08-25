@@ -106,5 +106,34 @@
   "favoriteEmptyTitle": "Keine gespeicherten Reiseziele",
   "favoriteEmptyBody": "Tippen Sie auf das Herz eines Reiseziels, um es hier zu speichern.",
   "addToFavorites": "Reiseziel speichern",
-  "removeFromFavorites": "Aus Gespeichert entfernen"
+  "removeFromFavorites": "Aus Gespeichert entfernen",
+  "itineraryCreateTitle": "Reise erstellen",
+  "itineraryEditTitle": "Reise bearbeiten",
+  "itineraryNotFound": "Reise nicht gefunden",
+  "itineraryNewButton": "Neue Reise",
+  "itineraryNameLabel": "Reisename",
+  "itineraryNameHint": "z. B. Frühling in China",
+  "itineraryNameError": "Bitte geben Sie einen Reisenamen ein",
+  "itineraryDestinationsLabel": "Reiseziele",
+  "itineraryDestinationsError": "Wählen Sie mindestens ein Reiseziel",
+  "itineraryDatesLabel": "Reisedaten",
+  "itineraryDatesHint": "Start- und Enddatum auswählen",
+  "itineraryDatesError": "Wählen Sie Ihre Reisedaten",
+  "itineraryNotesLabel": "Notizen",
+  "itineraryNotesHint": "Transport, Hotels, Sehenswürdigkeiten oder andere Pläne",
+  "itinerarySave": "Reise speichern",
+  "itineraryActions": "Reiseaktionen",
+  "itineraryEditAction": "Bearbeiten",
+  "itineraryDeleteAction": "Löschen",
+  "itineraryDeleteTitle": "Diese Reise löschen?",
+  "itineraryDeleteBody": "Diese gespeicherte Reise wird von diesem Gerät entfernt.",
+  "cancel": "Abbrechen",
+  "itineraryDays": "{days} Tage",
+  "@itineraryDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

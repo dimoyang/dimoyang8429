@@ -701,6 +701,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove from saved'**
   String get removeFromFavorites;
+
+  /// No description provided for @itineraryCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Trip'**
+  String get itineraryCreateTitle;
+
+  /// No description provided for @itineraryEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Trip'**
+  String get itineraryEditTitle;
+
+  /// No description provided for @itineraryNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip not found'**
+  String get itineraryNotFound;
+
+  /// No description provided for @itineraryNewButton.
+  ///
+  /// In en, this message translates to:
+  /// **'New Trip'**
+  String get itineraryNewButton;
+
+  /// No description provided for @itineraryNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip name'**
+  String get itineraryNameLabel;
+
+  /// No description provided for @itineraryNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Spring in China'**
+  String get itineraryNameHint;
+
+  /// No description provided for @itineraryNameError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a trip name'**
+  String get itineraryNameError;
+
+  /// No description provided for @itineraryDestinationsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Destinations'**
+  String get itineraryDestinationsLabel;
+
+  /// No description provided for @itineraryDestinationsError.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one destination'**
+  String get itineraryDestinationsError;
+
+  /// No description provided for @itineraryDatesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Travel dates'**
+  String get itineraryDatesLabel;
+
+  /// No description provided for @itineraryDatesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select start and end dates'**
+  String get itineraryDatesHint;
+
+  /// No description provided for @itineraryDatesError.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your travel dates'**
+  String get itineraryDatesError;
+
+  /// No description provided for @itineraryNotesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get itineraryNotesLabel;
+
+  /// No description provided for @itineraryNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Transport, hotels, places to visit, or other plans'**
+  String get itineraryNotesHint;
+
+  /// No description provided for @itinerarySave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Trip'**
+  String get itinerarySave;
+
+  /// No description provided for @itineraryActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip actions'**
+  String get itineraryActions;
+
+  /// No description provided for @itineraryEditAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get itineraryEditAction;
+
+  /// No description provided for @itineraryDeleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get itineraryDeleteAction;
+
+  /// No description provided for @itineraryDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this trip?'**
+  String get itineraryDeleteTitle;
+
+  /// No description provided for @itineraryDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This saved trip will be removed from this device.'**
+  String get itineraryDeleteBody;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @itineraryDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days'**
+  String itineraryDays(int days);
 }
 
 class _AppLocalizationsDelegate

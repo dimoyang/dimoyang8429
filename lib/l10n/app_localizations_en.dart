@@ -327,4 +327,74 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get removeFromFavorites => 'Remove from saved';
+
+  @override
+  String get itineraryCreateTitle => 'Create Trip';
+
+  @override
+  String get itineraryEditTitle => 'Edit Trip';
+
+  @override
+  String get itineraryNotFound => 'Trip not found';
+
+  @override
+  String get itineraryNewButton => 'New Trip';
+
+  @override
+  String get itineraryNameLabel => 'Trip name';
+
+  @override
+  String get itineraryNameHint => 'e.g. Spring in China';
+
+  @override
+  String get itineraryNameError => 'Enter a trip name';
+
+  @override
+  String get itineraryDestinationsLabel => 'Destinations';
+
+  @override
+  String get itineraryDestinationsError => 'Select at least one destination';
+
+  @override
+  String get itineraryDatesLabel => 'Travel dates';
+
+  @override
+  String get itineraryDatesHint => 'Select start and end dates';
+
+  @override
+  String get itineraryDatesError => 'Select your travel dates';
+
+  @override
+  String get itineraryNotesLabel => 'Notes';
+
+  @override
+  String get itineraryNotesHint =>
+      'Transport, hotels, places to visit, or other plans';
+
+  @override
+  String get itinerarySave => 'Save Trip';
+
+  @override
+  String get itineraryActions => 'Trip actions';
+
+  @override
+  String get itineraryEditAction => 'Edit';
+
+  @override
+  String get itineraryDeleteAction => 'Delete';
+
+  @override
+  String get itineraryDeleteTitle => 'Delete this trip?';
+
+  @override
+  String get itineraryDeleteBody =>
+      'This saved trip will be removed from this device.';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String itineraryDays(int days) {
+    return '$days days';
+  }
 }

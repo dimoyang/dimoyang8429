@@ -231,7 +231,15 @@ class HomeScreen extends StatelessWidget {
         itemBuilder: (context, index) {
           final chip = chips[index];
           return GestureDetector(
-            onTap: () => _showToast(context, l10n.chipComingSoon),
+            onTap: () {
+              if (index == 0 || index == 1) {
+                context.go('/travel-tools');
+              } else if (index == 3) {
+                context.go('/itinerary');
+              } else {
+                _showToast(context, l10n.chipComingSoon);
+              }
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(

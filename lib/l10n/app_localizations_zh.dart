@@ -315,4 +315,72 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get removeFromFavorites => '取消收藏';
+
+  @override
+  String get itineraryCreateTitle => '创建行程';
+
+  @override
+  String get itineraryEditTitle => '编辑行程';
+
+  @override
+  String get itineraryNotFound => '未找到该行程';
+
+  @override
+  String get itineraryNewButton => '新建行程';
+
+  @override
+  String get itineraryNameLabel => '行程名称';
+
+  @override
+  String get itineraryNameHint => '例如：中国春日之旅';
+
+  @override
+  String get itineraryNameError => '请输入行程名称';
+
+  @override
+  String get itineraryDestinationsLabel => '目的地';
+
+  @override
+  String get itineraryDestinationsError => '请至少选择一个目的地';
+
+  @override
+  String get itineraryDatesLabel => '旅行日期';
+
+  @override
+  String get itineraryDatesHint => '选择出发和结束日期';
+
+  @override
+  String get itineraryDatesError => '请选择旅行日期';
+
+  @override
+  String get itineraryNotesLabel => '行程备注';
+
+  @override
+  String get itineraryNotesHint => '记录交通、酒店、想去的地点或其他安排';
+
+  @override
+  String get itinerarySave => '保存行程';
+
+  @override
+  String get itineraryActions => '行程操作';
+
+  @override
+  String get itineraryEditAction => '编辑';
+
+  @override
+  String get itineraryDeleteAction => '删除';
+
+  @override
+  String get itineraryDeleteTitle => '删除这份行程？';
+
+  @override
+  String get itineraryDeleteBody => '这份已保存的行程将从当前设备中删除。';
+
+  @override
+  String get cancel => '取消';
+
+  @override
+  String itineraryDays(int days) {
+    return '$days 天';
+  }
 }
