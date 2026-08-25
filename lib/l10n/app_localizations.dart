@@ -641,6 +641,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open-source Licenses'**
   String get profileLicenses;
+
+  /// No description provided for @destinationSearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Destinations'**
+  String get destinationSearchTitle;
+
+  /// No description provided for @destinationFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get destinationFilterAll;
+
+  /// No description provided for @destinationFilterFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get destinationFilterFavorites;
+
+  /// No description provided for @clearSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get clearSearch;
+
+  /// No description provided for @searchNoResultsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No destinations found'**
+  String get searchNoResultsTitle;
+
+  /// No description provided for @searchNoResultsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Try another city, attraction, or food keyword.'**
+  String get searchNoResultsBody;
+
+  /// No description provided for @favoriteEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved destinations'**
+  String get favoriteEmptyTitle;
+
+  /// No description provided for @favoriteEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the heart on a destination to keep it here.'**
+  String get favoriteEmptyBody;
+
+  /// No description provided for @addToFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Save destination'**
+  String get addToFavorites;
+
+  /// No description provided for @removeFromFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from saved'**
+  String get removeFromFavorites;
 }
 
 class _AppLocalizationsDelegate

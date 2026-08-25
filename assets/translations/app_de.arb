@@ -96,5 +96,15 @@
   "profileMoreAssistance": "Weitere Unterstützung",
   "profileAbout": "Über die App",
   "profileAppVersion": "App-Version",
-  "profileLicenses": "Open-Source-Lizenzen"
+  "profileLicenses": "Open-Source-Lizenzen",
+  "destinationSearchTitle": "Reiseziele suchen",
+  "destinationFilterAll": "Alle",
+  "destinationFilterFavorites": "Gespeichert",
+  "clearSearch": "Suche löschen",
+  "searchNoResultsTitle": "Keine Reiseziele gefunden",
+  "searchNoResultsBody": "Versuchen Sie einen anderen Ort, eine Sehenswürdigkeit oder ein Gericht.",
+  "favoriteEmptyTitle": "Keine gespeicherten Reiseziele",
+  "favoriteEmptyBody": "Tippen Sie auf das Herz eines Reiseziels, um es hier zu speichern.",
+  "addToFavorites": "Reiseziel speichern",
+  "removeFromFavorites": "Aus Gespeichert entfernen"
 }

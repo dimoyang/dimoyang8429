@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:meditour_app/business/providers/language_provider.dart';
 import 'package:meditour_app/core/constants/colors.dart';
@@ -8,7 +9,7 @@ import 'package:meditour_app/presentation/widgets/destination_card.dart';
 import 'package:meditour_app/presentation/widgets/language_picker_sheet.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
 
-/// 首页：中国旅行门户（医疗为底部隐藏入口）
+/// 首页：中国旅行门户。
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -117,7 +118,7 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 12),
           // 搜索栏
           GestureDetector(
-            onTap: () => _showToast(context, l10n.searchComingSoon),
+            onTap: () => context.pushNamed('destinationSearch'),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
               decoration: BoxDecoration(

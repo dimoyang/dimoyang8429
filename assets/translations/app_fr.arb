@@ -96,5 +96,15 @@
   "profileMoreAssistance": "Assistance supplémentaire",
   "profileAbout": "À propos",
   "profileAppVersion": "Version de l'application",
-  "profileLicenses": "Licences open source"
+  "profileLicenses": "Licences open source",
+  "destinationSearchTitle": "Rechercher une destination",
+  "destinationFilterAll": "Toutes",
+  "destinationFilterFavorites": "Enregistrées",
+  "clearSearch": "Effacer la recherche",
+  "searchNoResultsTitle": "Aucune destination trouvée",
+  "searchNoResultsBody": "Essayez une autre ville, attraction ou spécialité.",
+  "favoriteEmptyTitle": "Aucune destination enregistrée",
+  "favoriteEmptyBody": "Touchez le cœur d'une destination pour la retrouver ici.",
+  "addToFavorites": "Enregistrer la destination",
+  "removeFromFavorites": "Retirer des favoris"
 }

@@ -96,5 +96,15 @@
   "profileMoreAssistance": "More Assistance",
   "profileAbout": "About",
   "profileAppVersion": "App Version",
-  "profileLicenses": "Open-source Licenses"
+  "profileLicenses": "Open-source Licenses",
+  "destinationSearchTitle": "Search Destinations",
+  "destinationFilterAll": "All",
+  "destinationFilterFavorites": "Saved",
+  "clearSearch": "Clear search",
+  "searchNoResultsTitle": "No destinations found",
+  "searchNoResultsBody": "Try another city, attraction, or food keyword.",
+  "favoriteEmptyTitle": "No saved destinations",
+  "favoriteEmptyBody": "Tap the heart on a destination to keep it here.",
+  "addToFavorites": "Save destination",
+  "removeFromFavorites": "Remove from saved"
 }

@@ -285,4 +285,34 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileLicenses => '开源许可';
+
+  @override
+  String get destinationSearchTitle => '搜索目的地';
+
+  @override
+  String get destinationFilterAll => '全部';
+
+  @override
+  String get destinationFilterFavorites => '已收藏';
+
+  @override
+  String get clearSearch => '清空搜索';
+
+  @override
+  String get searchNoResultsTitle => '没有找到目的地';
+
+  @override
+  String get searchNoResultsBody => '试试其他城市、景点或美食关键词。';
+
+  @override
+  String get favoriteEmptyTitle => '还没有收藏';
+
+  @override
+  String get favoriteEmptyBody => '点击目的地上的爱心，即可在这里快速找到。';
+
+  @override
+  String get addToFavorites => '收藏目的地';
+
+  @override
+  String get removeFromFavorites => '取消收藏';
 }

@@ -4,6 +4,7 @@ import 'package:meditour_app/data/models/destination.dart';
 import 'package:meditour_app/data/respositories/destination_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/back_button.dart';
+import 'package:meditour_app/presentation/widgets/destination_favorite_button.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
 
 /// 目的地详情页
@@ -132,6 +133,11 @@ class DestinationDetailScreen extends StatelessWidget {
           top: MediaQuery.of(context).padding.top + 8,
           left: 16,
           child: AppBackButton(onPressed: () => Navigator.of(context).pop()),
+        ),
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 8,
+          right: 16,
+          child: DestinationFavoriteButton(destinationId: destination.id),
         ),
       ],
     );

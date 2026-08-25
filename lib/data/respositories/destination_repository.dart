@@ -15,6 +15,22 @@ class DestinationRepository {
       tagline: '千年古都，历史与现代交汇',
       imageUrl:
           'https://agent.qianwen.com/service/37320046-bedd-4e/afbbffb6bdf6194f584bb626f1495045',
+      searchTerms: [
+        '北京',
+        'Beijing',
+        '长城',
+        'Great Wall',
+        'Große Mauer',
+        'Grande Muraille',
+        '故宫',
+        'Forbidden City',
+        'Verbotene Stadt',
+        'Cité interdite',
+        '烤鸭',
+        'Peking duck',
+        'Pekingente',
+        'canard laqué',
+      ],
       bestSeason: '4-5月 / 9-10月',
       suggestDays: '4-6 天',
       intro:
@@ -54,6 +70,18 @@ class DestinationRepository {
       tagline: '东方巴黎，黄浦江畔的摩登风情',
       imageUrl:
           'https://agent.qianwen.com/service/678e78be-3b65-49/8f0b9c0d07d33d6b79c0d698b2bdaa8a',
+      searchTerms: [
+        '上海',
+        'Shanghai',
+        '外滩',
+        'The Bund',
+        'Bund',
+        '豫园',
+        'Yu Garden',
+        'Jardin Yu',
+        '小笼包',
+        'xiaolongbao',
+      ],
       bestSeason: '4-5月 / 10-11月',
       suggestDays: '3-4 天',
       intro:
@@ -92,6 +120,20 @@ class DestinationRepository {
       tagline: '一眼千年，梦回大唐长安',
       imageUrl:
           'https://agent.qianwen.com/service/fec8273c-25ef-4b/4739fc217fb36537d3a287db2b73d1fb',
+      searchTerms: [
+        '西安',
+        "Xi'an",
+        '兵马俑',
+        'Terracotta Warriors',
+        'Terrakotta-Armee',
+        'armée de terre cuite',
+        '城墙',
+        'city wall',
+        'Stadtmauer',
+        'muraille',
+        '回民街',
+        'Muslim Quarter',
+      ],
       bestSeason: '3-5月 / 9-11月',
       suggestDays: '3-4 天',
       intro:
@@ -130,6 +172,20 @@ class DestinationRepository {
       tagline: '天府之国，把节奏慢下来',
       imageUrl:
           'https://agent.qianwen.com/service/821166ac-10cd-4a/daee43ebece6de5ffe99351a096fd29f',
+      searchTerms: [
+        '成都',
+        'Chengdu',
+        '熊猫',
+        'panda',
+        '火锅',
+        'hot pot',
+        'Feuertopf',
+        'fondue chinoise',
+        '茶馆',
+        'teahouse',
+        'Teehaus',
+        'maison de thé',
+      ],
       bestSeason: '3-6月 / 9-11月',
       suggestDays: '3-5 天',
       intro:

@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:meditour_app/app/router.dart';
+import 'package:meditour_app/business/providers/favorites_provider.dart';
 import 'package:meditour_app/business/providers/language_provider.dart';
 import 'package:meditour_app/core/constants/app_constant.dart';
 import 'package:meditour_app/presentation/themes/app_theme.dart';
@@ -16,6 +17,9 @@ class MeditourApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(
+          create: (_) => FavoritesProvider()..load(),
+        ),
       ],
       child: Consumer<LanguageProvider>(
         builder: (context, languageProvider, _) {

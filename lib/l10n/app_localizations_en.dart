@@ -295,4 +295,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileLicenses => 'Open-source Licenses';
+
+  @override
+  String get destinationSearchTitle => 'Search Destinations';
+
+  @override
+  String get destinationFilterAll => 'All';
+
+  @override
+  String get destinationFilterFavorites => 'Saved';
+
+  @override
+  String get clearSearch => 'Clear search';
+
+  @override
+  String get searchNoResultsTitle => 'No destinations found';
+
+  @override
+  String get searchNoResultsBody =>
+      'Try another city, attraction, or food keyword.';
+
+  @override
+  String get favoriteEmptyTitle => 'No saved destinations';
+
+  @override
+  String get favoriteEmptyBody =>
+      'Tap the heart on a destination to keep it here.';
+
+  @override
+  String get addToFavorites => 'Save destination';
+
+  @override
+  String get removeFromFavorites => 'Remove from saved';
 }

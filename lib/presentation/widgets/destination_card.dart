@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meditour_app/data/models/destination.dart';
+import 'package:meditour_app/presentation/widgets/destination_favorite_button.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
 
 /// 目的地宫格卡片
@@ -12,6 +13,7 @@ class DestinationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final langCode = Localizations.localeOf(context).languageCode;
+
     return GestureDetector(
       onTap: () {
         context.pushNamed(
@@ -45,35 +47,43 @@ class DestinationCard extends StatelessWidget {
               ),
             ),
             Positioned(
+              top: 8,
+              right: 8,
+              child: DestinationFavoriteButton(
+                destinationId: destination.id,
+                backgroundColor: Colors.black.withValues(alpha: 0.34),
+                inactiveColor: Colors.white,
+              ),
+            ),
+            Positioned(
               left: 13,
               right: 13,
               bottom: 12,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        destination.getName(langCode),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                        ),
+                  Text.rich(
+                    TextSpan(
+                      text: destination.getName(langCode),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
                       ),
-                      if (langCode != 'zh') ...[
-                        const SizedBox(width: 5),
-                        Text(
-                          destination.name,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 11,
+                      children: [
+                        if (langCode != 'zh')
+                          TextSpan(
+                            text: '  ${destination.name}',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w400,
+                            ),
                           ),
-                        ),
                       ],
-                    ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 3),
                   Text(

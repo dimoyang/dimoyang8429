@@ -297,4 +297,36 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get profileLicenses => 'Open-Source-Lizenzen';
+
+  @override
+  String get destinationSearchTitle => 'Reiseziele suchen';
+
+  @override
+  String get destinationFilterAll => 'Alle';
+
+  @override
+  String get destinationFilterFavorites => 'Gespeichert';
+
+  @override
+  String get clearSearch => 'Suche löschen';
+
+  @override
+  String get searchNoResultsTitle => 'Keine Reiseziele gefunden';
+
+  @override
+  String get searchNoResultsBody =>
+      'Versuchen Sie einen anderen Ort, eine Sehenswürdigkeit oder ein Gericht.';
+
+  @override
+  String get favoriteEmptyTitle => 'Keine gespeicherten Reiseziele';
+
+  @override
+  String get favoriteEmptyBody =>
+      'Tippen Sie auf das Herz eines Reiseziels, um es hier zu speichern.';
+
+  @override
+  String get addToFavorites => 'Reiseziel speichern';
+
+  @override
+  String get removeFromFavorites => 'Aus Gespeichert entfernen';
 }

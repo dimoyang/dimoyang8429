@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meditour_app/presentation/screens/booking_screen.dart';
 import 'package:meditour_app/presentation/screens/destination_detail_screen.dart';
+import 'package:meditour_app/presentation/screens/destination_search_screen.dart';
 import 'package:meditour_app/presentation/screens/home_screen.dart';
 import 'package:meditour_app/presentation/screens/itinerary_screen.dart';
 import 'package:meditour_app/presentation/screens/main_shell_screen.dart';
@@ -63,6 +64,11 @@ class AppRouter {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/search',
+        name: 'destinationSearch',
+        builder: (context, state) => const DestinationSearchScreen(),
       ),
       GoRoute(
         path: '/destinations/:id',

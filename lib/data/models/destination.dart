@@ -20,6 +20,7 @@ class Destination {
   final String nameEn;
   final String tagline;
   final String imageUrl;
+  final List<String> searchTerms;
   final String bestSeason;
   final String suggestDays;
   final String intro;
@@ -32,6 +33,7 @@ class Destination {
     required this.nameEn,
     required this.tagline,
     required this.imageUrl,
+    required this.searchTerms,
     required this.bestSeason,
     required this.suggestDays,
     required this.intro,

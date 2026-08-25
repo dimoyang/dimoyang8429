@@ -96,5 +96,15 @@
   "profileMoreAssistance": "更多协助",
   "profileAbout": "关于",
   "profileAppVersion": "应用版本",
-  "profileLicenses": "开源许可"
+  "profileLicenses": "开源许可",
+  "destinationSearchTitle": "搜索目的地",
+  "destinationFilterAll": "全部",
+  "destinationFilterFavorites": "已收藏",
+  "clearSearch": "清空搜索",
+  "searchNoResultsTitle": "没有找到目的地",
+  "searchNoResultsBody": "试试其他城市、景点或美食关键词。",
+  "favoriteEmptyTitle": "还没有收藏",
+  "favoriteEmptyBody": "点击目的地上的爱心，即可在这里快速找到。",
+  "addToFavorites": "收藏目的地",
+  "removeFromFavorites": "取消收藏"
 }
