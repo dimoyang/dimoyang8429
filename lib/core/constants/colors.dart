@@ -22,8 +22,8 @@ class AppColors {
   /// 次要文字
   static const Color ink2 = Color(0xFF64748B);
 
-  /// 弱化文字
-  static const Color ink3 = Color(0xFF94A3B8);
+  /// 弱化文字（白底对比度 ≥ 4.5:1，用于小字号辅助信息）
+  static const Color ink3 = Color(0xFF5F6D80);
 
   /// 页面背景
   static const Color pageBg = Color(0xFFF6F8FA);

@@ -10,10 +10,11 @@ class AppBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onPressed ?? () => Navigator.of(context).pop(),
       child: Container(
-        width: 36,
-        height: 36,
+        width: 48,
+        height: 48,
         decoration: const BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
@@ -26,7 +27,7 @@ class AppBackButton extends StatelessWidget {
           ],
         ),
         child: const Icon(Icons.arrow_back_ios_new,
-            size: 16, color: AppColors.ink),
+            size: 18, color: AppColors.ink),
       ),
     );
   }

@@ -29,7 +29,7 @@ class DestinationFavoriteButton extends StatelessWidget {
       shape: const CircleBorder(),
       child: IconButton(
         tooltip: isFavorite ? l10n.removeFromFavorites : l10n.addToFavorites,
-        constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+        constraints: const BoxConstraints.tightFor(width: 48, height: 48),
         padding: EdgeInsets.zero,
         onPressed: () {
           context.read<FavoritesProvider>().toggleDestination(destinationId);
