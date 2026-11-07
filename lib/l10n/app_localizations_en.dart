@@ -512,4 +512,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get medicalOfflineHint =>
       'Cannot reach the server right now — showing sample data.';
+
+  @override
+  String get medicalLoadFailed => 'Failed to load';
+
+  @override
+  String get retry => 'Retry';
 }

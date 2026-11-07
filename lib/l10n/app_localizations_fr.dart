@@ -517,4 +517,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get medicalOfflineHint =>
       'Serveur injoignable pour le moment — affichage des données d\'exemple.';
+
+  @override
+  String get medicalLoadFailed => 'Échec du chargement';
+
+  @override
+  String get retry => 'Réessayer';
 }

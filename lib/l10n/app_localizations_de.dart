@@ -519,4 +519,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get medicalOfflineHint =>
       'Server derzeit nicht erreichbar — es werden Beispieldaten angezeigt.';
+
+  @override
+  String get medicalLoadFailed => 'Laden fehlgeschlagen';
+
+  @override
+  String get retry => 'Erneut versuchen';
 }

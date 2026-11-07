@@ -92,6 +92,14 @@ class ServerException extends ApiException {
   String toLocalizedMessage(AppLocalizations l10n) => l10n.errorServer;
 }
 
+/// 响应结构或字段类型无法解析。
+class ResponseParseException extends ApiException {
+  const ResponseParseException();
+
+  @override
+  String toLocalizedMessage(AppLocalizations l10n) => l10n.errorUnknown;
+}
+
 /// 本地参数错误（如服务 id 无法转换为后端 package_id）。
 class InvalidArgumentException extends ApiException {
   const InvalidArgumentException();

@@ -493,4 +493,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get medicalOfflineHint => '当前无法连接服务器，正在展示示例数据。';
+
+  @override
+  String get medicalLoadFailed => '加载失败';
+
+  @override
+  String get retry => '重试';
 }

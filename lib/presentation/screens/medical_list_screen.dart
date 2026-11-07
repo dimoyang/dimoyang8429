@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:meditour_app/core/constants/colors.dart';
+import 'package:meditour_app/core/network/api_exception.dart';
 import 'package:meditour_app/data/models/medical_service.dart';
 import 'package:meditour_app/data/respositories/service_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
@@ -20,7 +21,57 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
     setState(() {
       _future = ServiceRepository.getServices(forceRemote: true);
     });
-    await _future;
+    try {
+      await _future;
+    } catch (_) {
+      // 错误由 FutureBuilder 以错误态呈现。
+    }
+  }
+
+  /// 加载失败时的错误态：提示具体原因并支持重试。
+  Widget _buildErrorState(AppLocalizations l10n, Object? error) {
+    final message = error is ApiException
+        ? error.toLocalizedMessage(l10n)
+        : l10n.errorUnknown;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.cloud_off_outlined,
+              size: 46,
+              color: AppColors.ink3,
+            ),
+            const SizedBox(height: 14),
+            Text(
+              l10n.medicalLoadFailed,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppColors.ink,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: AppColors.ink2,
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () => _refresh(),
+              child: Text(l10n.retry),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -38,6 +89,9 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return _buildErrorState(l10n, snapshot.error);
           }
           final services = snapshot.data ?? const <MedicalService>[];
           return RefreshIndicator(

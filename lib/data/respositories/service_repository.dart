@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:meditour_app/core/network/api_exception.dart';
 import 'package:meditour_app/core/network/api_service.dart';
 import 'package:meditour_app/data/models/hospital.dart';
 import 'package:meditour_app/data/models/medical_service.dart';
@@ -77,7 +79,18 @@ class ServiceRepository {
   /// 最近一次加载是否回退到了示例数据（用于页面展示离线提示）。
   static bool get lastLoadWasSample => _lastLoadWasSample;
 
-  /// 获取全部医疗服务：远程优先，失败回退示例数据。
+  /// 仅测试用：重置缓存与回退标记。
+  @visibleForTesting
+  static void resetForTesting() {
+    _cache = [];
+    _lastLoadWasSample = false;
+  }
+
+  /// 获取全部医疗服务：远程优先。
+  ///
+  /// 仅网络不可达/超时时回退内置示例数据并置 [lastLoadWasSample]；
+  /// HTTP 4xx/5xx 抛 [ApiException]，响应解析失败抛 [ResponseParseException]，
+  /// 两种情况都不回退，由调用方展示错误态并重试。
   static Future<List<MedicalService>> getServices({
     bool forceRemote = false,
   }) async {
@@ -103,9 +116,13 @@ class ServiceRepository {
         );
       }).toList();
       _lastLoadWasSample = false;
-    } catch (_) {
+    } on NetworkException {
       _cache = sampleServices;
       _lastLoadWasSample = true;
+    } on ApiException {
+      rethrow;
+    } catch (_) {
+      throw const ResponseParseException();
     }
     return List.unmodifiable(_cache);
   }

@@ -1055,6 +1055,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cannot reach the server right now — showing sample data.'**
   String get medicalOfflineHint;
+
+  /// No description provided for @medicalLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load'**
+  String get medicalLoadFailed;
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
 }
 
 class _AppLocalizationsDelegate

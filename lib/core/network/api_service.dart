@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:meditour_app/core/constants/app_constant.dart';
 import 'package:meditour_app/core/network/api_exception.dart';
 import 'package:meditour_app/core/network/token_store.dart';
@@ -37,7 +38,14 @@ class ApiService {
 
   static final ApiService instance = ApiService._();
 
-  late final Dio _dio;
+  late Dio _dio;
+
+  /// 仅测试用：替换底层 Dio，以便模拟不同网络响应。
+  @visibleForTesting
+  Dio get dioForTesting => _dio;
+
+  @visibleForTesting
+  set dioForTesting(Dio dio) => _dio = dio;
 
   Future<Map<String, dynamic>> _request(
     Future<Response<dynamic>> Function() call,

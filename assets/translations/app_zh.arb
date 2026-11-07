@@ -172,5 +172,7 @@
   "errorUnauthorized": "登录已过期，请重新登录。",
   "errorServer": "服务器繁忙，请稍后重试。",
   "errorUnknown": "操作失败，请重试。",
-  "medicalOfflineHint": "当前无法连接服务器，正在展示示例数据。"
+  "medicalOfflineHint": "当前无法连接服务器，正在展示示例数据。",
+  "medicalLoadFailed": "加载失败",
+  "retry": "重试"
 }
