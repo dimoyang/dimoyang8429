@@ -1,6 +1,7 @@
 # Miscellaneous
 *.class
 *.log
+*.txt
 *.pyc
 *.swp
 .DS_Store
@@ -34,6 +35,9 @@ migrate_working_dir/
 /coverage/
 **/Flutter/ephemeral/
 **/flutter/ephemeral/
+
+# Local build/debug artifacts
+/screenshots/
 
 # Symbolication related
 app.*.symbols
