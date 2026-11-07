@@ -76,18 +76,31 @@ class ServiceCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Row(
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12,
+                    runSpacing: 6,
                     children: [
-                      Icon(Icons.access_time, size: 12, color: AppColors.ink3),
-                      const SizedBox(width: 4),
-                      Text(
-                        l10n.daysTreatment(service.durationDays),
-                        style: const TextStyle(
-                            fontSize: 11.5, color: AppColors.ink3),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.access_time,
+                              size: 12, color: AppColors.ink3),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              l10n.daysTreatment(service.durationDays),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 11.5, color: AppColors.ink3),
+                            ),
+                          ),
+                        ],
                       ),
-                      const Spacer(),
                       Text(
-                        '${l10n.startingFrom} ${service.priceFrom}',
+                        l10n.startingFrom(service.priceFrom),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
