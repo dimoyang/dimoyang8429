@@ -1,12 +1,15 @@
+import 'package:meditour_app/core/network/api_service.dart';
+import 'package:meditour_app/data/models/hospital.dart';
 import 'package:meditour_app/data/models/medical_service.dart';
 
 /// 医疗服务仓库
 ///
-/// 当前阶段使用内存中的示例数据；接入后端后替换为真实 API 调用。
+/// 远程优先：从后端 /api/v1/medical 拉取套餐与医院并映射；
+/// 后端不可达时回退到内置示例数据，保证离线可演示。
 class ServiceRepository {
   ServiceRepository._();
 
-  /// 应用内共享的示例服务数据（内容来源：设计稿定稿的示例数据）
+  /// 内置示例服务数据（离线回退源，内容来源：设计稿定稿的示例数据）
   static final List<MedicalService> sampleServices = [
     MedicalService(
       id: '1',
@@ -68,15 +71,57 @@ class ServiceRepository {
     ),
   ];
 
-  /// 获取全部医疗服务
-  static Future<List<MedicalService>> getServices() async {
-    // TODO: 替换为 ApiService 的真实请求
-    return List.unmodifiable(sampleServices);
+  static List<MedicalService> _cache = [];
+  static bool _lastLoadWasSample = false;
+
+  /// 最近一次加载是否回退到了示例数据（用于页面展示离线提示）。
+  static bool get lastLoadWasSample => _lastLoadWasSample;
+
+  /// 获取全部医疗服务：远程优先，失败回退示例数据。
+  static Future<List<MedicalService>> getServices({
+    bool forceRemote = false,
+  }) async {
+    if (_cache.isNotEmpty && !forceRemote) {
+      return List.unmodifiable(_cache);
+    }
+    try {
+      final results = await Future.wait([
+        ApiService.instance.getPackages(pageSize: 100),
+        ApiService.instance.getHospitals(),
+      ]);
+      final packages = results[0];
+      final hospitals = results[1]
+          .map(HospitalInfo.fromJson)
+          .toList(growable: false);
+      final hospitalById = {for (final h in hospitals) h.id: h};
+
+      _cache = packages.map((pkg) {
+        final hospital = hospitalById[pkg['hospital_id']];
+        return MedicalService.fromPackage(
+          pkg,
+          hospitalName: hospital?.name ?? '',
+          hospitalLevel: hospital?.level ?? '',
+        );
+      }).toList();
+      _lastLoadWasSample = false;
+    } catch (_) {
+      _cache = sampleServices;
+      _lastLoadWasSample = true;
+    }
+    return List.unmodifiable(_cache);
   }
 
-  /// 根据 id 查找服务
+  /// 按 id 获取单个服务；缓存为空时先加载（深链直达场景）。
+  static Future<MedicalService?> getService(String id) async {
+    if (_cache.isEmpty) {
+      await getServices();
+    }
+    return findById(id);
+  }
+
+  /// 根据 id 查找服务（同步，仅查已加载缓存）
   static MedicalService? findById(String id) {
-    for (final service in sampleServices) {
+    for (final service in _cache) {
       if (service.id == id) {
         return service;
       }

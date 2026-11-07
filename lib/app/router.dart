@@ -6,9 +6,11 @@ import 'package:meditour_app/presentation/screens/destination_search_screen.dart
 import 'package:meditour_app/presentation/screens/home_screen.dart';
 import 'package:meditour_app/presentation/screens/itinerary_editor_screen.dart';
 import 'package:meditour_app/presentation/screens/itinerary_screen.dart';
+import 'package:meditour_app/presentation/screens/login_screen.dart';
 import 'package:meditour_app/presentation/screens/main_shell_screen.dart';
 import 'package:meditour_app/presentation/screens/medical_list_screen.dart';
 import 'package:meditour_app/presentation/screens/profile_screen.dart';
+import 'package:meditour_app/presentation/screens/register_screen.dart';
 import 'package:meditour_app/presentation/screens/service_detail_screen.dart';
 import 'package:meditour_app/presentation/screens/travel_tools_screen.dart';
 
@@ -65,6 +67,18 @@ class AppRouter {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/login',
+        name: 'login',
+        builder: (context, state) => LoginScreen(
+          redirect: state.uri.queryParameters['redirect'],
+        ),
+      ),
+      GoRoute(
+        path: '/register',
+        name: 'register',
+        builder: (context, state) => const RegisterScreen(),
       ),
       GoRoute(
         path: '/search',

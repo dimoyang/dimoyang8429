@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:meditour_app/business/providers/auth_provider.dart';
 import 'package:meditour_app/core/constants/colors.dart';
+import 'package:meditour_app/core/network/api_exception.dart';
 import 'package:meditour_app/core/utils/validators.dart';
+import 'package:meditour_app/data/models/booking.dart';
 import 'package:meditour_app/data/models/medical_service.dart';
+import 'package:meditour_app/data/respositories/booking_repository.dart';
 import 'package:meditour_app/data/respositories/service_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
+import 'package:meditour_app/presentation/widgets/form_field.dart';
+import 'package:provider/provider.dart';
 
 /// 预约页面
 class BookingScreen extends StatefulWidget {
@@ -19,18 +25,22 @@ class BookingScreen extends StatefulWidget {
 class _BookingScreenState extends State<BookingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _contactController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _noteController = TextEditingController();
   DateTime? _selectedDate;
+  bool _needTranslator = false;
+  bool _needAccommodation = false;
+  bool _needPickup = false;
+  bool _submitting = false;
   bool _submitted = false;
-  String? _bookingNo;
-
-  MedicalService? get _service => ServiceRepository.findById(widget.serviceId);
+  BookingResult? _result;
 
   @override
   void dispose() {
     _nameController.dispose();
-    _contactController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -38,19 +48,35 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+
+    return FutureBuilder<MedicalService?>(
+      future: ServiceRepository.getService(widget.serviceId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Scaffold(
+            backgroundColor: AppColors.pageBg,
+            appBar: AppBar(title: Text(l10n.btnBookConsult)),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+        final service = snapshot.data;
+        if (service == null) {
+          return Scaffold(
+            appBar: AppBar(title: Text(l10n.serviceNotFound)),
+            body: Center(child: Text(l10n.serviceNotFound)),
+          );
+        }
+        if (_submitted) {
+          return _buildSuccess(context, l10n);
+        }
+        return _buildForm(context, l10n, service);
+      },
+    );
+  }
+
+  Widget _buildForm(
+      BuildContext context, AppLocalizations l10n, MedicalService service) {
     final langCode = Localizations.localeOf(context).languageCode;
-    final service = _service;
-
-    if (service == null) {
-      return Scaffold(
-        appBar: AppBar(title: Text(l10n.serviceNotFound)),
-        body: Center(child: Text(l10n.serviceNotFound)),
-      );
-    }
-
-    if (_submitted) {
-      return _buildSuccess(context, l10n);
-    }
 
     return Scaffold(
       backgroundColor: AppColors.pageBg,
@@ -64,25 +90,53 @@ class _BookingScreenState extends State<BookingScreen> {
           children: [
             _buildServiceSummary(service, langCode),
             const SizedBox(height: 18),
-            _buildField(
+            AppFormField(
               label: l10n.formName,
               controller: _nameController,
               validator: (v) =>
-                  (v == null || v.isEmpty) ? l10n.formNameError : null,
+                  (v == null || v.trim().isEmpty) ? l10n.formNameError : null,
             ),
             const SizedBox(height: 14),
-            _buildField(
-              label: l10n.formContact,
-              controller: _contactController,
-              hint: l10n.formContactHint,
-              validator: (v) => Validators.isValidContact(v ?? '')
-                  ? null
-                  : l10n.formContactError,
+            AppFormField(
+              label: l10n.formPhone,
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              validator: (v) =>
+                  Validators.isValidPhone(v) ? null : l10n.formPhoneError,
+            ),
+            const SizedBox(height: 14),
+            AppFormField(
+              label: l10n.formEmail,
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              validator: (v) =>
+                  Validators.isValidEmail(v) ? null : l10n.formEmailError,
             ),
             const SizedBox(height: 14),
             _buildDateField(context, l10n),
-            const SizedBox(height: 14),
-            _buildField(
+            const SizedBox(height: 18),
+            Text(
+              l10n.extrasTitle,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            _buildExtraCheckbox(
+              value: _needTranslator,
+              label: l10n.needTranslator,
+              onChanged: (v) => setState(() => _needTranslator = v ?? false),
+            ),
+            _buildExtraCheckbox(
+              value: _needAccommodation,
+              label: l10n.needAccommodation,
+              onChanged: (v) =>
+                  setState(() => _needAccommodation = v ?? false),
+            ),
+            _buildExtraCheckbox(
+              value: _needPickup,
+              label: l10n.needPickup,
+              onChanged: (v) => setState(() => _needPickup = v ?? false),
+            ),
+            const SizedBox(height: 8),
+            AppFormField(
               label: l10n.formNote,
               controller: _noteController,
               hint: l10n.formNoteHint,
@@ -96,12 +150,21 @@ class _BookingScreenState extends State<BookingScreen> {
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              onPressed: _submit,
-              child: Text(
-                l10n.btnSubmit,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
+              onPressed: _submitting ? null : _submit,
+              child: _submitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      l10n.btnSubmit,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
             ),
             const SizedBox(height: 14),
             Text(
@@ -111,6 +174,25 @@ class _BookingScreenState extends State<BookingScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildExtraCheckbox({
+    required bool value,
+    required String label,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    return CheckboxListTile(
+      value: value,
+      onChanged: onChanged,
+      controlAffinity: ListTileControlAffinity.leading,
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      activeColor: AppColors.primary,
+      title: Text(
+        label,
+        style: const TextStyle(fontSize: 13.5, color: AppColors.ink),
       ),
     );
   }
@@ -158,48 +240,6 @@ class _BookingScreenState extends State<BookingScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildField({
-    required String label,
-    required TextEditingController controller,
-    String? hint,
-    String? Function(String?)? validator,
-    int maxLines = 1,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: controller,
-          validator: validator,
-          maxLines: maxLines,
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.line),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.line),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: AppColors.primary, width: 1.5),
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          ),
-        ),
-      ],
     );
   }
 
@@ -254,16 +294,95 @@ class _BookingScreenState extends State<BookingScreen> {
     }
   }
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      final now = DateTime.now();
-      _bookingNo =
-          'MT${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.millisecond.toString().padLeft(3, '0')}';
-      setState(() => _submitted = true);
+  Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    final date = _selectedDate;
+    if (date == null) {
+      _showSnackBar(l10n.formDateError);
+      return;
+    }
+
+    final auth = context.read<AuthProvider>();
+    if (!auth.isLoggedIn) {
+      _showLoginRequiredDialog(l10n);
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      final result = await BookingRepository.create(
+        serviceId: widget.serviceId,
+        date: date,
+        contactName: _nameController.text.trim(),
+        contactPhone: _phoneController.text.trim(),
+        contactEmail: _emailController.text.trim(),
+        notes: _noteController.text.trim(),
+        needTranslator: _needTranslator,
+        needAccommodation: _needAccommodation,
+        needPickup: _needPickup,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _result = result;
+        _submitted = true;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) {
+        return;
+      }
+      if (e is ApiBusinessException && e.statusCode == 404) {
+        _showSnackBar(l10n.bookingPackageNotFound);
+      } else {
+        _showSnackBar(e.toLocalizedMessage(l10n));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
     }
   }
 
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
+  }
+
+  void _showLoginRequiredDialog(AppLocalizations l10n) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.loginRequiredTitle),
+          content: Text(l10n.loginRequiredBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                context.pushNamed('login');
+              },
+              child: Text(l10n.goLogin),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildSuccess(BuildContext context, AppLocalizations l10n) {
+    final result = _result;
     return Scaffold(
       backgroundColor: AppColors.pageBg,
       body: SafeArea(
@@ -295,7 +414,7 @@ class _BookingScreenState extends State<BookingScreen> {
                     fontSize: 14, color: AppColors.ink2, height: 1.7),
               ),
               const SizedBox(height: 20),
-              if (_bookingNo != null)
+              if (result != null) ...[
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -303,15 +422,29 @@ class _BookingScreenState extends State<BookingScreen> {
                     color: AppColors.primaryBg,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    '${l10n.bookingNo} $_bookingNo',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryDark,
-                    ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '${l10n.bookingNo} ${result.orderNo}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${l10n.bookingTotal} '
+                        '${result.currency} ${result.totalPrice.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.ink2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ],
               const SizedBox(height: 32),
               FilledButton(
                 style: FilledButton.styleFrom(

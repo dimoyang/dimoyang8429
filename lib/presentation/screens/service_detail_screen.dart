@@ -17,15 +17,32 @@ class ServiceDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final langCode = Localizations.localeOf(context).languageCode;
-    final service = ServiceRepository.findById(serviceId);
 
-    if (service == null) {
-      return Scaffold(
-        appBar: AppBar(title: Text(l10n.serviceNotFound)),
-        body: Center(child: Text(l10n.serviceNotFound)),
-      );
-    }
+    return FutureBuilder<MedicalService?>(
+      future: ServiceRepository.getService(serviceId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Scaffold(
+            backgroundColor: AppColors.pageBg,
+            appBar: AppBar(title: Text(l10n.medicalListTitle)),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+        final service = snapshot.data;
+        if (service == null) {
+          return Scaffold(
+            appBar: AppBar(title: Text(l10n.serviceNotFound)),
+            body: Center(child: Text(l10n.serviceNotFound)),
+          );
+        }
+        return _buildContent(context, service, l10n);
+      },
+    );
+  }
+
+  Widget _buildContent(
+      BuildContext context, MedicalService service, AppLocalizations l10n) {
+    final langCode = Localizations.localeOf(context).languageCode;
 
     return Scaffold(
       backgroundColor: AppColors.pageBg,
@@ -45,17 +62,21 @@ class ServiceDetailScreen extends StatelessWidget {
                     _buildStatsRow(l10n, service),
                     _buildSection(l10n.sectionIntro),
                     Text(
-                      service.intro,
+                      service.getIntro(langCode),
                       style: const TextStyle(
                         fontSize: 14,
                         height: 1.75,
                         color: AppColors.ink2,
                       ),
                     ),
-                    _buildSection(l10n.sectionHighlights),
-                    ...service.highlights.map(_buildHighlight),
-                    _buildSection(l10n.sectionProcess),
-                    ...service.process.map(_buildProcessStepItem),
+                    if (service.highlights.isNotEmpty) ...[
+                      _buildSection(l10n.sectionHighlights),
+                      ...service.highlights.map(_buildHighlight),
+                    ],
+                    if (service.process.isNotEmpty) ...[
+                      _buildSection(l10n.sectionProcess),
+                      ...service.process.map(_buildProcessStepItem),
+                    ],
                     const SizedBox(height: 96),
                   ],
                 ),
