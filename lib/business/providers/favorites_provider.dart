@@ -5,8 +5,12 @@ import 'package:meditour_app/core/services/storage_service.dart';
 class FavoritesProvider extends ChangeNotifier {
   Set<String> _destinationIds = {};
   bool _isLoaded = false;
+  bool _loadFailed = false;
 
   bool get isLoaded => _isLoaded;
+
+  /// 本地存储读取失败（页面应展示错误态而不是一直加载）。
+  bool get loadFailed => _loadFailed;
 
   Set<String> get destinationIds => Set.unmodifiable(_destinationIds);
 
@@ -15,9 +19,20 @@ class FavoritesProvider extends ChangeNotifier {
   }
 
   Future<void> load() async {
-    _destinationIds =
-        (await StorageService.getFavoriteDestinationIds()).toSet();
-    _isLoaded = true;
+    if (_loadFailed) {
+      _loadFailed = false;
+      notifyListeners();
+    }
+
+    try {
+      _destinationIds =
+          (await StorageService.getFavoriteDestinationIds()).toSet();
+      _isLoaded = true;
+      _loadFailed = false;
+    } catch (_) {
+      _loadFailed = true;
+    }
+
     notifyListeners();
   }
 

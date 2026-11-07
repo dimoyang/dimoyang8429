@@ -5,6 +5,7 @@ import 'package:meditour_app/data/models/destination.dart';
 import 'package:meditour_app/data/respositories/destination_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/destination_card.dart';
+import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:provider/provider.dart';
 
 /// 支持关键词和收藏筛选的目的地搜索页。
@@ -74,8 +75,8 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                 const SizedBox(height: 12),
                 Align(
                   alignment: AlignmentDirectional.centerStart,
-                  child: SizedBox(
-                    width: 320,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 320),
                     child: SegmentedButton<bool>(
                       expandedInsets: EdgeInsets.zero,
                       showSelectedIcon: false,
@@ -102,33 +103,41 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
             ),
           ),
           Expanded(
-            child: _favoritesOnly && !favorites.isLoaded
-                ? const Center(child: CircularProgressIndicator())
-                : destinations.isEmpty
-                    ? _EmptySearchResult(favoritesOnly: _favoritesOnly)
-                    : LayoutBuilder(
-                        builder: (context, constraints) {
-                          final columns = constraints.maxWidth >= 900
-                              ? 4
-                              : constraints.maxWidth >= 600
-                                  ? 3
-                                  : 2;
-                          return GridView.builder(
-                            padding: const EdgeInsets.all(20),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: columns,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: 4 / 5,
-                            ),
-                            itemCount: destinations.length,
-                            itemBuilder: (context, index) => DestinationCard(
-                              destination: destinations[index],
-                            ),
-                          );
-                        },
-                      ),
+            child: _favoritesOnly && favorites.loadFailed
+                ? ErrorState(
+                    icon: Icons.favorite_border,
+                    title: l10n.medicalLoadFailed,
+                    message: l10n.errorUnknown,
+                    onRetry: favorites.load,
+                  )
+                : _favoritesOnly && !favorites.isLoaded
+                    ? const Center(child: CircularProgressIndicator())
+                    : destinations.isEmpty
+                        ? _EmptySearchResult(favoritesOnly: _favoritesOnly)
+                        : LayoutBuilder(
+                            builder: (context, constraints) {
+                              final columns = constraints.maxWidth >= 900
+                                  ? 4
+                                  : constraints.maxWidth >= 600
+                                      ? 3
+                                      : 2;
+                              return GridView.builder(
+                                padding: const EdgeInsets.all(20),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columns,
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                  childAspectRatio: 4 / 5,
+                                ),
+                                itemCount: destinations.length,
+                                itemBuilder: (context, index) =>
+                                    DestinationCard(
+                                  destination: destinations[index],
+                                ),
+                              );
+                            },
+                          ),
           ),
         ],
       ),

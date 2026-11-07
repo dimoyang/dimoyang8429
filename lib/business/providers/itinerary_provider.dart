@@ -8,10 +8,14 @@ import 'package:meditour_app/data/models/travel_itinerary.dart';
 class ItineraryProvider extends ChangeNotifier {
   List<TravelItinerary> _itineraries = [];
   bool _isLoaded = false;
+  bool _loadFailed = false;
 
   List<TravelItinerary> get itineraries => List.unmodifiable(_itineraries);
 
   bool get isLoaded => _isLoaded;
+
+  /// 本地存储读取失败（页面应展示错误态而不是一直加载）。
+  bool get loadFailed => _loadFailed;
 
   TravelItinerary? findById(String id) {
     for (final itinerary in _itineraries) {
@@ -23,29 +27,40 @@ class ItineraryProvider extends ChangeNotifier {
   }
 
   Future<void> load() async {
-    final records = await StorageService.getItineraryRecords();
-    final loaded = <TravelItinerary>[];
-
-    for (final record in records) {
-      try {
-        final json = jsonDecode(record);
-        if (json is Map<String, dynamic>) {
-          loaded.add(TravelItinerary.fromJson(json));
-        } else if (json is Map) {
-          loaded.add(
-            TravelItinerary.fromJson(Map<String, dynamic>.from(json)),
-          );
-        }
-      } on FormatException {
-        // Ignore malformed local records so one bad item does not block trips.
-      } on TypeError {
-        // Ignore records written with an incompatible schema.
-      }
+    if (_loadFailed) {
+      _loadFailed = false;
+      notifyListeners();
     }
 
-    _itineraries = loaded;
-    _sortItineraries();
-    _isLoaded = true;
+    try {
+      final records = await StorageService.getItineraryRecords();
+      final loaded = <TravelItinerary>[];
+
+      for (final record in records) {
+        try {
+          final json = jsonDecode(record);
+          if (json is Map<String, dynamic>) {
+            loaded.add(TravelItinerary.fromJson(json));
+          } else if (json is Map) {
+            loaded.add(
+              TravelItinerary.fromJson(Map<String, dynamic>.from(json)),
+            );
+          }
+        } on FormatException {
+          // Ignore malformed local records so one bad item does not block trips.
+        } on TypeError {
+          // Ignore records written with an incompatible schema.
+        }
+      }
+
+      _itineraries = loaded;
+      _sortItineraries();
+      _isLoaded = true;
+      _loadFailed = false;
+    } catch (_) {
+      _loadFailed = true;
+    }
+
     notifyListeners();
   }
 
@@ -54,6 +69,7 @@ class ItineraryProvider extends ChangeNotifier {
     required DateTime startDate,
     required DateTime endDate,
     required List<String> destinationIds,
+    List<ItineraryDay> days = const [],
     required String notes,
   }) async {
     final now = DateTime.now();
@@ -63,6 +79,7 @@ class ItineraryProvider extends ChangeNotifier {
       startDate: startDate,
       endDate: endDate,
       destinationIds: List.unmodifiable(destinationIds),
+      days: List.unmodifiable(days),
       notes: notes,
       createdAt: now,
       updatedAt: now,

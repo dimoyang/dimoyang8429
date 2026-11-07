@@ -21,6 +21,30 @@ Future<void> showAddToItinerarySheet(
       return SafeArea(
         child: Consumer<ItineraryProvider>(
           builder: (consumerContext, provider, _) {
+            if (provider.loadFailed) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.medicalLoadFailed,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: provider.load,
+                      child: Text(l10n.retry),
+                    ),
+                  ],
+                ),
+              );
+            }
+
             if (!provider.isLoaded) {
               return const Padding(
                 padding: EdgeInsets.symmetric(vertical: 32),

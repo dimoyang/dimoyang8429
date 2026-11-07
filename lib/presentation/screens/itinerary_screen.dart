@@ -6,6 +6,7 @@ import 'package:meditour_app/data/models/destination.dart';
 import 'package:meditour_app/data/models/travel_itinerary.dart';
 import 'package:meditour_app/data/respositories/destination_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
+import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:provider/provider.dart';
 
 /// Lists locally saved itineraries and provides their management actions.
@@ -33,11 +34,7 @@ class ItineraryScreen extends StatelessWidget {
       ),
       body: SafeArea(
         top: false,
-        child: !provider.isLoaded
-            ? const Center(child: CircularProgressIndicator())
-            : provider.itineraries.isEmpty
-                ? const _EmptyItinerary()
-                : _ItineraryList(itineraries: provider.itineraries),
+        child: _buildBody(l10n, provider),
       ),
       floatingActionButton: provider.isLoaded && provider.itineraries.isNotEmpty
           ? FloatingActionButton.extended(
@@ -47,6 +44,24 @@ class ItineraryScreen extends StatelessWidget {
             )
           : null,
     );
+  }
+
+  Widget _buildBody(AppLocalizations l10n, ItineraryProvider provider) {
+    if (provider.loadFailed) {
+      return ErrorState(
+        icon: Icons.route_outlined,
+        title: l10n.medicalLoadFailed,
+        message: l10n.errorUnknown,
+        onRetry: provider.load,
+      );
+    }
+    if (!provider.isLoaded) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (provider.itineraries.isEmpty) {
+      return const _EmptyItinerary();
+    }
+    return _ItineraryList(itineraries: provider.itineraries);
   }
 }
 
