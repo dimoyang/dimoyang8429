@@ -301,6 +301,41 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profileLicenses => 'Open-Source-Lizenzen';
 
   @override
+  String get profileBookings => 'Meine Buchungen';
+
+  @override
+  String get profileBookingsSub => 'Ihre medizinischen Buchungen ansehen';
+
+  @override
+  String get bookingsLoginBody =>
+      'Melden Sie sich an, um Ihre Buchungen und Termine zu sehen.';
+
+  @override
+  String get bookingsEmptyTitle => 'Noch keine Buchungen';
+
+  @override
+  String get bookingsEmptyBody =>
+      'Ihre gebuchten medizinischen Leistungen erscheinen hier.';
+
+  @override
+  String get bookingsLoadFailed => 'Buchungen konnten nicht geladen werden';
+
+  @override
+  String get bookingsAppointmentDate => 'Termin';
+
+  @override
+  String get bookingsStatusPending => 'Ausstehend';
+
+  @override
+  String get bookingsStatusConfirmed => 'Bestätigt';
+
+  @override
+  String get bookingsStatusCompleted => 'Abgeschlossen';
+
+  @override
+  String get bookingsStatusCancelled => 'Storniert';
+
+  @override
   String get destinationSearchTitle => 'Reiseziele suchen';
 
   @override

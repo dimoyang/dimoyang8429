@@ -111,6 +111,13 @@ class ProfileScreen extends StatelessWidget {
               );
             },
           ),
+          const SizedBox(height: 8),
+          _SettingsTile(
+            icon: Icons.receipt_long_outlined,
+            title: l10n.profileBookings,
+            subtitle: l10n.profileBookingsSub,
+            onTap: () => context.pushNamed('bookings'),
+          ),
           const SizedBox(height: 24),
           _SectionLabel(l10n.profilePreferences),
           const SizedBox(height: 8),

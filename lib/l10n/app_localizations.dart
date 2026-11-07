@@ -642,6 +642,72 @@ abstract class AppLocalizations {
   /// **'Open-source Licenses'**
   String get profileLicenses;
 
+  /// No description provided for @profileBookings.
+  ///
+  /// In en, this message translates to:
+  /// **'My Bookings'**
+  String get profileBookings;
+
+  /// No description provided for @profileBookingsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'View your medical service orders'**
+  String get profileBookingsSub;
+
+  /// No description provided for @bookingsLoginBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in to view your bookings and appointment details.'**
+  String get bookingsLoginBody;
+
+  /// No description provided for @bookingsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No bookings yet'**
+  String get bookingsEmptyTitle;
+
+  /// No description provided for @bookingsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your submitted medical service bookings will appear here.'**
+  String get bookingsEmptyBody;
+
+  /// No description provided for @bookingsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load bookings'**
+  String get bookingsLoadFailed;
+
+  /// No description provided for @bookingsAppointmentDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Appointment date'**
+  String get bookingsAppointmentDate;
+
+  /// No description provided for @bookingsStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get bookingsStatusPending;
+
+  /// No description provided for @bookingsStatusConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get bookingsStatusConfirmed;
+
+  /// No description provided for @bookingsStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get bookingsStatusCompleted;
+
+  /// No description provided for @bookingsStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get bookingsStatusCancelled;
+
   /// No description provided for @destinationSearchTitle.
   ///
   /// In en, this message translates to:

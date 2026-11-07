@@ -288,6 +288,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileLicenses => '开源许可';
 
   @override
+  String get profileBookings => '我的预约';
+
+  @override
+  String get profileBookingsSub => '查看医疗服务预约记录';
+
+  @override
+  String get bookingsLoginBody => '登录后可查看您的预约记录与就诊信息。';
+
+  @override
+  String get bookingsEmptyTitle => '还没有预约';
+
+  @override
+  String get bookingsEmptyBody => '您提交的医疗服务预约会显示在这里。';
+
+  @override
+  String get bookingsLoadFailed => '预约加载失败';
+
+  @override
+  String get bookingsAppointmentDate => '到诊日期';
+
+  @override
+  String get bookingsStatusPending => '待确认';
+
+  @override
+  String get bookingsStatusConfirmed => '已确认';
+
+  @override
+  String get bookingsStatusCompleted => '已完成';
+
+  @override
+  String get bookingsStatusCancelled => '已取消';
+
+  @override
   String get destinationSearchTitle => '搜索目的地';
 
   @override

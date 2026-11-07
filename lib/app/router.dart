@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meditour_app/presentation/screens/booking_screen.dart';
+import 'package:meditour_app/presentation/screens/bookings_screen.dart';
 import 'package:meditour_app/presentation/screens/destination_detail_screen.dart';
 import 'package:meditour_app/presentation/screens/destination_search_screen.dart';
 import 'package:meditour_app/presentation/screens/home_screen.dart';
@@ -79,6 +80,11 @@ class AppRouter {
         path: '/register',
         name: 'register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/bookings',
+        name: 'bookings',
+        builder: (context, state) => const BookingsScreen(),
       ),
       GoRoute(
         path: '/search',

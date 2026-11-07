@@ -6,6 +6,12 @@ import 'package:meditour_app/data/models/booking.dart';
 class BookingRepository {
   BookingRepository._();
 
+  /// 当前登录用户的预约订单列表。
+  static Future<List<BookingOrder>> list() async {
+    final items = await ApiService.instance.getMyBookings();
+    return items.map(BookingOrder.fromJson).toList();
+  }
+
   static Future<BookingResult> create({
     required String serviceId,
     required DateTime date,

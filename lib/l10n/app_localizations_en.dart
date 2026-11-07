@@ -299,6 +299,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileLicenses => 'Open-source Licenses';
 
   @override
+  String get profileBookings => 'My Bookings';
+
+  @override
+  String get profileBookingsSub => 'View your medical service orders';
+
+  @override
+  String get bookingsLoginBody =>
+      'Log in to view your bookings and appointment details.';
+
+  @override
+  String get bookingsEmptyTitle => 'No bookings yet';
+
+  @override
+  String get bookingsEmptyBody =>
+      'Your submitted medical service bookings will appear here.';
+
+  @override
+  String get bookingsLoadFailed => 'Failed to load bookings';
+
+  @override
+  String get bookingsAppointmentDate => 'Appointment date';
+
+  @override
+  String get bookingsStatusPending => 'Pending';
+
+  @override
+  String get bookingsStatusConfirmed => 'Confirmed';
+
+  @override
+  String get bookingsStatusCompleted => 'Completed';
+
+  @override
+  String get bookingsStatusCancelled => 'Cancelled';
+
+  @override
   String get destinationSearchTitle => 'Search Destinations';
 
   @override
