@@ -29,6 +29,18 @@ class Validators {
     return isEmailLike || isPhoneLike;
   }
 
+  /// 邮箱是否有效
+  static bool isValidEmail(String? value) {
+    final v = (value ?? '').trim();
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v);
+  }
+
+  /// 电话号码是否有效
+  static bool isValidPhone(String? value) {
+    final v = (value ?? '').trim();
+    return RegExp(r'^[+\d][\d\s-]{4,}$').hasMatch(v);
+  }
+
   /// 日期校验：允许为空；填写时必须晚于今天
   static String? futureDate(String? value, String message) {
     if (value == null || value.isEmpty) {
