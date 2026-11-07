@@ -59,6 +59,30 @@ class _BookingScreenState extends State<BookingScreen> {
             body: const Center(child: CircularProgressIndicator()),
           );
         }
+        if (snapshot.hasError) {
+          final error = snapshot.error;
+          final message = error is ApiException
+              ? error.toLocalizedMessage(l10n)
+              : l10n.errorUnknown;
+          return Scaffold(
+            backgroundColor: AppColors.pageBg,
+            appBar: AppBar(title: Text(l10n.btnBookConsult)),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: AppColors.ink2,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
         final service = snapshot.data;
         if (service == null) {
           return Scaffold(

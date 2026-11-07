@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meditour_app/core/constants/colors.dart';
+import 'package:meditour_app/core/network/api_exception.dart';
 import 'package:meditour_app/data/models/medical_service.dart'
     show MedicalService, ProcessStep;
 import 'package:meditour_app/data/respositories/service_repository.dart';
@@ -26,6 +27,30 @@ class ServiceDetailScreen extends StatelessWidget {
             backgroundColor: AppColors.pageBg,
             appBar: AppBar(title: Text(l10n.medicalListTitle)),
             body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          final error = snapshot.error;
+          final message = error is ApiException
+              ? error.toLocalizedMessage(l10n)
+              : l10n.errorUnknown;
+          return Scaffold(
+            backgroundColor: AppColors.pageBg,
+            appBar: AppBar(title: Text(l10n.medicalLoadFailed)),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: AppColors.ink2,
+                  ),
+                ),
+              ),
+            ),
           );
         }
         final service = snapshot.data;

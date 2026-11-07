@@ -172,7 +172,8 @@
   "errorUnauthorized": "Session expirée. Veuillez vous reconnecter.",
   "errorServer": "Serveur occupé. Veuillez réessayer plus tard.",
   "errorUnknown": "Une erreur est survenue. Veuillez réessayer.",
-  "medicalOfflineHint": "Serveur injoignable pour le moment — affichage des données d'exemple.",
+  "errorRequest": "La demande n'a pas pu aboutir. Vérifiez vos informations et réessayez.",
+  "medicalOfflineHint": "Serveur temporairement injoignable — affichage des données d'exemple.",
   "medicalLoadFailed": "Échec du chargement",
   "retry": "Réessayer"
 }

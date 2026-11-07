@@ -172,7 +172,8 @@
   "errorUnauthorized": "Anmeldung abgelaufen. Bitte erneut anmelden.",
   "errorServer": "Server ist ausgelastet. Bitte später erneut versuchen.",
   "errorUnknown": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
-  "medicalOfflineHint": "Server derzeit nicht erreichbar — es werden Beispieldaten angezeigt.",
+  "errorRequest": "Die Anfrage konnte nicht abgeschlossen werden. Bitte prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
+  "medicalOfflineHint": "Server vorübergehend nicht erreichbar — es werden Beispieldaten angezeigt.",
   "medicalLoadFailed": "Laden fehlgeschlagen",
   "retry": "Erneut versuchen"
 }

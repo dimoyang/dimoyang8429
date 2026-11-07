@@ -510,8 +510,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorUnknown => 'Something went wrong. Please try again.';
 
   @override
+  String get errorRequest =>
+      'We couldn\'t complete this request. Please check your details and try again.';
+
+  @override
   String get medicalOfflineHint =>
-      'Cannot reach the server right now — showing sample data.';
+      'Temporarily unable to reach the server — showing sample data.';
 
   @override
   String get medicalLoadFailed => 'Failed to load';

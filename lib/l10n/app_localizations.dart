@@ -1050,10 +1050,16 @@ abstract class AppLocalizations {
   /// **'Something went wrong. Please try again.'**
   String get errorUnknown;
 
+  /// No description provided for @errorRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t complete this request. Please check your details and try again.'**
+  String get errorRequest;
+
   /// No description provided for @medicalOfflineHint.
   ///
   /// In en, this message translates to:
-  /// **'Cannot reach the server right now — showing sample data.'**
+  /// **'Temporarily unable to reach the server — showing sample data.'**
   String get medicalOfflineHint;
 
   /// No description provided for @medicalLoadFailed.

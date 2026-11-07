@@ -68,20 +68,17 @@ class UnauthorizedException extends ApiException {
   String toLocalizedMessage(AppLocalizations l10n) => l10n.errorUnauthorized;
 }
 
-/// 其余 4xx：优先展示后端返回的 detail。
+/// 其余 4xx：统一映射为用户友好文案，不直接展示后端原始 detail。
 class ApiBusinessException extends ApiException {
   final int statusCode;
+
+  /// 后端原始错误信息，仅用于日志排查，不向用户展示。
   final String? detail;
 
   const ApiBusinessException({required this.statusCode, this.detail});
 
   @override
-  String toLocalizedMessage(AppLocalizations l10n) {
-    if (detail != null && detail!.isNotEmpty) {
-      return detail!;
-    }
-    return l10n.errorUnknown;
-  }
+  String toLocalizedMessage(AppLocalizations l10n) => l10n.errorRequest;
 }
 
 /// 5xx：服务端错误。

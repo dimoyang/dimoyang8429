@@ -515,8 +515,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorUnknown => 'Une erreur est survenue. Veuillez réessayer.';
 
   @override
+  String get errorRequest =>
+      'La demande n\'a pas pu aboutir. Vérifiez vos informations et réessayez.';
+
+  @override
   String get medicalOfflineHint =>
-      'Serveur injoignable pour le moment — affichage des données d\'exemple.';
+      'Serveur temporairement injoignable — affichage des données d\'exemple.';
 
   @override
   String get medicalLoadFailed => 'Échec du chargement';

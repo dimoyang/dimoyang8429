@@ -517,8 +517,12 @@ class AppLocalizationsDe extends AppLocalizations {
       'Etwas ist schiefgelaufen. Bitte erneut versuchen.';
 
   @override
+  String get errorRequest =>
+      'Die Anfrage konnte nicht abgeschlossen werden. Bitte prüfen Sie Ihre Angaben und versuchen Sie es erneut.';
+
+  @override
   String get medicalOfflineHint =>
-      'Server derzeit nicht erreichbar — es werden Beispieldaten angezeigt.';
+      'Server vorübergehend nicht erreichbar — es werden Beispieldaten angezeigt.';
 
   @override
   String get medicalLoadFailed => 'Laden fehlgeschlagen';

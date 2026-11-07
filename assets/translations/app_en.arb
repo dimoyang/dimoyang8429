@@ -172,7 +172,8 @@
   "errorUnauthorized": "Login expired. Please log in again.",
   "errorServer": "Server is busy. Please try again later.",
   "errorUnknown": "Something went wrong. Please try again.",
-  "medicalOfflineHint": "Cannot reach the server right now — showing sample data.",
+  "errorRequest": "We couldn't complete this request. Please check your details and try again.",
+  "medicalOfflineHint": "Temporarily unable to reach the server — showing sample data.",
   "medicalLoadFailed": "Failed to load",
   "retry": "Retry"
 }

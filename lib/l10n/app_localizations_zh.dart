@@ -492,7 +492,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorUnknown => '操作失败，请重试。';
 
   @override
-  String get medicalOfflineHint => '当前无法连接服务器，正在展示示例数据。';
+  String get errorRequest => '请求未能完成，请检查填写的信息后重试。';
+
+  @override
+  String get medicalOfflineHint => '暂时无法连接服务器，当前显示的是示例数据。';
 
   @override
   String get medicalLoadFailed => '加载失败';
