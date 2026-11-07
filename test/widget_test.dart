@@ -24,7 +24,7 @@ void main() {
   testWidgets('main shell navigates across four travel tabs', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MeditourApp());
+    await tester.pumpWidget(const MeditourApp(initialLanguageCode: 'zh'));
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationBar), findsOneWidget);

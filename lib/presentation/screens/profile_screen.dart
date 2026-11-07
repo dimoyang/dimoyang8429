@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:meditour_app/business/providers/auth_provider.dart';
 import 'package:meditour_app/business/providers/language_provider.dart';
 import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
@@ -28,6 +29,89 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
         children: [
+          _SectionLabel(l10n.profileAccount),
+          const SizedBox(height: 8),
+          Consumer<AuthProvider>(
+            builder: (context, auth, _) {
+              if (!auth.isInitialized) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (!auth.isLoggedIn) {
+                return _SettingsTile(
+                  icon: Icons.person_outline,
+                  title: l10n.loginButton,
+                  subtitle: l10n.loginEntrySub,
+                  onTap: () => context.pushNamed('login'),
+                );
+              }
+              final user = auth.user!;
+              return Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.line),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 21,
+                          backgroundColor: AppColors.primary,
+                          child: Text(
+                            user.displayName.isNotEmpty
+                                ? user.displayName[0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.displayName,
+                                style: const TextStyle(
+                                  color: AppColors.ink,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                user.email,
+                                style: const TextStyle(
+                                  color: AppColors.ink2,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.logout,
+                    title: l10n.logout,
+                    onTap: () => auth.logout(),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 24),
           _SectionLabel(l10n.profilePreferences),
           const SizedBox(height: 8),
           _SettingsTile(

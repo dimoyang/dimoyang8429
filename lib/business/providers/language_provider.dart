@@ -2,21 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:meditour_app/core/services/storage_service.dart';
 
 class LanguageProvider extends ChangeNotifier {
-  Locale _currentLocale = const Locale('en');
+  Locale _currentLocale;
 
   Locale get currentLocale => _currentLocale;
 
-  LanguageProvider() {
-    _loadSavedLocale();
-  }
-
-  Future<void> _loadSavedLocale() async {
-    final saved = await StorageService.getLanguageCode();
-    if (saved != null) {
-      _currentLocale = Locale(saved);
-      notifyListeners();
-    }
-  }
+  LanguageProvider({String? initialCode})
+      : _currentLocale = Locale(initialCode ?? 'en');
 
   /// 语言列表（代码 → 原生名称）
   static const languageOptions = [

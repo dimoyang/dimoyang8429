@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:meditour_app/app/router.dart';
+import 'package:meditour_app/business/providers/auth_provider.dart';
 import 'package:meditour_app/business/providers/favorites_provider.dart';
 import 'package:meditour_app/business/providers/itinerary_provider.dart';
 import 'package:meditour_app/business/providers/language_provider.dart';
@@ -11,18 +12,25 @@ import 'package:meditour_app/presentation/themes/app_theme.dart';
 
 /// 应用根组件
 class MeditourApp extends StatelessWidget {
-  const MeditourApp({super.key});
+  final String? initialLanguageCode;
+
+  const MeditourApp({super.key, this.initialLanguageCode});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(
+          create: (_) => LanguageProvider(initialCode: initialLanguageCode),
+        ),
         ChangeNotifierProvider(
           create: (_) => FavoritesProvider()..load(),
         ),
         ChangeNotifierProvider(
           create: (_) => ItineraryProvider()..load(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider()..init(),
         ),
       ],
       child: Consumer<LanguageProvider>(
