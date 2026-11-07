@@ -90,9 +90,8 @@ class ServiceRepository {
         ApiService.instance.getHospitals(),
       ]);
       final packages = results[0];
-      final hospitals = results[1]
-          .map(HospitalInfo.fromJson)
-          .toList(growable: false);
+      final hospitals =
+          results[1].map(HospitalInfo.fromJson).toList(growable: false);
       final hospitalById = {for (final h in hospitals) h.id: h};
 
       _cache = packages.map((pkg) {

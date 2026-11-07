@@ -55,9 +55,8 @@ class _LoginScreenState extends State<LoginScreen> {
               label: l10n.passwordLabel,
               controller: _passwordController,
               obscureText: true,
-              validator: (v) => (v == null || v.length < 6)
-                  ? l10n.passwordError
-                  : null,
+              validator: (v) =>
+                  (v == null || v.length < 6) ? l10n.passwordError : null,
             ),
             const SizedBox(height: 24),
             FilledButton(
@@ -86,9 +85,8 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 14),
             Center(
               child: TextButton(
-                onPressed: _submitting
-                    ? null
-                    : () => context.pushNamed('register'),
+                onPressed:
+                    _submitting ? null : () => context.pushNamed('register'),
                 child: Text(
                   l10n.loginSwitchToRegister,
                   style: const TextStyle(

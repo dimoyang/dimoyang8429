@@ -127,8 +127,7 @@ class _BookingScreenState extends State<BookingScreen> {
             _buildExtraCheckbox(
               value: _needAccommodation,
               label: l10n.needAccommodation,
-              onChanged: (v) =>
-                  setState(() => _needAccommodation = v ?? false),
+              onChanged: (v) => setState(() => _needAccommodation = v ?? false),
             ),
             _buildExtraCheckbox(
               value: _needPickup,

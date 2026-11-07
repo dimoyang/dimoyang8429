@@ -90,8 +90,7 @@ class ItineraryProvider extends ChangeNotifier {
   /// 把目的地加入指定行程；已包含时返回 false。
   Future<bool> addDestination(String itineraryId, String destinationId) async {
     final itinerary = findById(itineraryId);
-    if (itinerary == null ||
-        itinerary.destinationIds.contains(destinationId)) {
+    if (itinerary == null || itinerary.destinationIds.contains(destinationId)) {
       return false;
     }
 

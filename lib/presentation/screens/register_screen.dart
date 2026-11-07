@@ -62,9 +62,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               label: l10n.passwordLabel,
               controller: _passwordController,
               obscureText: true,
-              validator: (v) => (v == null || v.length < 6)
-                  ? l10n.passwordError
-                  : null,
+              validator: (v) =>
+                  (v == null || v.length < 6) ? l10n.passwordError : null,
             ),
             const SizedBox(height: 14),
             AppFormField(
