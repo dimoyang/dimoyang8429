@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:meditour_app/core/services/storage_service.dart';
 
 /// 内存 + 持久化的 token 仓库，供 dio 拦截器同步读取。
@@ -29,5 +30,12 @@ class TokenStore {
     _token = null;
     _restored = true;
     await StorageService.clearAuthToken();
+  }
+
+  /// 仅测试用：清空内存态，模拟冷启动。
+  @visibleForTesting
+  static void resetForTesting() {
+    _token = null;
+    _restored = false;
   }
 }

@@ -1,13 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meditour_app/app/app.dart';
+import 'package:meditour_app/business/providers/auth_provider.dart';
 import 'package:meditour_app/business/providers/favorites_provider.dart';
+import 'package:meditour_app/business/providers/itinerary_provider.dart';
+import 'package:meditour_app/business/providers/language_provider.dart';
 import 'package:meditour_app/presentation/widgets/destination_card.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({'language_code': 'zh'});
+  });
+
+  test('language provider honors the injected initial locale', () {
+    expect(
+      LanguageProvider(initialCode: 'zh').currentLocale.languageCode,
+      'zh',
+    );
+    expect(
+      LanguageProvider(initialCode: 'en').currentLocale.languageCode,
+      'en',
+    );
+    expect(LanguageProvider().currentLocale.languageCode, 'en');
+  });
+
+  testWidgets('app assembles providers and renders English when injected', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MeditourApp(initialLanguageCode: 'en'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Discover'), findsOneWidget);
+
+    final context = tester.element(find.byType(NavigationBar));
+    expect(context.read<LanguageProvider>().currentLocale.languageCode, 'en');
+    expect(context.read<AuthProvider>(), isNotNull);
+    expect(context.read<ItineraryProvider>(), isNotNull);
+    expect(context.read<FavoritesProvider>(), isNotNull);
   });
 
   test('favorite destinations persist across provider instances', () async {
