@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meditour_app/app/app.dart';
 import 'package:meditour_app/business/providers/auth_provider.dart';
 import 'package:meditour_app/business/providers/favorites_provider.dart';
 import 'package:meditour_app/business/providers/itinerary_provider.dart';
 import 'package:meditour_app/business/providers/language_provider.dart';
+import 'package:meditour_app/core/constants/app_constant.dart';
+import 'package:meditour_app/data/respositories/service_repository.dart';
+import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/destination_card.dart';
+import 'package:meditour_app/presentation/widgets/service_card.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -39,6 +44,30 @@ void main() {
     expect(context.read<AuthProvider>(), isNotNull);
     expect(context.read<ItineraryProvider>(), isNotNull);
     expect(context.read<FavoritesProvider>(), isNotNull);
+  });
+
+  testWidgets('service card lays out under unbounded ListView height', (
+    WidgetTester tester,
+  ) async {
+    final service = ServiceRepository.sampleServices.first;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        supportedLocales: AppConstants.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: ListView(children: [ServiceCard(service: service)]),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text(service.nameZh), findsOneWidget);
   });
 
   test('favorite destinations persist across provider instances', () async {

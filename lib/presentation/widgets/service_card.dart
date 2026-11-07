@@ -32,6 +32,7 @@ class ServiceCard extends StatelessWidget {
           ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
@@ -43,61 +44,59 @@ class ServiceCard extends StatelessWidget {
                 fallbackIcon: Icons.local_hospital_outlined,
               ),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      service.getName(langCode),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                      ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    service.getName(langCode),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Text('🏥', style: TextStyle(fontSize: 11)),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            service.hospital,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 11.5, color: AppColors.ink3),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    Row(
-                      children: [
-                        Icon(Icons.access_time,
-                            size: 12, color: AppColors.ink3),
-                        const SizedBox(width: 4),
-                        Text(
-                          l10n.daysTreatment(service.durationDays),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Text('🏥', style: TextStyle(fontSize: 11)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          service.hospital,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                               fontSize: 11.5, color: AppColors.ink3),
                         ),
-                        const Spacer(),
-                        Text(
-                          '${l10n.startingFrom} ${service.priceFrom}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(Icons.access_time, size: 12, color: AppColors.ink3),
+                      const SizedBox(width: 4),
+                      Text(
+                        l10n.daysTreatment(service.durationDays),
+                        style: const TextStyle(
+                            fontSize: 11.5, color: AppColors.ink3),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${l10n.startingFrom} ${service.priceFrom}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
