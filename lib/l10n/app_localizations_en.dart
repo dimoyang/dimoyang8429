@@ -157,7 +157,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookingNote =>
-      '🔒 Your information is used solely for this booking. A medical concierge will contact you within 24 hours. This demo does not connect to a real server.';
+      '🔒 Your information is used solely for this booking. A medical concierge will contact you within 24 hours.';
 
   @override
   String get formName => 'Name';
@@ -397,4 +397,119 @@ class AppLocalizationsEn extends AppLocalizations {
   String itineraryDays(int days) {
     return '$days days';
   }
+
+  @override
+  String get addToTripCreateNew => 'Create a new trip and add';
+
+  @override
+  String get addToTripAdded => 'Added to your trip';
+
+  @override
+  String get profileAccount => 'Account';
+
+  @override
+  String get loginTitle => 'Log In';
+
+  @override
+  String get registerTitle => 'Create Account';
+
+  @override
+  String get emailLabel => 'Email';
+
+  @override
+  String get emailError => 'Please enter a valid email address';
+
+  @override
+  String get passwordLabel => 'Password';
+
+  @override
+  String get passwordError => 'Password must be at least 6 characters';
+
+  @override
+  String get passwordConfirmLabel => 'Confirm Password';
+
+  @override
+  String get passwordMismatch => 'Passwords do not match';
+
+  @override
+  String get fullNameLabel => 'Full Name (optional)';
+
+  @override
+  String get loginButton => 'Log In';
+
+  @override
+  String get registerButton => 'Create Account';
+
+  @override
+  String get loginSwitchToRegister => 'No account yet? Create one';
+
+  @override
+  String get registerSwitchToLogin => 'Already have an account? Log in';
+
+  @override
+  String get logout => 'Log Out';
+
+  @override
+  String get loginEntrySub => 'Log in to book medical services';
+
+  @override
+  String get loginRequiredTitle => 'Log in required';
+
+  @override
+  String get loginRequiredBody =>
+      'Please log in or create an account to submit your booking.';
+
+  @override
+  String get goLogin => 'Log In';
+
+  @override
+  String get formPhone => 'Phone';
+
+  @override
+  String get formPhoneError => 'Please enter a valid phone number';
+
+  @override
+  String get formEmail => 'Email';
+
+  @override
+  String get formEmailError => 'Please enter a valid email address';
+
+  @override
+  String get formDateError => 'Please select a preferred date';
+
+  @override
+  String get extrasTitle => 'Additional Services';
+
+  @override
+  String get needTranslator => 'Translator companion';
+
+  @override
+  String get needAccommodation => 'Accommodation arrangement';
+
+  @override
+  String get needPickup => 'Airport pickup';
+
+  @override
+  String get bookingTotal => 'Total';
+
+  @override
+  String get bookingPackageNotFound =>
+      'This service is no longer available. Please go back and pick another one.';
+
+  @override
+  String get errorNetwork =>
+      'Network unavailable. Please check your connection and try again.';
+
+  @override
+  String get errorUnauthorized => 'Login expired. Please log in again.';
+
+  @override
+  String get errorServer => 'Server is busy. Please try again later.';
+
+  @override
+  String get errorUnknown => 'Something went wrong. Please try again.';
+
+  @override
+  String get medicalOfflineHint =>
+      'Cannot reach the server right now — showing sample data.';
 }

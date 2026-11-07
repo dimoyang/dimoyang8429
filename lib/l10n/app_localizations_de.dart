@@ -157,7 +157,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get bookingNote =>
-      '🔒 Ihre Informationen werden nur für diese Buchung verwendet. Ein medizinischer Assistent wird sich innerhalb von 24 Stunden mit Ihnen in Verbindung setzen. Diese Demo ist nicht mit einem echten Server verbunden.';
+      '🔒 Ihre Informationen werden nur für diese Buchung verwendet. Ein medizinischer Assistent wird sich innerhalb von 24 Stunden mit Ihnen in Verbindung setzen.';
 
   @override
   String get formName => 'Name';
@@ -400,4 +400,123 @@ class AppLocalizationsDe extends AppLocalizations {
   String itineraryDays(int days) {
     return '$days Tage';
   }
+
+  @override
+  String get addToTripCreateNew => 'Neue Reise erstellen und hinzufügen';
+
+  @override
+  String get addToTripAdded => 'Zu Ihrer Reise hinzugefügt';
+
+  @override
+  String get profileAccount => 'Konto';
+
+  @override
+  String get loginTitle => 'Anmelden';
+
+  @override
+  String get registerTitle => 'Konto erstellen';
+
+  @override
+  String get emailLabel => 'E-Mail';
+
+  @override
+  String get emailError => 'Bitte gültige E-Mail-Adresse eingeben';
+
+  @override
+  String get passwordLabel => 'Passwort';
+
+  @override
+  String get passwordError => 'Passwort muss mindestens 6 Zeichen haben';
+
+  @override
+  String get passwordConfirmLabel => 'Passwort bestätigen';
+
+  @override
+  String get passwordMismatch => 'Passwörter stimmen nicht überein';
+
+  @override
+  String get fullNameLabel => 'Vollständiger Name (optional)';
+
+  @override
+  String get loginButton => 'Anmelden';
+
+  @override
+  String get registerButton => 'Konto erstellen';
+
+  @override
+  String get loginSwitchToRegister => 'Noch kein Konto? Jetzt registrieren';
+
+  @override
+  String get registerSwitchToLogin => 'Bereits ein Konto? Anmelden';
+
+  @override
+  String get logout => 'Abmelden';
+
+  @override
+  String get loginEntrySub =>
+      'Melden Sie sich an, um medizinische Leistungen zu buchen';
+
+  @override
+  String get loginRequiredTitle => 'Anmeldung erforderlich';
+
+  @override
+  String get loginRequiredBody =>
+      'Bitte melden Sie sich an oder erstellen Sie ein Konto, um Ihre Buchung zu senden.';
+
+  @override
+  String get goLogin => 'Anmelden';
+
+  @override
+  String get formPhone => 'Telefon';
+
+  @override
+  String get formPhoneError => 'Bitte gültige Telefonnummer eingeben';
+
+  @override
+  String get formEmail => 'E-Mail';
+
+  @override
+  String get formEmailError => 'Bitte gültige E-Mail-Adresse eingeben';
+
+  @override
+  String get formDateError => 'Bitte Wunschtermin auswählen';
+
+  @override
+  String get extrasTitle => 'Zusatzleistungen';
+
+  @override
+  String get needTranslator => 'Dolmetscher-Begleitung';
+
+  @override
+  String get needAccommodation => 'Unterkunftsorganisation';
+
+  @override
+  String get needPickup => 'Flughafentransfer';
+
+  @override
+  String get bookingTotal => 'Gesamt';
+
+  @override
+  String get bookingPackageNotFound =>
+      'Diese Leistung ist nicht mehr verfügbar. Bitte gehen Sie zurück und wählen Sie eine andere.';
+
+  @override
+  String get errorNetwork =>
+      'Netzwerk nicht verfügbar. Bitte Verbindung prüfen und erneut versuchen.';
+
+  @override
+  String get errorUnauthorized =>
+      'Anmeldung abgelaufen. Bitte erneut anmelden.';
+
+  @override
+  String get errorServer =>
+      'Server ist ausgelastet. Bitte später erneut versuchen.';
+
+  @override
+  String get errorUnknown =>
+      'Etwas ist schiefgelaufen. Bitte erneut versuchen.';
+
+  @override
+  String get medicalOfflineHint =>
+      'Server derzeit nicht erreichbar — es werden Beispieldaten angezeigt.';
 }

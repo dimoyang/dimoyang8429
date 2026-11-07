@@ -148,8 +148,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get bookingNo => '预约编号';
 
   @override
-  String get bookingNote =>
-      '🔒 您的信息仅用于本次预约对接，医疗顾问将在 24 小时内与您联系。本设计稿中的提交流程为前端演示，不连接真实服务。';
+  String get bookingNote => '🔒 您的信息仅用于本次预约对接，医疗顾问将在 24 小时内与您联系。';
 
   @override
   String get formName => '姓名';
@@ -383,4 +382,115 @@ class AppLocalizationsZh extends AppLocalizations {
   String itineraryDays(int days) {
     return '$days 天';
   }
+
+  @override
+  String get addToTripCreateNew => '新建行程并加入';
+
+  @override
+  String get addToTripAdded => '已加入行程';
+
+  @override
+  String get profileAccount => '账号';
+
+  @override
+  String get loginTitle => '登录';
+
+  @override
+  String get registerTitle => '注册账号';
+
+  @override
+  String get emailLabel => '邮箱';
+
+  @override
+  String get emailError => '请输入有效的邮箱地址';
+
+  @override
+  String get passwordLabel => '密码';
+
+  @override
+  String get passwordError => '密码至少 6 位';
+
+  @override
+  String get passwordConfirmLabel => '确认密码';
+
+  @override
+  String get passwordMismatch => '两次输入的密码不一致';
+
+  @override
+  String get fullNameLabel => '姓名（选填）';
+
+  @override
+  String get loginButton => '登录';
+
+  @override
+  String get registerButton => '注册';
+
+  @override
+  String get loginSwitchToRegister => '还没有账号？去注册';
+
+  @override
+  String get registerSwitchToLogin => '已有账号？去登录';
+
+  @override
+  String get logout => '退出登录';
+
+  @override
+  String get loginEntrySub => '登录后可预约医疗服务';
+
+  @override
+  String get loginRequiredTitle => '需要登录';
+
+  @override
+  String get loginRequiredBody => '提交预约前，请先登录或注册账号。';
+
+  @override
+  String get goLogin => '去登录';
+
+  @override
+  String get formPhone => '手机号';
+
+  @override
+  String get formPhoneError => '请输入有效的手机号';
+
+  @override
+  String get formEmail => '邮箱';
+
+  @override
+  String get formEmailError => '请输入有效的邮箱地址';
+
+  @override
+  String get formDateError => '请选择期望到诊日期';
+
+  @override
+  String get extrasTitle => '附加服务';
+
+  @override
+  String get needTranslator => '翻译陪同';
+
+  @override
+  String get needAccommodation => '住宿安排';
+
+  @override
+  String get needPickup => '接机服务';
+
+  @override
+  String get bookingTotal => '合计';
+
+  @override
+  String get bookingPackageNotFound => '该服务已下架，请返回重新选择。';
+
+  @override
+  String get errorNetwork => '网络不可用，请检查连接后重试。';
+
+  @override
+  String get errorUnauthorized => '登录已过期，请重新登录。';
+
+  @override
+  String get errorServer => '服务器繁忙，请稍后重试。';
+
+  @override
+  String get errorUnknown => '操作失败，请重试。';
+
+  @override
+  String get medicalOfflineHint => '当前无法连接服务器，正在展示示例数据。';
 }

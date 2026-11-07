@@ -381,7 +381,7 @@ abstract class AppLocalizations {
   /// No description provided for @bookingNote.
   ///
   /// In en, this message translates to:
-  /// **'🔒 Your information is used solely for this booking. A medical concierge will contact you within 24 hours. This demo does not connect to a real server.'**
+  /// **'🔒 Your information is used solely for this booking. A medical concierge will contact you within 24 hours.'**
   String get bookingNote;
 
   /// No description provided for @formName.
@@ -833,6 +833,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{days} days'**
   String itineraryDays(int days);
+
+  /// No description provided for @addToTripCreateNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a new trip and add'**
+  String get addToTripCreateNew;
+
+  /// No description provided for @addToTripAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to your trip'**
+  String get addToTripAdded;
+
+  /// No description provided for @profileAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get profileAccount;
+
+  /// No description provided for @loginTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Log In'**
+  String get loginTitle;
+
+  /// No description provided for @registerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get registerTitle;
+
+  /// No description provided for @emailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get emailLabel;
+
+  /// No description provided for @emailError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get emailError;
+
+  /// No description provided for @passwordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get passwordLabel;
+
+  /// No description provided for @passwordError.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 6 characters'**
+  String get passwordError;
+
+  /// No description provided for @passwordConfirmLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Password'**
+  String get passwordConfirmLabel;
+
+  /// No description provided for @passwordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get passwordMismatch;
+
+  /// No description provided for @fullNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Name (optional)'**
+  String get fullNameLabel;
+
+  /// No description provided for @loginButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Log In'**
+  String get loginButton;
+
+  /// No description provided for @registerButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get registerButton;
+
+  /// No description provided for @loginSwitchToRegister.
+  ///
+  /// In en, this message translates to:
+  /// **'No account yet? Create one'**
+  String get loginSwitchToRegister;
+
+  /// No description provided for @registerSwitchToLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account? Log in'**
+  String get registerSwitchToLogin;
+
+  /// No description provided for @logout.
+  ///
+  /// In en, this message translates to:
+  /// **'Log Out'**
+  String get logout;
+
+  /// No description provided for @loginEntrySub.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in to book medical services'**
+  String get loginEntrySub;
+
+  /// No description provided for @loginRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in required'**
+  String get loginRequiredTitle;
+
+  /// No description provided for @loginRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Please log in or create an account to submit your booking.'**
+  String get loginRequiredBody;
+
+  /// No description provided for @goLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Log In'**
+  String get goLogin;
+
+  /// No description provided for @formPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get formPhone;
+
+  /// No description provided for @formPhoneError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid phone number'**
+  String get formPhoneError;
+
+  /// No description provided for @formEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get formEmail;
+
+  /// No description provided for @formEmailError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get formEmailError;
+
+  /// No description provided for @formDateError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a preferred date'**
+  String get formDateError;
+
+  /// No description provided for @extrasTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional Services'**
+  String get extrasTitle;
+
+  /// No description provided for @needTranslator.
+  ///
+  /// In en, this message translates to:
+  /// **'Translator companion'**
+  String get needTranslator;
+
+  /// No description provided for @needAccommodation.
+  ///
+  /// In en, this message translates to:
+  /// **'Accommodation arrangement'**
+  String get needAccommodation;
+
+  /// No description provided for @needPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Airport pickup'**
+  String get needPickup;
+
+  /// No description provided for @bookingTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get bookingTotal;
+
+  /// No description provided for @bookingPackageNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This service is no longer available. Please go back and pick another one.'**
+  String get bookingPackageNotFound;
+
+  /// No description provided for @errorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Network unavailable. Please check your connection and try again.'**
+  String get errorNetwork;
+
+  /// No description provided for @errorUnauthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Login expired. Please log in again.'**
+  String get errorUnauthorized;
+
+  /// No description provided for @errorServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Server is busy. Please try again later.'**
+  String get errorServer;
+
+  /// No description provided for @errorUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get errorUnknown;
+
+  /// No description provided for @medicalOfflineHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot reach the server right now — showing sample data.'**
+  String get medicalOfflineHint;
 }
 
 class _AppLocalizationsDelegate

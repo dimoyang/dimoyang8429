@@ -157,7 +157,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get bookingNote =>
-      '🔒 Vos informations sont utilisées uniquement pour cette réservation. Un concierge médical vous contactera sous 24 heures. Cette démo n\'est pas connectée à un vrai serveur.';
+      '🔒 Vos informations sont utilisées uniquement pour cette réservation. Un concierge médical vous contactera sous 24 heures.';
 
   @override
   String get formName => 'Nom';
@@ -400,4 +400,121 @@ class AppLocalizationsFr extends AppLocalizations {
   String itineraryDays(int days) {
     return '$days jours';
   }
+
+  @override
+  String get addToTripCreateNew => 'Créer un nouveau voyage et ajouter';
+
+  @override
+  String get addToTripAdded => 'Ajouté à votre voyage';
+
+  @override
+  String get profileAccount => 'Compte';
+
+  @override
+  String get loginTitle => 'Connexion';
+
+  @override
+  String get registerTitle => 'Créer un compte';
+
+  @override
+  String get emailLabel => 'E-mail';
+
+  @override
+  String get emailError => 'Veuillez saisir une adresse e-mail valide';
+
+  @override
+  String get passwordLabel => 'Mot de passe';
+
+  @override
+  String get passwordError =>
+      'Le mot de passe doit contenir au moins 6 caractères';
+
+  @override
+  String get passwordConfirmLabel => 'Confirmer le mot de passe';
+
+  @override
+  String get passwordMismatch => 'Les mots de passe ne correspondent pas';
+
+  @override
+  String get fullNameLabel => 'Nom complet (facultatif)';
+
+  @override
+  String get loginButton => 'Se connecter';
+
+  @override
+  String get registerButton => 'Créer un compte';
+
+  @override
+  String get loginSwitchToRegister => 'Pas encore de compte ? Inscrivez-vous';
+
+  @override
+  String get registerSwitchToLogin => 'Déjà un compte ? Connectez-vous';
+
+  @override
+  String get logout => 'Se déconnecter';
+
+  @override
+  String get loginEntrySub =>
+      'Connectez-vous pour réserver des services médicaux';
+
+  @override
+  String get loginRequiredTitle => 'Connexion requise';
+
+  @override
+  String get loginRequiredBody =>
+      'Veuillez vous connecter ou créer un compte pour envoyer votre réservation.';
+
+  @override
+  String get goLogin => 'Se connecter';
+
+  @override
+  String get formPhone => 'Téléphone';
+
+  @override
+  String get formPhoneError => 'Veuillez saisir un numéro de téléphone valide';
+
+  @override
+  String get formEmail => 'E-mail';
+
+  @override
+  String get formEmailError => 'Veuillez saisir une adresse e-mail valide';
+
+  @override
+  String get formDateError => 'Veuillez sélectionner une date souhaitée';
+
+  @override
+  String get extrasTitle => 'Services supplémentaires';
+
+  @override
+  String get needTranslator => 'Accompagnement par un interprète';
+
+  @override
+  String get needAccommodation => 'Organisation de l\'hbergement';
+
+  @override
+  String get needPickup => 'Transfert depuis l\'aéroport';
+
+  @override
+  String get bookingTotal => 'Total';
+
+  @override
+  String get bookingPackageNotFound =>
+      'Ce service n\'est plus disponible. Veuillez revenir en arrière et en choisir un autre.';
+
+  @override
+  String get errorNetwork =>
+      'Réseau indisponible. Veuillez vérifier votre connexion et réessayer.';
+
+  @override
+  String get errorUnauthorized => 'Session expirée. Veuillez vous reconnecter.';
+
+  @override
+  String get errorServer => 'Serveur occupé. Veuillez réessayer plus tard.';
+
+  @override
+  String get errorUnknown => 'Une erreur est survenue. Veuillez réessayer.';
+
+  @override
+  String get medicalOfflineHint =>
+      'Serveur injoignable pour le moment — affichage des données d\'exemple.';
 }
