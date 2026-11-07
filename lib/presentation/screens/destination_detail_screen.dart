@@ -3,6 +3,7 @@ import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/data/models/destination.dart';
 import 'package:meditour_app/data/respositories/destination_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
+import 'package:meditour_app/presentation/widgets/add_to_itinerary_sheet.dart';
 import 'package:meditour_app/presentation/widgets/back_button.dart';
 import 'package:meditour_app/presentation/widgets/destination_favorite_button.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
@@ -95,14 +96,10 @@ class DestinationDetailScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.itineraryComingSoon),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
+                  onPressed: () => showAddToItinerarySheet(
+                    context,
+                    destination: destination,
+                  ),
                   child: Text(
                     l10n.btnItinerary,
                     style: const TextStyle(

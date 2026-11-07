@@ -87,6 +87,22 @@ class ItineraryProvider extends ChangeNotifier {
     await _persist();
   }
 
+  /// 把目的地加入指定行程；已包含时返回 false。
+  Future<bool> addDestination(String itineraryId, String destinationId) async {
+    final itinerary = findById(itineraryId);
+    if (itinerary == null ||
+        itinerary.destinationIds.contains(destinationId)) {
+      return false;
+    }
+
+    await update(
+      itinerary.copyWith(
+        destinationIds: [...itinerary.destinationIds, destinationId],
+      ),
+    );
+    return true;
+  }
+
   Future<void> delete(String id) async {
     _itineraries.removeWhere((itinerary) => itinerary.id == id);
     notifyListeners();
