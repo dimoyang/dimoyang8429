@@ -18,22 +18,29 @@ class ApiService {
       InterceptorsWrapper(
         onRequest: (options, handler) {
           final token = TokenStore.current;
-          final isAuthEndpoint = options.path.startsWith('/auth/');
-          if (token != null && !isAuthEndpoint) {
+          if (token != null && !_isPublicAuthPath(options.path)) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           handler.next(options);
         },
         onError: (error, handler) {
           final status = error.response?.statusCode;
-          final isAuthEndpoint = error.requestOptions.path.startsWith('/auth/');
-          if (status == 401 && !isAuthEndpoint) {
+          if (status == 401 && !_isPublicAuthPath(error.requestOptions.path)) {
             TokenStore.clear();
           }
           handler.next(error);
         },
       ),
     );
+  }
+
+  /// 免鉴权端点：仅登录与注册。
+  ///
+  /// `/auth/me` 等受保护接口必须携带 token，401 时也应清除失效凭据。
+  static const Set<String> _publicAuthPaths = {'/auth/login', '/auth/register'};
+
+  static bool _isPublicAuthPath(String path) {
+    return _publicAuthPaths.contains(path.split('?').first);
   }
 
   static final ApiService instance = ApiService._();
