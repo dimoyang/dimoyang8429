@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.env
+*.db
+.pytest_cache/
+
+# 根 .gitignore 忽略了 *.txt，依赖清单需要纳入版本控制
+!requirements.txt
+!requirements-dev.txt
+

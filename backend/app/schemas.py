@@ -1,0 +1,175 @@
+"""请求/响应模型：字段名与 Flutter 前端契约严格一致。"""
+
+from datetime import date, datetime
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=6, max_length=72)
+    full_name: str | None = None
+    preferred_language: str = Field(default="en", max_length=10)
+
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: str
+    full_name: str | None
+    phone: str | None
+    preferred_language: str
+
+
+class HospitalResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    name_en: str
+    level: str
+
+
+class PackageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    name_en: str
+    price: float
+    currency: str
+    duration_days: int
+    image_url: str
+    description: str
+    description_en: str
+    category: str
+    hospital_id: int
+
+
+class PackagePage(BaseModel):
+    items: list[PackageResponse]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
+class BookingCreate(BaseModel):
+    package_id: int
+    appointment_date: datetime
+    contact_name: str
+    contact_phone: str
+    contact_email: str
+    notes: str = ""
+    need_translator: bool = False
+    need_accommodation: bool = False
+    need_pickup: bool = False
+
+    @field_validator("appointment_date")
+    @classmethod
+    def drop_timezone(cls, value: datetime) -> datetime:
+        """前端按 naive ISO 发送；若带时区则统一换算为 UTC 后去除时区。"""
+        if value.tzinfo is not None:
+            from datetime import timezone
+
+            value = value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value
+
+
+class BookingResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    order_no: str
+    total_price: float
+    currency: str
+    status: str
+
+
+class DestinationExperience(BaseModel):
+    icon: str = ""
+    title: str
+    description: str = ""
+
+
+class DestinationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    name_en: str
+    tagline: str
+    image_url: str
+    search_terms: list[str] = Field(default_factory=list)
+    best_season: str
+    suggest_days: str
+    intro: str
+    experiences: list[DestinationExperience] = Field(default_factory=list)
+    tips: list[str] = Field(default_factory=list)
+
+
+class ItineraryDayPayload(BaseModel):
+    day_number: int = Field(ge=1)
+    destination_ids: list[str] = Field(default_factory=list)
+    notes: str = ""
+
+
+class ItineraryWrite(BaseModel):
+    """创建与全量更新共用的请求体。"""
+
+    title: str = Field(min_length=1, max_length=160)
+    start_date: date
+    end_date: date
+    destination_ids: list[str] = Field(default_factory=list)
+    days: list[ItineraryDayPayload] = Field(default_factory=list)
+    notes: str = ""
+
+    @model_validator(mode="after")
+    def validate_plan(self) -> "ItineraryWrite":
+        if self.end_date < self.start_date:
+            raise ValueError("end_date must not be earlier than start_date")
+        if not self.destination_ids:
+            raise ValueError("destination_ids must not be empty")
+
+        day_count = (self.end_date - self.start_date).days + 1
+        day_numbers = [day.day_number for day in self.days]
+        if len(day_numbers) != len(set(day_numbers)):
+            raise ValueError("day_number must be unique")
+        if any(number > day_count for number in day_numbers):
+            raise ValueError("day_number exceeds trip length")
+        return self
+
+
+class ItineraryDayResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    day_number: int
+    destination_ids: list[str] = Field(default_factory=list)
+    notes: str = ""
+
+
+class ItineraryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    start_date: date
+    end_date: date
+    destination_ids: list[str] = Field(default_factory=list)
+    days: list[ItineraryDayResponse] = Field(default_factory=list)
+    notes: str = ""
+    created_at: datetime
+    updated_at: datetime
