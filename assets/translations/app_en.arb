@@ -67,7 +67,14 @@
   "hospitalLabel": "Hospital",
   "priceLabel": "Base price",
   "durationLabel": "Duration",
-  "startingFrom": "from",
+  "startingFrom": "from {price}",
+  "@startingFrom": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "level3A": "Grade 3A",
   "navDiscover": "Discover",
   "navItinerary": "Trips",
@@ -119,6 +126,23 @@
   "itineraryDatesLabel": "Travel dates",
   "itineraryDatesHint": "Select start and end dates",
   "itineraryDatesError": "Select your travel dates",
+  "itineraryDayPlanLabel": "Day-by-day plan",
+  "itineraryDayPlanHint": "Select travel dates first, then plan each day.",
+  "itineraryDayLabel": "Day {day}",
+  "@itineraryDayLabel": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "itineraryDayNotesHint": "Notes for this day",
+  "itineraryAddPlace": "Add place",
+  "itinerarySelectPlace": "Select a place",
+  "itineraryNoPlacesInDay": "No places planned yet",
+  "itineraryMoveUp": "Move up",
+  "itineraryMoveDown": "Move down",
+  "itineraryRemovePlace": "Remove place",
   "itineraryNotesLabel": "Notes",
   "itineraryNotesHint": "Transport, hotels, places to visit, or other plans",
   "itinerarySave": "Save Trip",
@@ -175,5 +199,7 @@
   "errorRequest": "We couldn't complete this request. Please check your details and try again.",
   "medicalOfflineHint": "Temporarily unable to reach the server — showing sample data.",
   "medicalLoadFailed": "Failed to load",
+  "medicalEmptyTitle": "No services yet",
+  "medicalEmptyBody": "No medical services are available right now. Please try again later.",
   "retry": "Retry"
 }

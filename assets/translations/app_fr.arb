@@ -67,7 +67,7 @@
   "hospitalLabel": "Hôpital",
   "priceLabel": "Prix de base",
   "durationLabel": "Durée",
-  "startingFrom": "à partir de",
+  "startingFrom": "à partir de {price}",
   "level3A": "Classe 3A",
   "navDiscover": "Découvrir",
   "navItinerary": "Voyages",
@@ -119,6 +119,23 @@
   "itineraryDatesLabel": "Dates du voyage",
   "itineraryDatesHint": "Sélectionnez les dates de début et de fin",
   "itineraryDatesError": "Sélectionnez vos dates de voyage",
+  "itineraryDayPlanLabel": "Programme jour par jour",
+  "itineraryDayPlanHint": "Sélectionnez d'abord les dates, puis planifiez chaque jour.",
+  "itineraryDayLabel": "Jour {day}",
+  "@itineraryDayLabel": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "itineraryDayNotesHint": "Notes pour ce jour",
+  "itineraryAddPlace": "Ajouter un lieu",
+  "itinerarySelectPlace": "Choisir un lieu",
+  "itineraryNoPlacesInDay": "Aucun lieu prévu ce jour",
+  "itineraryMoveUp": "Monter",
+  "itineraryMoveDown": "Descendre",
+  "itineraryRemovePlace": "Retirer le lieu",
   "itineraryNotesLabel": "Notes",
   "itineraryNotesHint": "Transports, hôtels, lieux à visiter ou autres projets",
   "itinerarySave": "Enregistrer le voyage",
@@ -175,5 +192,7 @@
   "errorRequest": "La demande n'a pas pu aboutir. Vérifiez vos informations et réessayez.",
   "medicalOfflineHint": "Serveur temporairement injoignable — affichage des données d'exemple.",
   "medicalLoadFailed": "Échec du chargement",
+  "medicalEmptyTitle": "Aucun service disponible",
+  "medicalEmptyBody": "Aucun service médical n'est disponible pour le moment. Veuillez réessayer plus tard.",
   "retry": "Réessayer"
 }

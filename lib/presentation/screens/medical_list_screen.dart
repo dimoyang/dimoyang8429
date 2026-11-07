@@ -4,6 +4,7 @@ import 'package:meditour_app/core/network/api_exception.dart';
 import 'package:meditour_app/data/models/medical_service.dart';
 import 'package:meditour_app/data/respositories/service_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
+import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:meditour_app/presentation/widgets/service_card.dart';
 
 /// 健康之旅列表页（医疗服务隐藏入口）
@@ -28,11 +29,8 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
     }
   }
 
-  /// 加载失败时的错误态：提示具体原因并支持重试。
-  Widget _buildErrorState(AppLocalizations l10n, Object? error) {
-    final message = error is ApiException
-        ? error.toLocalizedMessage(l10n)
-        : l10n.errorUnknown;
+  /// 后端返回空列表时的空数据态，避免整页只剩留白。
+  Widget _buildEmptyState(AppLocalizations l10n) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -40,13 +38,13 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.cloud_off_outlined,
+              Icons.local_hospital_outlined,
               size: 46,
               color: AppColors.ink3,
             ),
             const SizedBox(height: 14),
             Text(
-              l10n.medicalLoadFailed,
+              l10n.medicalEmptyTitle,
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -55,7 +53,7 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              message,
+              l10n.medicalEmptyBody,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13,
@@ -65,7 +63,7 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
             ),
             const SizedBox(height: 20),
             FilledButton(
-              onPressed: () => _refresh(),
+              onPressed: _refresh,
               child: Text(l10n.retry),
             ),
           ],
@@ -91,9 +89,19 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return _buildErrorState(l10n, snapshot.error);
+            final error = snapshot.error;
+            return ErrorState(
+              title: l10n.medicalLoadFailed,
+              message: error is ApiException
+                  ? error.toLocalizedMessage(l10n)
+                  : l10n.errorUnknown,
+              onRetry: _refresh,
+            );
           }
           final services = snapshot.data ?? const <MedicalService>[];
+          if (services.isEmpty) {
+            return _buildEmptyState(l10n);
+          }
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(

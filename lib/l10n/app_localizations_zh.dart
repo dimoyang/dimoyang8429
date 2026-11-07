@@ -192,7 +192,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get durationLabel => '疗程时长';
 
   @override
-  String get startingFrom => '起';
+  String startingFrom(String price) {
+    return '$price 起';
+  }
 
   @override
   String get level3A => '三级甲等';
@@ -352,6 +354,38 @@ class AppLocalizationsZh extends AppLocalizations {
   String get itineraryDatesError => '请选择旅行日期';
 
   @override
+  String get itineraryDayPlanLabel => '按天安排';
+
+  @override
+  String get itineraryDayPlanHint => '先选择旅行日期，再安排每天的地点。';
+
+  @override
+  String itineraryDayLabel(int day) {
+    return '第 $day 天';
+  }
+
+  @override
+  String get itineraryDayNotesHint => '当天的安排或备注';
+
+  @override
+  String get itineraryAddPlace => '添加地点';
+
+  @override
+  String get itinerarySelectPlace => '选择地点';
+
+  @override
+  String get itineraryNoPlacesInDay => '当天还没有安排地点';
+
+  @override
+  String get itineraryMoveUp => '上移';
+
+  @override
+  String get itineraryMoveDown => '下移';
+
+  @override
+  String get itineraryRemovePlace => '移除地点';
+
+  @override
   String get itineraryNotesLabel => '行程备注';
 
   @override
@@ -499,6 +533,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get medicalLoadFailed => '加载失败';
+
+  @override
+  String get medicalEmptyTitle => '暂无可预约服务';
+
+  @override
+  String get medicalEmptyBody => '当前没有可展示的医疗服务，请稍后重试。';
 
   @override
   String get retry => '重试';

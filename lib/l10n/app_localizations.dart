@@ -465,8 +465,8 @@ abstract class AppLocalizations {
   /// No description provided for @startingFrom.
   ///
   /// In en, this message translates to:
-  /// **'from'**
-  String get startingFrom;
+  /// **'from {price}'**
+  String startingFrom(String price);
 
   /// No description provided for @level3A.
   ///
@@ -774,6 +774,66 @@ abstract class AppLocalizations {
   /// **'Select your travel dates'**
   String get itineraryDatesError;
 
+  /// No description provided for @itineraryDayPlanLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Day-by-day plan'**
+  String get itineraryDayPlanLabel;
+
+  /// No description provided for @itineraryDayPlanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select travel dates first, then plan each day.'**
+  String get itineraryDayPlanHint;
+
+  /// No description provided for @itineraryDayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {day}'**
+  String itineraryDayLabel(int day);
+
+  /// No description provided for @itineraryDayNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes for this day'**
+  String get itineraryDayNotesHint;
+
+  /// No description provided for @itineraryAddPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Add place'**
+  String get itineraryAddPlace;
+
+  /// No description provided for @itinerarySelectPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a place'**
+  String get itinerarySelectPlace;
+
+  /// No description provided for @itineraryNoPlacesInDay.
+  ///
+  /// In en, this message translates to:
+  /// **'No places planned yet'**
+  String get itineraryNoPlacesInDay;
+
+  /// No description provided for @itineraryMoveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move up'**
+  String get itineraryMoveUp;
+
+  /// No description provided for @itineraryMoveDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Move down'**
+  String get itineraryMoveDown;
+
+  /// No description provided for @itineraryRemovePlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove place'**
+  String get itineraryRemovePlace;
+
   /// No description provided for @itineraryNotesLabel.
   ///
   /// In en, this message translates to:
@@ -1067,6 +1127,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to load'**
   String get medicalLoadFailed;
+
+  /// No description provided for @medicalEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No services yet'**
+  String get medicalEmptyTitle;
+
+  /// No description provided for @medicalEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No medical services are available right now. Please try again later.'**
+  String get medicalEmptyBody;
 
   /// No description provided for @retry.
   ///

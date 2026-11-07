@@ -67,7 +67,7 @@
   "hospitalLabel": "Krankenhaus",
   "priceLabel": "Grundpreis",
   "durationLabel": "Dauer",
-  "startingFrom": "ab",
+  "startingFrom": "ab {price}",
   "level3A": "Klasse 3A",
   "navDiscover": "Entdecken",
   "navItinerary": "Reisen",
@@ -119,6 +119,23 @@
   "itineraryDatesLabel": "Reisedaten",
   "itineraryDatesHint": "Start- und Enddatum auswählen",
   "itineraryDatesError": "Wählen Sie Ihre Reisedaten",
+  "itineraryDayPlanLabel": "Tagesplan",
+  "itineraryDayPlanHint": "Wählen Sie zuerst die Reisedaten, dann planen Sie jeden Tag.",
+  "itineraryDayLabel": "Tag {day}",
+  "@itineraryDayLabel": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "itineraryDayNotesHint": "Notizen für diesen Tag",
+  "itineraryAddPlace": "Ort hinzufügen",
+  "itinerarySelectPlace": "Ort auswählen",
+  "itineraryNoPlacesInDay": "Noch keine Orte für diesen Tag",
+  "itineraryMoveUp": "Nach oben",
+  "itineraryMoveDown": "Nach unten",
+  "itineraryRemovePlace": "Ort entfernen",
   "itineraryNotesLabel": "Notizen",
   "itineraryNotesHint": "Transport, Hotels, Sehenswürdigkeiten oder andere Pläne",
   "itinerarySave": "Reise speichern",
@@ -175,5 +192,7 @@
   "errorRequest": "Die Anfrage konnte nicht abgeschlossen werden. Bitte prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
   "medicalOfflineHint": "Server vorübergehend nicht erreichbar — es werden Beispieldaten angezeigt.",
   "medicalLoadFailed": "Laden fehlgeschlagen",
+  "medicalEmptyTitle": "Noch keine Leistungen",
+  "medicalEmptyBody": "Derzeit sind keine medizinischen Leistungen verfügbar. Bitte später erneut versuchen.",
   "retry": "Erneut versuchen"
 }

@@ -202,7 +202,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get durationLabel => 'Durée';
 
   @override
-  String get startingFrom => 'à partir de';
+  String startingFrom(String price) {
+    return 'à partir de $price';
+  }
 
   @override
   String get level3A => 'Classe 3A';
@@ -368,6 +370,39 @@ class AppLocalizationsFr extends AppLocalizations {
   String get itineraryDatesError => 'Sélectionnez vos dates de voyage';
 
   @override
+  String get itineraryDayPlanLabel => 'Programme jour par jour';
+
+  @override
+  String get itineraryDayPlanHint =>
+      'Sélectionnez d\'abord les dates, puis planifiez chaque jour.';
+
+  @override
+  String itineraryDayLabel(int day) {
+    return 'Jour $day';
+  }
+
+  @override
+  String get itineraryDayNotesHint => 'Notes pour ce jour';
+
+  @override
+  String get itineraryAddPlace => 'Ajouter un lieu';
+
+  @override
+  String get itinerarySelectPlace => 'Choisir un lieu';
+
+  @override
+  String get itineraryNoPlacesInDay => 'Aucun lieu prévu ce jour';
+
+  @override
+  String get itineraryMoveUp => 'Monter';
+
+  @override
+  String get itineraryMoveDown => 'Descendre';
+
+  @override
+  String get itineraryRemovePlace => 'Retirer le lieu';
+
+  @override
   String get itineraryNotesLabel => 'Notes';
 
   @override
@@ -524,6 +559,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get medicalLoadFailed => 'Échec du chargement';
+
+  @override
+  String get medicalEmptyTitle => 'Aucun service disponible';
+
+  @override
+  String get medicalEmptyBody =>
+      'Aucun service médical n\'est disponible pour le moment. Veuillez réessayer plus tard.';
 
   @override
   String get retry => 'Réessayer';

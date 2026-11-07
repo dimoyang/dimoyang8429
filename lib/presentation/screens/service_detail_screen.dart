@@ -7,20 +7,40 @@ import 'package:meditour_app/data/models/medical_service.dart'
 import 'package:meditour_app/data/respositories/service_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/back_button.dart';
+import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
 
 /// 服务详情页
-class ServiceDetailScreen extends StatelessWidget {
+class ServiceDetailScreen extends StatefulWidget {
   final String serviceId;
 
   const ServiceDetailScreen({super.key, required this.serviceId});
+
+  @override
+  State<ServiceDetailScreen> createState() => _ServiceDetailScreenState();
+}
+
+class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
+  late Future<MedicalService?> _serviceFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _serviceFuture = ServiceRepository.getService(widget.serviceId);
+  }
+
+  void _reload() {
+    setState(() {
+      _serviceFuture = ServiceRepository.getService(widget.serviceId);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
     return FutureBuilder<MedicalService?>(
-      future: ServiceRepository.getService(serviceId),
+      future: _serviceFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return Scaffold(
@@ -37,19 +57,10 @@ class ServiceDetailScreen extends StatelessWidget {
           return Scaffold(
             backgroundColor: AppColors.pageBg,
             appBar: AppBar(title: Text(l10n.medicalLoadFailed)),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.6,
-                    color: AppColors.ink2,
-                  ),
-                ),
-              ),
+            body: ErrorState(
+              title: l10n.medicalLoadFailed,
+              message: message,
+              onRetry: _reload,
             ),
           );
         }
@@ -191,7 +202,10 @@ class ServiceDetailScreen extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: _StatItem(label: l10n.statBasePrice, value: service.priceFrom),
+          child: _StatItem(
+            label: l10n.statBasePrice,
+            value: l10n.startingFrom(service.priceFrom),
+          ),
         ),
       ],
     );

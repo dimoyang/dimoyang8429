@@ -67,7 +67,7 @@
   "hospitalLabel": "医院",
   "priceLabel": "基础价格",
   "durationLabel": "疗程时长",
-  "startingFrom": "起",
+  "startingFrom": "{price} 起",
   "level3A": "三级甲等",
   "navDiscover": "发现",
   "navItinerary": "行程",
@@ -119,6 +119,23 @@
   "itineraryDatesLabel": "旅行日期",
   "itineraryDatesHint": "选择出发和结束日期",
   "itineraryDatesError": "请选择旅行日期",
+  "itineraryDayPlanLabel": "按天安排",
+  "itineraryDayPlanHint": "先选择旅行日期，再安排每天的地点。",
+  "itineraryDayLabel": "第 {day} 天",
+  "@itineraryDayLabel": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "itineraryDayNotesHint": "当天的安排或备注",
+  "itineraryAddPlace": "添加地点",
+  "itinerarySelectPlace": "选择地点",
+  "itineraryNoPlacesInDay": "当天还没有安排地点",
+  "itineraryMoveUp": "上移",
+  "itineraryMoveDown": "下移",
+  "itineraryRemovePlace": "移除地点",
   "itineraryNotesLabel": "行程备注",
   "itineraryNotesHint": "记录交通、酒店、想去的地点或其他安排",
   "itinerarySave": "保存行程",
@@ -175,5 +192,7 @@
   "errorRequest": "请求未能完成，请检查填写的信息后重试。",
   "medicalOfflineHint": "暂时无法连接服务器，当前显示的是示例数据。",
   "medicalLoadFailed": "加载失败",
+  "medicalEmptyTitle": "暂无可预约服务",
+  "medicalEmptyBody": "当前没有可展示的医疗服务，请稍后重试。",
   "retry": "重试"
 }
