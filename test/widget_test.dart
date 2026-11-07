@@ -31,6 +31,13 @@ void main() {
     expect(LanguageProvider().currentLocale.languageCode, 'en');
   });
 
+  test('starting price drops decimals and groups thousands', () {
+    final service = ServiceRepository.sampleServices.first;
+
+    expect(service.basePrice, 15000);
+    expect(service.priceFrom, 'EUR 15,000');
+  });
+
   testWidgets('app assembles providers and renders English when injected', (
     WidgetTester tester,
   ) async {
@@ -122,11 +129,22 @@ void main() {
     expect(find.text('创建行程'), findsOneWidget);
     expect(find.byKey(const Key('itineraryTitleField')), findsOneWidget);
 
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('itinerarySaveButton')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.byKey(const Key('itinerarySaveButton')));
     await tester.pump();
+    expect(find.text('请选择旅行日期'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('请输入行程名称'),
+      -300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('请输入行程名称'), findsOneWidget);
     expect(find.text('请至少选择一个目的地'), findsOneWidget);
-    expect(find.text('请选择旅行日期'), findsOneWidget);
 
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();

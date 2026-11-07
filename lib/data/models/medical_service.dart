@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 class MedicalService {
   final String id;
   final String nameEn;
@@ -53,8 +55,11 @@ class MedicalService {
     this.process = const [],
   });
 
-  /// 格式化的起步价格字符串
-  String get priceFrom => '$currency $basePrice';
+  /// 格式化的起步价格字符串（千分位、不保留小数）
+  String get priceFrom {
+    final amount = NumberFormat('#,##0', 'en').format(basePrice);
+    return '$currency $amount';
+  }
 
   // 根据当前语言获取名称
   String getName(String languageCode) {
