@@ -433,6 +433,46 @@ class AuditLogPage(BaseModel):
     pages: int
 
 
+class StaffStatusStat(BaseModel):
+    """某一状态的订单数（全量，不受日期范围影响）。"""
+
+    status: str
+    count: int
+
+
+class StaffRevenueByCurrency(BaseModel):
+    """日期范围内的成交金额；按币种分组，避免不同币种直接相加。"""
+
+    currency: str
+    orders: int
+    amount: float
+
+
+class StaffTrendPoint(BaseModel):
+    """趋势中的一天：新建订单数、完成订单数与成交金额。"""
+
+    date: date
+    created: int
+    completed: int
+    revenue: float
+
+
+class StaffStatsOverview(BaseModel):
+    """员工概览：全量总数/状态分布 + 指定日期范围的成交与趋势。"""
+
+    generated_at: datetime
+    total_bookings: int
+    status_counts: list[StaffStatusStat]
+    revenue_from: date
+    revenue_to: date
+    revenue: list[StaffRevenueByCurrency]
+    trend: list[StaffTrendPoint]
+
+    @field_serializer("generated_at")
+    def serialize_generated_at(self, value: datetime) -> str:
+        return _serialize_utc_datetime(value)
+
+
 class DestinationExperience(BaseModel):
     icon: str = ""
     title: str

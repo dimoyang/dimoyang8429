@@ -1198,6 +1198,50 @@ def main() -> int:
         "不支持的语言返回 422",
     )
 
+    # 目的地多语言：不传 lang 与旧响应一致，数组字段类型不变，id 仍是 slug。
+    baseline_destinations = api.get("/destinations")
+    de_destinations = api.get("/destinations?lang=de")
+    baseline_rows = (
+        baseline_destinations.body
+        if isinstance(baseline_destinations.body, list)
+        else []
+    )
+    de_rows = (
+        de_destinations.body if isinstance(de_destinations.body, list) else []
+    )
+    baseline_ids = [
+        row.get("id") for row in baseline_rows if isinstance(row, dict)
+    ]
+    de_ids = [row.get("id") for row in de_rows if isinstance(row, dict)]
+    de_beijing = next(
+        (row for row in de_rows if isinstance(row, dict) and row.get("id") == "beijing"),
+        None,
+    )
+    checker.check(
+        de_destinations.status == 200 and de_ids == baseline_ids,
+        "目的地列表支持 lang 且条目与顺序不变",
+        f"{len(baseline_ids)} -> {len(de_ids)}",
+    )
+    checker.check(
+        de_beijing is not None
+        and isinstance(de_beijing.get("search_terms"), list)
+        and isinstance(de_beijing.get("experiences"), list)
+        and isinstance(de_beijing.get("tips"), list),
+        "目的地多语言响应保持数组字段类型",
+    )
+    destination_detail = api.get("/destinations/beijing?lang=fr")
+    checker.check(
+        destination_detail.status == 200
+        and isinstance(destination_detail.body, dict)
+        and destination_detail.body.get("id") == "beijing",
+        "目的地详情支持 lang 且 id 仍为 slug",
+        fmt(destination_detail.body.get("id") if isinstance(destination_detail.body, dict) else None),
+    )
+    checker.check(
+        api.get("/destinations?lang=it").status == 422,
+        "目的地不支持的语言返回 422",
+    )
+
     # 13. 数据导出
     checker.section(13, "用户数据导出（仅本人）")
     export = api.get("/auth/export", token=token)
@@ -1487,6 +1531,43 @@ def main() -> int:
         checker.check(
             api.get("/staff/bookings").status == 401,
             "未登录访问员工接口返回 401",
+        )
+
+        stats = api.get(
+            "/staff/stats/overview?date_from=2026-11-01&date_to=2026-11-08",
+            token=staff_token,
+        )
+        stats_body = stats.body if isinstance(stats.body, dict) else {}
+        checker.check(
+            stats.status == 200
+            and is_int(stats_body.get("total_bookings"))
+            and isinstance(stats_body.get("status_counts"), list)
+            and isinstance(stats_body.get("revenue"), list)
+            and isinstance(stats_body.get("trend"), list),
+            "员工概览返回总数、状态分布、成交金额与趋势",
+            f"实际 {stats.status} {fmt(stats.body, 200)}",
+        )
+        checker.check(
+            len(stats_body.get("trend", [])) == 8,
+            "员工概览趋势覆盖完整日期范围",
+            f"实际 {len(stats_body.get('trend', []))} 天",
+        )
+        checker.check(
+            api.get("/staff/stats/overview", token=token).status == 403,
+            "普通用户访问员工统计返回 403",
+        )
+        checker.check(
+            api.get("/staff/stats/overview").status == 401,
+            "未登录访问员工统计返回 401",
+        )
+        checker.check(
+            api.get(
+                "/staff/stats/overview"
+                "?date_from=2026-11-08&date_to=2026-11-01",
+                token=staff_token,
+            ).status
+            == 422,
+            "员工统计日期范围颠倒返回 422",
         )
 
     # 汇总

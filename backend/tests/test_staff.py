@@ -320,3 +320,83 @@ def test_forbidden_detail_access_is_not_audited(client, auth_headers) -> None:
             )
         )
     assert count == 0
+
+
+def test_stats_overview_requires_staff(client, auth_headers) -> None:
+    assert client.get("/api/v1/staff/stats/overview").status_code == 401
+    denied = client.get(
+        "/api/v1/staff/stats/overview", headers=auth_headers
+    )
+    assert denied.status_code == 403
+
+
+def test_stats_overview_reports_counts_revenue_and_trend(
+    client, auth_headers
+) -> None:
+    _, staff_headers = _make_staff(client)
+    booking = _create_booking(client, auth_headers, days=87)
+
+    for target in ("confirmed", "completed"):
+        response = client.patch(
+            f"/api/v1/staff/bookings/{booking['id']}/status",
+            json={"status": target},
+            headers=staff_headers,
+        )
+        assert response.status_code == 200, response.text
+
+    today = datetime.now(timezone.utc).date()
+    stats = client.get(
+        "/api/v1/staff/stats/overview",
+        params={
+            "date_from": (today - timedelta(days=1)).isoformat(),
+            "date_to": today.isoformat(),
+        },
+        headers=staff_headers,
+    )
+    assert stats.status_code == 200, stats.text
+    body = stats.json()
+
+    assert body["total_bookings"] >= 1
+    assert body["revenue_from"] == (today - timedelta(days=1)).isoformat()
+    assert body["revenue_to"] == today.isoformat()
+    assert len(body["trend"]) == 2
+
+    by_status = {item["status"]: item for item in body["status_counts"]}
+    assert set(by_status) >= {"pending", "confirmed", "completed", "cancelled"}
+    assert by_status["completed"]["count"] >= 1
+
+    revenue = {item["currency"]: item for item in body["revenue"]}
+    assert booking["currency"] in revenue
+    assert revenue[booking["currency"]]["amount"] >= booking["total_price"]
+    assert revenue[booking["currency"]]["orders"] >= 1
+
+    today_point = body["trend"][-1]
+    assert today_point["date"] == today.isoformat()
+    assert today_point["created"] >= 1
+    assert today_point["completed"] >= 1
+    assert today_point["revenue"] >= booking["total_price"]
+
+
+def test_stats_overview_rejects_invalid_range(client) -> None:
+    _, staff_headers = _make_staff(client)
+    today = datetime.now(timezone.utc).date()
+
+    reversed_range = client.get(
+        "/api/v1/staff/stats/overview",
+        params={
+            "date_from": today.isoformat(),
+            "date_to": (today - timedelta(days=1)).isoformat(),
+        },
+        headers=staff_headers,
+    )
+    assert reversed_range.status_code == 422
+
+    too_long = client.get(
+        "/api/v1/staff/stats/overview",
+        params={
+            "date_from": (today - timedelta(days=90)).isoformat(),
+            "date_to": today.isoformat(),
+        },
+        headers=staff_headers,
+    )
+    assert too_long.status_code == 422

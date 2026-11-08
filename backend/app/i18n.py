@@ -30,26 +30,30 @@ def normalize_lang(lang: str) -> str:
 def load_translations(
     db: Session,
     entity_type: str,
-    entity_ids: list[int],
+    entity_ids: list[int | str],
     lang: str,
     fields: tuple[str, ...],
-) -> dict[int, dict[str, str]]:
-    """一次性取回多个实体在指定语言下的译文，避免 N+1 查询。"""
+) -> dict[str, dict[str, str]]:
+    """一次性取回多个实体在指定语言下的译文，避免 N+1 查询。
+
+    返回的键统一为字符串：套餐/医院传整数主键也可以，目的地直接传 slug。
+    """
     if not entity_ids:
         return {}
 
+    normalized_ids = [str(entity_id) for entity_id in entity_ids]
     rows = db.scalars(
         select(ContentTranslation).where(
             ContentTranslation.entity_type == entity_type,
-            ContentTranslation.entity_id.in_(entity_ids),
+            ContentTranslation.entity_id.in_(normalized_ids),
             ContentTranslation.lang == lang,
             ContentTranslation.field.in_(fields),
         )
     ).all()
 
-    result: dict[int, dict[str, str]] = {}
+    result: dict[str, dict[str, str]] = {}
     for row in rows:
-        result.setdefault(row.entity_id, {})[row.field] = row.value
+        result.setdefault(str(row.entity_id), {})[row.field] = row.value
     return result
 
 

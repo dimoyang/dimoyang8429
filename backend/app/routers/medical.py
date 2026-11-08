@@ -65,7 +65,7 @@ def list_packages(
             ("name", "description"),
         )
         for response in responses:
-            translated = translations.get(response.id, {})
+            translated = translations.get(str(response.id), {})
             response.name = _localized(
                 translated.get("name"),
                 response.name,
@@ -120,7 +120,7 @@ def list_hospitals(
         )
         for response in responses:
             response.name = _localized(
-                translations.get(response.id, {}).get("name"),
+                translations.get(str(response.id), {}).get("name"),
                 response.name,
                 response.name_en,
                 language,

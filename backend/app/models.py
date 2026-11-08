@@ -71,6 +71,11 @@ class Hospital(Base):
 
 class MedicalPackage(Base):
     __tablename__ = "medical_packages"
+    __table_args__ = (
+        # 公开/员工列表：WHERE is_active ORDER BY id；复合索引的 id 列
+        # 让 SQLite 直接按索引顺序返回，避免临时 B 树排序。
+        Index("ix_medical_packages_active_id", "is_active", "id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(160))
@@ -97,8 +102,20 @@ class Booking(Base):
     __table_args__ = (
         # 用户订单常按状态查询；复合索引前缀也能服务仅按 user_id 的查询。
         Index("ix_bookings_user_status", "user_id", "status"),
+        # 用户订单列表按 id 倒序：索引里带 id 才能直接反向扫描，
+        # 否则 SQLite 会先按 user_id 过滤再建临时 B 树排序。
+        Index("ix_bookings_user_id_id", "user_id", "id"),
         # 员工列表：按状态过滤 + 按创建时间倒序。
         Index("ix_bookings_status_created_at", "status", "created_at"),
+        # 统计成交金额：WHERE status='completed' AND completed_at 范围。
+        # 带上 currency / total_price 形成覆盖索引，避免按日汇总时逐行回表。
+        Index(
+            "ix_bookings_status_completed_stats",
+            "status",
+            "completed_at",
+            "currency",
+            "total_price",
+        ),
         # 员工列表不筛选状态时的全局时间排序。
         Index("ix_bookings_created_at", "created_at"),
         # 并发兜底：同一用户、套餐、预约时间只允许一个 pending 订单。
@@ -309,12 +326,17 @@ class AuditLog(Base):
             "action",
             "created_at",
         ),
+        # 按操作者过滤 + 时间倒序；替代单列 actor_user_id 索引，
+        # 避免过滤后还要临时 B 树排序。
+        Index(
+            "ix_audit_logs_actor_created_at",
+            "actor_user_id",
+            "created_at",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    actor_user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id"), index=True
-    )
+    actor_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     # 冗余保存操作者邮箱：用户后续被匿名化后仍能还原当时的操作人。
     actor_email: Mapped[str] = mapped_column(String(255))
     action: Mapped[str] = mapped_column(String(60))
@@ -331,6 +353,7 @@ class ContentTranslation(Base):
     en / zh 仍以业务表的 name/name_en 等列为主；本表存放 de/fr 等额外语言。
     回退顺序为 请求语言 → en → zh。
 
+    `entity_id` 用字符串：套餐/医院存整数主键的文本形式，目的地直接存 slug。
     唯一约束 (entity_type, entity_id, lang, field) 的索引前缀已经覆盖
     (entity_type, entity_id, lang) 查询，因此不再单独建重复索引。
     """
@@ -348,7 +371,7 @@ class ContentTranslation(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     entity_type: Mapped[str] = mapped_column(String(40))
-    entity_id: Mapped[int] = mapped_column(Integer)
+    entity_id: Mapped[str] = mapped_column(String(64))
     lang: Mapped[str] = mapped_column(String(8))
     field: Mapped[str] = mapped_column(String(60))
     value: Mapped[str] = mapped_column(Text, default="")

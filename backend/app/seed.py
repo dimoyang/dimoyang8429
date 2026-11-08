@@ -162,6 +162,8 @@ def _seed_translations(db: Session) -> None:
         )
 
     for entity_type, entity_id, lang, field, value in entries:
+        # content_translations.entity_id 统一为字符串，兼容整数主键与 slug。
+        entity_id = str(entity_id)
         exists = db.scalar(
             select(ContentTranslation.id).where(
                 ContentTranslation.entity_type == entity_type,
@@ -998,7 +1000,7 @@ def _seed_demo_catalog(db: Session) -> None:
         exists = db.scalar(
             select(ContentTranslation.id).where(
                 ContentTranslation.entity_type == entity_type,
-                ContentTranslation.entity_id == entity.id,
+                ContentTranslation.entity_id == str(entity.id),
                 ContentTranslation.lang == lang,
                 ContentTranslation.field == field,
             )
@@ -1007,7 +1009,7 @@ def _seed_demo_catalog(db: Session) -> None:
             db.add(
                 ContentTranslation(
                     entity_type=entity_type,
-                    entity_id=entity.id,
+                    entity_id=str(entity.id),
                     lang=lang,
                     field=field,
                     value=value,

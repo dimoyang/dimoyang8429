@@ -5,7 +5,7 @@
 应在此处增加过滤条件而不是靠前端隐藏。
 """
 
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -24,6 +24,10 @@ from app.schemas import (
     StaffBookingDetail,
     StaffBookingListItem,
     StaffBookingPage,
+    StaffRevenueByCurrency,
+    StaffStatsOverview,
+    StaffStatusStat,
+    StaffTrendPoint,
 )
 
 router = APIRouter(prefix="/staff", tags=["staff"])
@@ -224,6 +228,207 @@ def _naive_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value
     return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+STATS_MAX_DAYS = 90
+STATUS_ORDER = ("pending", "confirmed", "completed", "cancelled")
+
+
+def _stats_range(
+    date_from: date | None, date_to: date | None
+) -> tuple[date, date]:
+    """默认最近 14 天（含今天），按 UTC 日期解释，最长 90 天。"""
+    end = date_to or datetime.now(timezone.utc).date()
+    start = date_from or (end - timedelta(days=13))
+    if start > end:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="date_from must be earlier than or equal to date_to",
+        )
+    if (end - start).days >= STATS_MAX_DAYS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"date range must not exceed {STATS_MAX_DAYS} days",
+        )
+    return start, end
+
+
+@router.get(
+    "/stats/overview",
+    response_model=StaffStatsOverview,
+    summary="员工概览统计",
+    description=(
+        "需要 `staff` 角色。全量返回订单总数与各状态分布；"
+        "`date_from` / `date_to`（含边界，按 UTC 日期解释）限定成交金额与"
+        "逐日趋势，默认最近 14 天，最长 90 天。成交金额按币种分组，"
+        "完成时间取 `completed_at`；迁移前缺失该字段的历史订单回退用 `created_at`。"
+    ),
+    responses={
+        401: {"description": "未登录或令牌无效"},
+        403: {"description": "已登录但不是 staff"},
+        422: {"description": "日期范围颠倒或超过 90 天"},
+    },
+)
+def get_stats_overview(
+    date_from: date | None = Query(None, description="起始日期（含，UTC）"),
+    date_to: date | None = Query(None, description="结束日期（含，UTC）"),
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_staff),
+) -> StaffStatsOverview:
+    """订单总数、状态分布、区间成交金额与逐日趋势。"""
+    start_date, end_date = _stats_range(date_from, date_to)
+    start_dt = datetime.combine(start_date, time.min)
+    # 用「次日零点」做开区间，避免 last microsecond 的边界遗漏。
+    end_dt = datetime.combine(end_date + timedelta(days=1), time.min)
+
+    total_bookings = db.scalar(select(func.count()).select_from(Booking)) or 0
+
+    # 状态分布只做计数，走 (status, created_at) 覆盖索引，无需回表取金额。
+    status_rows = db.execute(
+        select(Booking.status, func.count()).group_by(Booking.status)
+    ).all()
+    by_status: dict[str, int] = {name: 0 for name in STATUS_ORDER}
+    for name, count in status_rows:
+        by_status[name] = int(count)
+    ordered_statuses = list(STATUS_ORDER) + sorted(
+        set(by_status) - set(STATUS_ORDER)
+    )
+    status_counts = [
+        StaffStatusStat(status=name, count=by_status[name])
+        for name in ordered_statuses
+    ]
+
+    # 迁移前的历史订单可能没有 completed_at；先探测是否存在，
+    # 没有就跳过两条回退查询，避免每次都在旧时间范围里白扫一遍。
+    has_legacy_completed = (
+        db.scalar(
+            select(Booking.id)
+            .where(
+                Booking.status == "completed",
+                Booking.completed_at.is_(None),
+            )
+            .limit(1)
+        )
+        is not None
+    )
+
+    # 成交金额：优先 completed_at；迁移前该列为空的历史订单回退 created_at。
+    revenue: dict[str, list[float]] = {}
+    revenue_rows = [
+        db.execute(
+            select(
+                Booking.currency,
+                func.count(),
+                func.coalesce(func.sum(Booking.total_price), 0.0),
+            )
+            .where(
+                Booking.status == "completed",
+                Booking.completed_at >= start_dt,
+                Booking.completed_at < end_dt,
+            )
+            .group_by(Booking.currency)
+        ).all()
+    ]
+    if has_legacy_completed:
+        revenue_rows.append(
+            db.execute(
+                select(
+                    Booking.currency,
+                    func.count(),
+                    func.coalesce(func.sum(Booking.total_price), 0.0),
+                )
+                .where(
+                    Booking.status == "completed",
+                    Booking.completed_at.is_(None),
+                    Booking.created_at >= start_dt,
+                    Booking.created_at < end_dt,
+                )
+                .group_by(Booking.currency)
+            ).all()
+        )
+    for rows in revenue_rows:
+        for currency, orders, amount in rows:
+            bucket = revenue.setdefault(currency, [0, 0.0])
+            bucket[0] += int(orders)
+            bucket[1] += float(amount or 0.0)
+    revenue_items = [
+        StaffRevenueByCurrency(
+            currency=currency,
+            orders=int(bucket[0]),
+            amount=round(bucket[1], 2),
+        )
+        for currency, bucket in sorted(revenue.items())
+    ]
+
+    # 趋势：三条按日聚合查询（新建 / 完成 / 迁移前完成回退），
+    # 日期范围已由 created_at / completed_at 索引先裁剪，再按日分组。
+    created_rows = db.execute(
+        select(func.date(Booking.created_at), func.count())
+        .where(Booking.created_at >= start_dt, Booking.created_at < end_dt)
+        .group_by(func.date(Booking.created_at))
+    ).all()
+    created_by_day = {day: int(count) for day, count in created_rows}
+
+    completed_by_day: dict[str, list[float]] = {}
+    for day, count, amount in db.execute(
+        select(
+            func.date(Booking.completed_at),
+            func.count(),
+            func.coalesce(func.sum(Booking.total_price), 0.0),
+        )
+        .where(
+            Booking.status == "completed",
+            Booking.completed_at >= start_dt,
+            Booking.completed_at < end_dt,
+        )
+        .group_by(func.date(Booking.completed_at))
+    ).all():
+        bucket = completed_by_day.setdefault(day, [0, 0.0])
+        bucket[0] += int(count)
+        bucket[1] += float(amount or 0.0)
+    if has_legacy_completed:
+        for day, count, amount in db.execute(
+            select(
+                func.date(Booking.created_at),
+                func.count(),
+                func.coalesce(func.sum(Booking.total_price), 0.0),
+            )
+            .where(
+                Booking.status == "completed",
+                Booking.completed_at.is_(None),
+                Booking.created_at >= start_dt,
+                Booking.created_at < end_dt,
+            )
+            .group_by(func.date(Booking.created_at))
+        ).all():
+            bucket = completed_by_day.setdefault(day, [0, 0.0])
+            bucket[0] += int(count)
+            bucket[1] += float(amount or 0.0)
+
+    trend: list[StaffTrendPoint] = []
+    cursor = start_date
+    while cursor <= end_date:
+        key = cursor.isoformat()
+        completed = completed_by_day.get(key, [0, 0.0])
+        trend.append(
+            StaffTrendPoint(
+                date=cursor,
+                created=created_by_day.get(key, 0),
+                completed=int(completed[0]),
+                revenue=round(completed[1], 2),
+            )
+        )
+        cursor += timedelta(days=1)
+
+    return StaffStatsOverview(
+        generated_at=utcnow(),
+        total_bookings=int(total_bookings),
+        status_counts=status_counts,
+        revenue_from=start_date,
+        revenue_to=end_date,
+        revenue=revenue_items,
+        trend=trend,
+    )
 
 
 @router.get(

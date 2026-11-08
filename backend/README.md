@@ -1,6 +1,7 @@
 # MediTour 后端
 
 FastAPI + SQLAlchemy + SQLite 的 MediTour API，路径前缀 `/api/v1`，契约以 Flutter 前端为准。
+接口、字段与行为变更见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 本地启动
 
@@ -188,6 +189,26 @@ GET /api/v1/staff/audit-logs
 - `created_from > created_to` 返回 422。
 - 审计与业务写入同事务提交：写不进去就不返回敏感数据，避免出现无记录的访问。
 
+### 员工概览统计
+
+```text
+GET /api/v1/staff/stats/overview?date_from=2026-10-26&date_to=2026-11-08
+```
+
+- 仅 `staff`（未登录 401，普通用户 403）。
+- 全量字段：`total_bookings`、`status_counts`（pending / confirmed / completed / cancelled，
+  没有订单的状态补 0）。
+- 日期范围字段：`revenue_from` / `revenue_to`、`revenue`（按币种分组，避免不同币种相加）、
+  `trend`（逐日 `created` / `completed` / `revenue`）。
+- 范围含边界，按 UTC 日期解释；默认最近 14 天，最长 90 天；`date_from > date_to`
+  或超过 90 天返回 422。
+- 成交金额取 `completed_at`；迁移前该列为空的历史订单回退 `created_at`。服务端先探测
+  是否存在这类历史行，没有就跳过回退查询，避免每次空扫。
+- 2026-11-08 演示库（40 单）实测：稳定状态 **6.4–8.2 ms**（14 天与 90 天范围差异不大）。
+  另用 20 万单合成库直调统计函数（不含 HTTP 开销）：14 天中位 **82 ms**、90 天中位
+  **133 ms**；耗时主要来自全量状态计数与按日分组，已由索引限制在日期范围内，不随表
+  总量线性爆炸。
+
 ## 内容运营（员工）
 
 员工可维护套餐、医院与目的地，全部在 `/api/v1/staff/*` 下，非 `staff` 一律 403。
@@ -212,7 +233,7 @@ GET /api/v1/staff/audit-logs
   - 目的地仍被任意行程（整体或按天）引用 → 409。
 - 目的地 `id` 是前端使用的 slug（小写字母、数字、连字符），创建后不可修改；
   重复 slug 返回 409，格式不合法返回 422。员工目的地列表额外返回 `sort_order`。
-  公开的 `/destinations` 端点未改动。
+  公开的 `/destinations` 列表/详情支持可选 `lang`，见“目的地多语言”。
 - 员工侧写接口放在 `app/routers/staff_content.py`，与公开只读的 `destinations.py` 分离。
 
 ## 图片上传
@@ -244,19 +265,50 @@ GET /api/v1/staff/audit-logs
 `/medical/hospitals`（前端按数组解析）、`/bookings/`、`/itineraries`、`/destinations`。
 这些列表如需分页，只能新增端点或做 API 版本化。
 
-索引（迁移 `e3f5a7c9b1d2`）：
+索引（迁移 `e3f5a7c9b1d2` + `c2d4e6f8a1b3`）：
 
 | 表 | 索引 | 用途 |
 | --- | --- | --- |
-| `bookings` | `ix_bookings_user_status (user_id, status)` | 用户订单/状态过滤，前缀覆盖仅 `user_id` 的查询 |
+| `bookings` | `ix_bookings_user_status (user_id, status)` | 用户订单/状态过滤 |
+| `bookings` | `ix_bookings_user_id_id (user_id, id)` | 用户订单列表按 `id` 倒序，避免临时排序 |
 | `bookings` | `ix_bookings_status_created_at (status, created_at)` | 员工按状态过滤并按时间排序 |
 | `bookings` | `ix_bookings_created_at (created_at)` | 员工不筛选状态时的时间排序 |
+| `bookings` | `ix_bookings_status_completed_stats (status, completed_at, currency, total_price)` | 统计成交金额的覆盖索引 |
 | `itineraries` | `ix_itineraries_user_start (user_id, start_date)` | 行程按用户过滤并按出发日期排序 |
+| `medical_packages` | `ix_medical_packages_active_id (is_active, id)` | 在售列表过滤 + 按 `id` 排序 |
+| `audit_logs` | `ix_audit_logs_action_created_at (action, created_at)` | 按操作类型 + 时间范围 |
+| `audit_logs` | `ix_audit_logs_actor_created_at (actor_user_id, created_at)` | 按操作者过滤 + 时间倒序 |
 | `content_translations` | 唯一约束 `(entity_type, entity_id, lang, field)` | 查询前缀已包含 `entity_type + entity_id + lang` |
 
 同时清理重复索引：`ix_bookings_user_id`、`ix_itineraries_user_id`（复合索引前缀已覆盖）
 与 `ix_content_translations_lookup`（与唯一约束前缀重复）。`order_no`、`token_hash`、
 `jti` 等唯一索引保留，用于等值查找。
+
+### 查询计划实测
+
+`scripts/check_query_plans.py` 用 SQLAlchemy 编译真实查询，再对 SQLite 执行
+`EXPLAIN QUERY PLAN`，检查全表 `SCAN` 与 `USE TEMP B-TREE FOR ORDER BY`：
+
+```bash
+cd backend
+python scripts/check_query_plans.py --verbose
+python scripts/check_query_plans.py --strict   # 有疑点时退出码 1
+```
+
+`c2d4e6f8a1b3` 依据实测补齐索引，关键对比如下（同一条查询、同一份 SQL）：
+
+| 查询 | 改动前 | 改动后 |
+| --- | --- | --- |
+| 用户订单 `WHERE user_id ORDER BY id DESC` | `ix_bookings_user_status` + **TEMP B-TREE ORDER BY** | `ix_bookings_user_id_id (user_id=?)`，无临时排序 |
+| 公开套餐 `WHERE is_active ORDER BY id` | **SCAN medical_packages** + **TEMP B-TREE ORDER BY** | `COVERING INDEX ix_medical_packages_active_id (is_active=?)` |
+| 套餐总数 `COUNT(*) WHERE is_active` | **SCAN medical_packages** | `COVERING INDEX ix_medical_packages_active_id (is_active=?)` |
+| 审计 `WHERE actor_user_id ORDER BY created_at DESC` | `ix_audit_logs_actor_user_id` + **TEMP B-TREE ORDER BY** | `ix_audit_logs_actor_created_at`，无临时排序 |
+| 统计成交额 `WHERE status='completed' AND completed_at 范围` | `ix_bookings_status_created_at` 后逐行回表 | `COVERING INDEX ix_bookings_status_completed_stats` |
+
+以下查询本来就命中索引，未改动：订单按 `status` + `created_at`、审计按 `action` +
+时间范围、审计按 `entity_type` + `entity_id` + 时间、译文按实体 + 语言、行程按用户 +
+出发日期。`package.category_active` 在脚本中标记为 `INFO`：当前服务端没有按分类过滤
+的查询（前端本地筛选），因此不建分类索引，避免无查询使用的写放大。
 
 ### 列表接口查询次数（N+1）
 
@@ -354,6 +406,20 @@ SELECT 数，确认列表接口是常数查询而不是随条数增长。当前�
 - 上线前必须由人工翻译并复核的字段：套餐 `name` / `description`、医院 `name` / `level`，以及任何医疗适应症、风险提示、价格与疗效相关文案。机器翻译只能作为草稿，不能冒充成品；未完成人工翻译的字段会按上述顺序回退，不会被机器生成的文本覆盖。
 - 人工译文通过 `scripts/import_translations.py` 批量导入（见下节），不走接口自动翻译。
 
+### 目的地多语言
+
+- `GET /api/v1/destinations` 与 `GET /api/v1/destinations/{slug}` 同样支持 `lang=zh|en|de|fr`。
+- **不传 `lang` 时响应与旧版本逐字节一致**；前端现有调用无需改动。
+- 只翻译标量字段：`name` / `tagline` / `intro` / `best_season` / `suggest_days`，
+  回退顺序与医疗套餐一致（请求语言 → en → zh）。`name_en` 是主数据列，不随 `lang` 变化。
+- 数组字段 `search_terms` / `experiences` / `tips` **不翻译**，类型与内容保持主数据：
+  `list[str]` / `list[object]` / `list[str]`，不会因为多语言被字符串化或变成字典。
+- `id` 始终是 slug 字符串（如 `beijing`），与前端 `Destination.id` 一致；未知 slug 仍是 404，
+  非法 `lang` 返回 422（大小写不敏感，`lang=DE` 等同 `de`）。
+- 目的地译文存 `content_translations`，`entity_id` 存 slug；迁移 `d4e6f8a2b1c3`
+  把该列从整数放宽为 `String(64)`，套餐/医院继续存整数主键的文本形式。
+- 关键词 `query` 仍只匹配 `name` / `name_en` / `tagline` 主数据列，不搜索译文。
+
 ## 人工翻译批量导入
 
 `scripts/import_translations.py` 把人工翻译结果导入 `content_translations`。
@@ -380,8 +446,9 @@ python scripts/import_translations.py var/translations.csv
   全部通过后才按 `(entity_type, entity_id, lang, field)` 幂等 upsert。
 - 语言码必须在 `zh/en/de/fr` 内，但**不接受 `en` / `zh`**：这两类主数据在业务表列
   （`name` / `name_en` 等）中维护，写进翻译表不会被公开接口读取，属于“看似生效”的死数据。
-- 字段白名单：`package` 的 `name` / `description`、`hospital` 的 `name`。
-  `destination` 暂不支持——`content_translations.entity_id` 是整数，而目的地主键是 slug。
+- 字段白名单：`package` 的 `name` / `description`、`hospital` 的 `name`、
+  `destination` 的 `name` / `tagline` / `intro` / `best_season` / `suggest_days`。
+  目的地 `entity_id` 必须是 slug（小写字母、数字、连字符），套餐/医院仍是正整数。
 - 重复执行同一文件不会产生重复行或额外更新；文件内同一唯一键出现两次会直接报错，
   避免“后一行覆盖前一行”的静默行为。
 
@@ -535,7 +602,15 @@ python -m alembic stamp head
 （可空），审计表的 `details`（JSON，可空），并把 `audit_logs.entity_id` 从整数放宽为
 `String(64)` 以支持目的地 slug。已有订单的三列保持 NULL（无法回溯真实时刻，巡检脚本
 会列在“需人工判断”），已有审计行的整数值按文本保留。该迁移也可在现有数据上直接升级。
-当前 head 即 `a7c2e9f4b6d1`。
+
+迁移 `c2d4e6f8a1b3` 依据查询计划实测补齐索引并替换一个单列索引，只建索引、不改数据，
+可在现有库上直接升级；降级会恢复原 `ix_audit_logs_actor_user_id` 并删除本批新增索引。
+
+迁移 `d4e6f8a2b1c3` 把 `content_translations.entity_id` 从整数改为 `String(64)`，
+使目的地 slug 可以存译文；SQLite 通过批量重建表完成转换，已有整数值按文本保留，
+唯一约束 `(entity_type, entity_id, lang, field)` 不变。降级前会删除
+`entity_type='destination'` 的译文（无法转回整数），随后恢复整数类型。
+当前 head 即 `d4e6f8a2b1c3`。
 
 ## PostgreSQL 切换脚手架（未验证）
 
@@ -614,7 +689,10 @@ docker compose down -v       # 连数据一起删
 ```bash
 cd backend
 # 备份：默认读 DATABASE_URL，写到 var/backups/meditour-<时间戳>.db
+# 默认保留最近 7 天每天 1 份 + 更早每周 1 份最多 4 周
 python scripts/backup_db.py
+python scripts/backup_db.py --daily-keep 14 --weekly-keep 8
+python scripts/backup_db.py --no-retention          # 只备份，不清理
 python scripts/backup_db.py --output-dir D:\backups --database-url sqlite:///D:/data/meditour.db
 
 # 恢复：先停掉后端进程；目标非空时必须 --force
@@ -623,10 +701,43 @@ python scripts/restore_db.py --backup var/backups/meditour-20261108-095413.db --
 
 - 备份使用 SQLite 在线备份 API，先写临时文件，校验行数与订单指标一致后再原子替换，
   不会复制出写入中途的半截文件。
+- 保留策略只处理 `meditour-YYYYMMDD-HHMMSS.db`，其它文件（含 `.tmp`、手动命名备份）
+  一律不动；**最新的一份永远保留**，即使它已超出保留窗口。最近 N 天每天保留最新一份，
+  更早的每个 ISO 周保留最新一份、最多 M 周。
 - 恢复的安全阀：目标库已有业务表且未加 `--force` 时拒绝执行；加 `--force` 时也会
   先保留 `<库名>.pre-restore-<时间戳>.db.bak`，再覆盖。
 - 恢复完成后会重新统计表行数、订单状态分布与订单金额合计，与备份不一致则以非零
   状态退出。恢复后请用当前代码再执行一次 `python -m alembic upgrade head`。
+
+### 定时执行
+
+备份脚本没有常驻进程，交给系统计划任务即可：
+
+```powershell
+# Windows：每天 02:00 备份（路径按实际环境替换）
+schtasks /Create /SC DAILY /ST 02:00 /TN "MediTour Backup" ^
+  /TR "I:\meditour_app\backend\.venv\Scripts\python.exe I:\meditour_app\backend\scripts\backup_db.py"
+```
+
+```cron
+# Linux/macOS：每天 02:00，日志写到 var/backup.log
+0 2 * * * cd /srv/meditour/backend && .venv/bin/python scripts/backup_db.py >> var/backup.log 2>&1
+```
+
+### 恢复演练与 RTO（2026-11-08）
+
+用当前开发库（225 KB，40 单，含 12 张业务表）做了一次完整演练：先备份，再恢复到
+一个已存在数据的目标库（触发 `--force` 与覆盖前副本），最后空跑一次迁移。
+
+```text
+备份耗时:                  298 ms
+恢复耗时（含覆盖前副本）:   270 ms
+alembic upgrade head:     1031 ms（已是 head，主要是进程启动）
+实测 RTO:                ≈ 1.3 s
+```
+
+这是演示数据下的真实数字，不是估算。RTO 随数据库体积增长，主要成本是恢复时的文件
+复制与两次全量指纹统计；上线前请用生产库副本重跑同一演练，并以生产数字为准。
 
 本机真实演练（演练库 `backend/var/drill/`，含 1 个订单，已从仓库忽略）：
 

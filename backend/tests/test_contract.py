@@ -19,6 +19,11 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import delete
+
+from app.database import SessionLocal
+from app.models import ContentTranslation
+
 USER_SPEC = {
     "id": "int",
     "email": "str",
@@ -225,6 +230,58 @@ def test_frontend_contract_matches_backend(client) -> None:
     details += _report(
         "GET /destinations", destinations.json(), ("list_of", DESTINATION_SPEC)
     )
+
+    # 多语言响应必须保持同一份契约：id 仍是 slug 字符串，数组字段类型不变。
+    try:
+        with SessionLocal() as db:
+            db.execute(
+                delete(ContentTranslation).where(
+                    ContentTranslation.entity_type == "destination"
+                )
+            )
+            db.add_all(
+                [
+                    ContentTranslation(
+                        entity_type="destination",
+                        entity_id="beijing",
+                        lang="de",
+                        field="name",
+                        value="Peking",
+                    ),
+                    ContentTranslation(
+                        entity_type="destination",
+                        entity_id="beijing",
+                        lang="fr",
+                        field="intro",
+                        value="Capitale ancienne",
+                    ),
+                ]
+            )
+            db.commit()
+
+        localized_list = client.get("/api/v1/destinations?lang=de")
+        assert localized_list.status_code == 200, localized_list.text
+        details += _report(
+            "GET /destinations?lang=de",
+            localized_list.json(),
+            ("list_of", DESTINATION_SPEC),
+        )
+
+        localized_detail = client.get("/api/v1/destinations/beijing?lang=fr")
+        assert localized_detail.status_code == 200, localized_detail.text
+        details += _report(
+            "GET /destinations/{id}?lang=fr",
+            localized_detail.json(),
+            DESTINATION_SPEC,
+        )
+    finally:
+        with SessionLocal() as db:
+            db.execute(
+                delete(ContentTranslation).where(
+                    ContentTranslation.entity_type == "destination"
+                )
+            )
+            db.commit()
 
     package_id = packages.json()["items"][0]["id"]
     created = client.post(

@@ -16,11 +16,12 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 # 只接受本地文件型 SQLite 连接串；内存库没有可备份的文件。
@@ -28,6 +29,10 @@ SQLITE_URL_PREFIXES = (
     "sqlite+pysqlite:///",
     "sqlite:///",
 )
+
+# 备份脚本生成的标准文件名；保留策略只处理这一类文件，
+# 不会碰手动命名或其它工具的备份。
+BACKUP_NAME_RE = re.compile(r"^meditour-(\d{8})-(\d{6})\.db$")
 
 
 class BackupError(RuntimeError):
@@ -144,6 +149,92 @@ class BackupResult:
     source: str
     target: str
     fingerprint: DatabaseFingerprint
+
+
+@dataclass(frozen=True)
+class PruneResult:
+    """保留策略执行结果；路径已按字符串排序，便于日志输出与断言。"""
+
+    kept: tuple[str, ...]
+    deleted: tuple[str, ...]
+
+
+def backup_timestamp(path: Path) -> datetime | None:
+    """从标准备份文件名解析时间；不是本脚本的备份返回 None。"""
+    match = BACKUP_NAME_RE.match(path.name)
+    if match is None:
+        return None
+    return datetime.strptime(
+        match.group(1) + match.group(2), "%Y%m%d%H%M%S"
+    )
+
+
+def prune_backups(
+    directory: Path,
+    *,
+    daily_keep: int,
+    weekly_keep: int,
+    now: datetime | None = None,
+) -> PruneResult:
+    """按「每天 N 份 + 每周 M 份」清理旧备份。
+
+    规则：
+
+    - 只处理 ``meditour-YYYYMMDD-HHMMSS.db``，其它文件一律不动；
+    - 最新的一份永远保留，即使它已经超出保留窗口；
+    - 最近 ``daily_keep`` 天，每天保留最新的一份；
+    - 更早的备份，每个 ISO 周保留最新的一份，最多 ``weekly_keep`` 周。
+    """
+    directory = directory.expanduser().resolve()
+    if not directory.exists() or not directory.is_dir():
+        raise BackupError(f"Backup directory not found: {directory}")
+    if daily_keep < 0 or weekly_keep < 0:
+        raise ValueError("daily_keep and weekly_keep must be >= 0")
+
+    candidates: list[tuple[datetime, Path]] = []
+    for path in directory.iterdir():
+        if not path.is_file():
+            continue
+        stamp = backup_timestamp(path)
+        if stamp is not None:
+            candidates.append((stamp, path))
+    candidates.sort(key=lambda item: (item[0], item[1].name), reverse=True)
+    if not candidates:
+        return PruneResult(kept=(), deleted=())
+
+    today = (now or datetime.now()).date()
+    keep: set[Path] = {candidates[0][1]}
+    daily_days: set[date] = set()
+    weekly_weeks: set[tuple[int, int]] = set()
+
+    for stamp, path in candidates:
+        age_days = (today - stamp.date()).days
+        if age_days < daily_keep:
+            if stamp.date() not in daily_days:
+                daily_days.add(stamp.date())
+                keep.add(path)
+            continue
+        if len(weekly_weeks) >= weekly_keep:
+            continue
+        iso = stamp.isocalendar()
+        week_key = (iso.year, iso.week)
+        if week_key not in weekly_weeks:
+            weekly_weeks.add(week_key)
+            keep.add(path)
+
+    deleted = [path for _, path in candidates if path not in keep]
+    for path in deleted:
+        try:
+            path.unlink()
+        except OSError as exc:
+            raise BackupError(
+                f"Failed to delete old backup {path}: {exc}"
+            ) from exc
+
+    return PruneResult(
+        kept=tuple(sorted(str(path) for path in keep)),
+        deleted=tuple(sorted(str(path) for path in deleted)),
+    )
 
 
 @dataclass(frozen=True)

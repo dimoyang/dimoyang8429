@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy import func, select
 
 from app.database import SessionLocal
-from app.models import ContentTranslation, Hospital, MedicalPackage
+from app.models import ContentTranslation, Destination, Hospital, MedicalPackage
 from app.translations_import import TranslationImportError, import_translations
 
 HEADER = ("entity_type", "entity_id", "lang", "field", "value")
@@ -38,13 +38,13 @@ def _write_csv(path, rows) -> str:
     return str(path)
 
 
-def _count(db, entity_type: str, entity_id: int) -> int:
+def _count(db, entity_type: str, entity_id: int | str) -> int:
     return db.scalar(
         select(func.count())
         .select_from(ContentTranslation)
         .where(
             ContentTranslation.entity_type == entity_type,
-            ContentTranslation.entity_id == entity_id,
+            ContentTranslation.entity_id == str(entity_id),
         )
     )
 
@@ -175,7 +175,7 @@ def test_column_languages_and_unknown_fields_are_rejected(
             ("package", package_id, "en", "name", "English override"),
             ("package", package_id, "zh", "name", "中文覆盖"),
             ("package", package_id, "de", "level", "Falsches Feld"),
-            ("destination", 1, "de", "name", "Nicht unterstützt"),
+            ("itinerary", 1, "de", "name", "Unbekannter Typ"),
         ],
     )
 
@@ -187,6 +187,58 @@ def test_column_languages_and_unknown_fields_are_rejected(
     assert all("业务表列" in messages[index] for index in (0, 1))
     assert "未知 field" in messages[2]
     assert "未知 entity_type" in messages[3]
+
+
+def test_import_supports_destination_slugs(client, tmp_path) -> None:
+    with SessionLocal() as db:
+        assert db.get(Destination, "beijing") is not None
+
+    path = _write_csv(
+        tmp_path / "destinations.csv",
+        [
+            ("destination", "beijing", "de", "name", "Peking"),
+            ("destination", "beijing", "de", "tagline", "Kaiserstadt"),
+            ("destination", "beijing", "fr", "intro", "Capitale ancienne"),
+        ],
+    )
+
+    with SessionLocal() as db:
+        summary = import_translations(db, path)
+    assert (summary.inserted, summary.updated, summary.unchanged) == (3, 0, 0)
+
+    listing = client.get("/api/v1/destinations?lang=de")
+    assert listing.status_code == 200
+    beijing = next(item for item in listing.json() if item["id"] == "beijing")
+    assert beijing["name"] == "Peking"
+    assert beijing["tagline"] == "Kaiserstadt"
+    # 数组字段保持原类型，翻译只作用于标量字段。
+    assert isinstance(beijing["search_terms"], list)
+    assert isinstance(beijing["tips"], list)
+    assert isinstance(beijing["experiences"], list)
+
+    with SessionLocal() as db:
+        again = import_translations(db, path)
+        count = _count(db, "destination", "beijing")
+    assert (again.inserted, again.updated, again.unchanged) == (0, 0, 3)
+    assert count == 3
+
+
+def test_destination_slug_is_validated(client, tmp_path) -> None:
+    path = _write_csv(
+        tmp_path / "destinations.csv",
+        [
+            ("destination", "Beijing", "de", "name", "Groß"),
+            ("destination", "unknown-city", "de", "name", "Nicht da"),
+        ],
+    )
+
+    with SessionLocal() as db:
+        with pytest.raises(TranslationImportError) as excinfo:
+            import_translations(db, path)
+
+    messages = [problem.message for problem in excinfo.value.problems]
+    assert "目的地 slug" in messages[0]
+    assert "不存在" in messages[1]
 
 
 def test_duplicate_keys_and_bad_ids_are_rejected(client, tmp_path) -> None:

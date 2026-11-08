@@ -13,6 +13,7 @@ from app.db_backup import (
     BackupError,
     backup_database,
     fingerprint,
+    prune_backups,
     restore_database,
     sqlite_path_from_url,
 )
@@ -183,3 +184,85 @@ def test_backup_refuses_existing_target_without_overwrite(tmp_path: Path) -> Non
 def test_non_sqlite_url_is_rejected() -> None:
     with pytest.raises(BackupError):
         sqlite_path_from_url("postgresql://user:pass@localhost:5432/meditour")
+
+
+def _touch_backups(directory: Path, names: list[str]) -> None:
+    directory.mkdir(parents=True, exist_ok=True)
+    for name in names:
+        (directory / name).write_bytes(b"backup")
+
+
+def test_prune_keeps_daily_then_weekly_and_never_newest(
+    tmp_path: Path,
+) -> None:
+    names = [
+        "meditour-20261108-010000.db",  # 今天较早的一份：同一天只留最新
+        "meditour-20261108-020000.db",  # 最新
+        "meditour-20261107-020000.db",
+        "meditour-20261106-020000.db",
+        "meditour-20261030-020000.db",  # 第 44 周
+        "meditour-20261023-020000.db",  # 第 43 周
+        "meditour-20261016-020000.db",  # 第 42 周
+        "meditour-20261009-020000.db",  # 第 41 周
+    ]
+    _touch_backups(tmp_path, names)
+    (tmp_path / "manual-backup.db").write_bytes(b"keep me")
+    (tmp_path / "meditour-20261108-020000.db.tmp").write_bytes(b"partial")
+
+    result = prune_backups(
+        tmp_path,
+        daily_keep=3,
+        weekly_keep=2,
+        now=datetime(2026, 11, 8, 12, 0),
+    )
+
+    kept = {Path(path).name for path in result.kept}
+    deleted = {Path(path).name for path in result.deleted}
+    assert kept == {
+        "meditour-20261108-020000.db",
+        "meditour-20261107-020000.db",
+        "meditour-20261106-020000.db",
+        "meditour-20261030-020000.db",
+        "meditour-20261023-020000.db",
+    }
+    assert deleted == {
+        "meditour-20261108-010000.db",
+        "meditour-20261016-020000.db",
+        "meditour-20261009-020000.db",
+    }
+    # 非本脚本命名的文件与临时文件不参与清理。
+    assert (tmp_path / "manual-backup.db").exists()
+    assert (tmp_path / "meditour-20261108-020000.db.tmp").exists()
+
+
+def test_prune_with_zero_retention_keeps_only_newest(
+    tmp_path: Path,
+) -> None:
+    _touch_backups(
+        tmp_path,
+        [
+            "meditour-20250101-010000.db",
+            "meditour-20250102-010000.db",
+            "meditour-20250103-010000.db",
+        ],
+    )
+
+    result = prune_backups(
+        tmp_path,
+        daily_keep=0,
+        weekly_keep=0,
+        now=datetime(2026, 11, 8, 12, 0),
+    )
+
+    assert {Path(path).name for path in result.kept} == {
+        "meditour-20250103-010000.db"
+    }
+    assert len(result.deleted) == 2
+
+
+def test_prune_empty_directory_is_noop(tmp_path: Path) -> None:
+    result = prune_backups(
+        tmp_path, daily_keep=7, weekly_keep=4, now=datetime(2026, 11, 8)
+    )
+    assert result.kept == ()
+    assert result.deleted == ()

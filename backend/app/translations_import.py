@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -23,16 +24,31 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.i18n import SUPPORTED_LANGUAGES
-from app.models import ContentTranslation, Hospital, MedicalPackage, utcnow
+from app.models import (
+    ContentTranslation,
+    Destination,
+    Hospital,
+    MedicalPackage,
+    utcnow,
+)
 
 COLUMNS = ("entity_type", "entity_id", "lang", "field", "value")
 
-# 允许导入的实体与字段。destination 不在其中：content_translations.entity_id
-# 是整数，而目的地主键是 slug 字符串，当前表结构无法表达。
+# 允许导入的实体与字段。entity_id 统一按字符串存储：
+# 套餐/医院是整数主键的文本形式，目的地是 slug。
 ENTITY_FIELDS: dict[str, tuple[str, ...]] = {
     "package": ("name", "description"),
     "hospital": ("name",),
+    "destination": (
+        "name",
+        "tagline",
+        "intro",
+        "best_season",
+        "suggest_days",
+    ),
 }
+
+DESTINATION_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
 
 # en/zh 的主数据在业务表列（name/name_en 等）中维护；写进翻译表不会被
 # 公开接口读取，属于“看似生效”的死数据，因此直接拒绝。
@@ -51,13 +67,13 @@ class RowProblem:
 class ParsedRow:
     line: int
     entity_type: str
-    entity_id: int
+    entity_id: str
     lang: str
     field: str
     value: str
 
     @property
-    def key(self) -> tuple[str, int, str, str]:
+    def key(self) -> tuple[str, str, str, str]:
         return (self.entity_type, self.entity_id, self.lang, self.field)
 
 
@@ -90,7 +106,7 @@ def _parse_rows(path: Path) -> tuple[list[ParsedRow], list[RowProblem]]:
     path = Path(path)
     rows: list[ParsedRow] = []
     problems: list[RowProblem] = []
-    seen: dict[tuple[str, int, str, str], int] = {}
+    seen: dict[tuple[str, str, str, str], int] = {}
 
     with path.open(newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
@@ -138,14 +154,25 @@ def _parse_rows(path: Path) -> tuple[list[ParsedRow], list[RowProblem]]:
                     )
                 )
 
-            try:
-                entity_id = int(raw_id)
-            except ValueError:
-                entity_id = 0
-                row_problems.append(f"entity_id 必须是正整数，收到 '{raw_id}'")
+            if entity_type == "destination":
+                if not DESTINATION_ID_RE.match(raw_id):
+                    row_problems.append(
+                        "entity_id 必须是目的地 slug（小写字母、数字、连字符），"
+                        f"收到 '{raw_id}'"
+                    )
+                entity_id = raw_id
             else:
-                if entity_id <= 0:
-                    row_problems.append("entity_id 必须是正整数")
+                try:
+                    numeric_id = int(raw_id)
+                except ValueError:
+                    numeric_id = 0
+                    row_problems.append(
+                        f"entity_id 必须是正整数，收到 '{raw_id}'"
+                    )
+                else:
+                    if numeric_id <= 0:
+                        row_problems.append("entity_id 必须是正整数")
+                entity_id = str(numeric_id)
 
             if not value:
                 row_problems.append("value 不能为空")
@@ -189,17 +216,25 @@ def _validate_entities(
     """确认 entity_id 真实存在；避免导入后永远匹配不到内容。"""
     problems: list[RowProblem] = []
 
-    model_by_type = {"package": MedicalPackage, "hospital": Hospital}
-    id_sets: dict[str, set[int]] = {}
+    model_by_type: dict[str, tuple[type, type]] = {
+        "package": (MedicalPackage, int),
+        "hospital": (Hospital, int),
+        "destination": (Destination, str),
+    }
+    id_sets: dict[str, set[str]] = {}
     for row in rows:
         id_sets.setdefault(row.entity_type, set()).add(row.entity_id)
 
-    found: dict[str, set[int]] = {}
+    found: dict[str, set[str]] = {}
     for entity_type, ids in id_sets.items():
-        model = model_by_type[entity_type]
-        found[entity_type] = set(
-            db.scalars(select(model.id).where(model.id.in_(ids))).all()
-        )
+        model, converter = model_by_type[entity_type]
+        query_ids = [converter(entity_id) for entity_id in ids]
+        found[entity_type] = {
+            str(value)
+            for value in db.scalars(
+                select(model.id).where(model.id.in_(query_ids))
+            ).all()
+        }
 
     for row in rows:
         if row.entity_id not in found[row.entity_type]:
