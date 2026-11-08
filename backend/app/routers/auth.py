@@ -1,18 +1,35 @@
-"""认证路由：登录、注册、刷新、登出、当前用户。"""
+"""认证路由：登录、注册、刷新、登出、找回/修改密码、注销账号。"""
+
+import logging
+import secrets
+from datetime import timedelta
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import rate_limit
+from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user, get_token_payload
-from app.models import User
+from app.mailer import send_password_reset
+from app.models import (
+    Booking,
+    Itinerary,
+    ItineraryDay,
+    PasswordResetToken,
+    User,
+    utcnow,
+)
 from app.schemas import (
+    ChangePasswordRequest,
+    DeleteAccountRequest,
     LogoutRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
     RefreshRequest,
     TokenResponse,
     UserCreate,
@@ -23,11 +40,19 @@ from app.security import (
     create_token_pair,
     decode_token,
     hash_password,
+    hash_reset_token,
     verify_password,
 )
 from app.token_service import is_revoked, purge_expired, revoke
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger("app.auth")
+
+# 无论邮箱是否注册都返回同一响应，避免账号枚举。
+_RESET_REQUEST_RESPONSE = {
+    "detail": "If the email is registered, a password reset link has been sent"
+}
+_INVALID_RESET_TOKEN = "Invalid or expired reset token"
 
 
 def _invalid_token(detail: str) -> HTTPException:
@@ -56,7 +81,11 @@ def login(
         )
 
     user = db.scalar(select(User).where(User.email == email))
-    if user is None or not verify_password(form_data.password, user.password_hash):
+    if (
+        user is None
+        or user.deleted_at is not None
+        or not verify_password(form_data.password, user.password_hash)
+    ):
         rate_limit.record_failure(client_ip, email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -65,7 +94,7 @@ def login(
         )
 
     rate_limit.clear(client_ip, email)
-    access_token, refresh_token = create_token_pair(user.id)
+    access_token, refresh_token = create_token_pair(user.id, user.token_version)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
@@ -90,7 +119,11 @@ def refresh_tokens(
         raise _invalid_token("Invalid or expired refresh token")
 
     user = db.get(User, user_id)
-    if user is None:
+    if (
+        user is None
+        or user.deleted_at is not None
+        or int(payload.get("ver", 0) or 0) != user.token_version
+    ):
         raise _invalid_token("Invalid or expired refresh token")
 
     revoke(db, payload)
@@ -102,7 +135,7 @@ def refresh_tokens(
         db.rollback()
         raise _invalid_token("Refresh token has already been used")
 
-    access_token, refresh_token = create_token_pair(user.id)
+    access_token, refresh_token = create_token_pair(user.id, user.token_version)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
@@ -156,6 +189,174 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> User:
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.post("/password-reset/request")
+def request_password_reset(
+    payload: PasswordResetRequest,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    """请求重置令牌。
+
+    无论邮箱是否存在都返回同一响应；令牌只存 SHA-256 摘要，短时效且一次性。
+    同一用户再次请求时，之前未使用的令牌立即作废。
+    """
+    email = payload.email.strip().lower()
+    user = db.scalar(select(User).where(User.email == email))
+
+    if user is not None and user.deleted_at is None:
+        now = utcnow()
+        db.execute(
+            update(PasswordResetToken)
+            .where(
+                PasswordResetToken.user_id == user.id,
+                PasswordResetToken.used_at.is_(None),
+            )
+            .values(used_at=now)
+        )
+        raw_token = secrets.token_urlsafe(32)
+        db.add(
+            PasswordResetToken(
+                user_id=user.id,
+                token_hash=hash_reset_token(raw_token),
+                expires_at=now
+                + timedelta(minutes=settings.RESET_TOKEN_EXPIRE_MINUTES),
+            )
+        )
+        db.commit()
+        try:
+            send_password_reset(user.email, raw_token)
+        except Exception:
+            # 发信失败也不能改变响应，否则会暴露邮箱是否存在。
+            logger.exception("password_reset_email_failed")
+
+    return _RESET_REQUEST_RESPONSE
+
+
+@router.post("/password-reset/confirm")
+def confirm_password_reset(
+    payload: PasswordResetConfirm,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    """用一次性令牌设置新密码；成功后旧令牌版本全部失效。"""
+    now = utcnow()
+    record = db.scalar(
+        select(PasswordResetToken).where(
+            PasswordResetToken.token_hash == hash_reset_token(payload.token)
+        )
+    )
+    if (
+        record is None
+        or record.used_at is not None
+        or record.expires_at <= now
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=_INVALID_RESET_TOKEN
+        )
+
+    user = db.get(User, record.user_id)
+    if user is None or user.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=_INVALID_RESET_TOKEN
+        )
+
+    # 条件更新保证并发下同一令牌只能成功一次。
+    consumed = db.execute(
+        update(PasswordResetToken)
+        .where(
+            PasswordResetToken.id == record.id,
+            PasswordResetToken.used_at.is_(None),
+        )
+        .values(used_at=now)
+    )
+    if consumed.rowcount == 0:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=_INVALID_RESET_TOKEN
+        )
+
+    user.password_hash = hash_password(payload.new_password)
+    user.token_version += 1
+    db.commit()
+    return {"detail": "Password has been reset"}
+
+
+@router.post("/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    """校验当前密码后修改密码，并让该用户已签发的所有令牌失效。"""
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    current_user.password_hash = hash_password(payload.new_password)
+    current_user.token_version += 1
+    db.commit()
+    return {"detail": "Password changed; please log in again"}
+
+
+@router.delete("/account")
+def delete_account(
+    body: DeleteAccountRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    """注销账号：软删除 + 匿名化。
+
+    用户行保留以维持订单外键完整性；订单作为财务凭证保留，只清除联系人信息，
+    待处理订单标记为 cancelled；行程与每日安排属于纯个人数据，直接删除。
+    """
+    if not verify_password(body.password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is incorrect",
+        )
+
+    user = current_user
+    now = utcnow()
+
+    anonymized_email = f"deleted-{user.id}-{secrets.token_hex(4)}@deleted.invalid"
+    db.execute(
+        update(Booking)
+        .where(Booking.user_id == user.id)
+        .values(
+            contact_name="Deleted user",
+            contact_phone="",
+            contact_email=anonymized_email,
+            notes="",
+        )
+    )
+    db.execute(
+        update(Booking)
+        .where(Booking.user_id == user.id, Booking.status == "pending")
+        .values(status="cancelled")
+    )
+
+    itinerary_ids = list(
+        db.scalars(select(Itinerary.id).where(Itinerary.user_id == user.id))
+    )
+    if itinerary_ids:
+        db.execute(
+            delete(ItineraryDay).where(
+                ItineraryDay.itinerary_id.in_(itinerary_ids)
+            )
+        )
+        db.execute(delete(Itinerary).where(Itinerary.id.in_(itinerary_ids)))
+
+    user.email = anonymized_email
+    user.full_name = None
+    user.phone = None
+    user.password_hash = hash_password(secrets.token_urlsafe(32))
+    user.token_version += 1
+    user.deleted_at = now
+
+    db.commit()
+    return {"detail": "Account deleted and personal data anonymized"}
 
 
 @router.get("/me", response_model=UserResponse)

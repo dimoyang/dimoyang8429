@@ -49,6 +49,32 @@ class Settings:
         "MEDITOUR_SEED_DEMO_USER", ""
     ).strip().lower() in {"1", "true", "yes", "on"}
 
+    # 忘记密码令牌有效期（分钟）。
+    RESET_TOKEN_EXPIRE_MINUTES = int(
+        os.getenv("MEDITOUR_RESET_TOKEN_EXPIRE_MINUTES", "30")
+    )
+
+    # 邮件实现：file（开发默认，写入 outbox 文件）/ smtp（生产配置位）。
+    MAIL_BACKEND: str = os.getenv("MEDITOUR_MAIL_BACKEND", "file").strip().lower()
+    MAIL_OUTBOX: Path = Path(
+        os.getenv(
+            "MEDITOUR_MAIL_OUTBOX",
+            str(BASE_DIR / "var" / "mail_outbox.log"),
+        )
+    )
+    PUBLIC_BASE_URL: str = os.getenv(
+        "MEDITOUR_PUBLIC_BASE_URL", "http://localhost:8123"
+    )
+
+    SMTP_HOST: str = os.getenv("MEDITOUR_SMTP_HOST", "")
+    SMTP_PORT: int = int(os.getenv("MEDITOUR_SMTP_PORT", "587"))
+    SMTP_USER: str = os.getenv("MEDITOUR_SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("MEDITOUR_SMTP_PASSWORD", "")
+    SMTP_FROM: str = os.getenv("MEDITOUR_SMTP_FROM", "no-reply@meditour.local")
+    SMTP_STARTTLS: bool = os.getenv(
+        "MEDITOUR_SMTP_STARTTLS", "1"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
 
 settings = Settings()
 

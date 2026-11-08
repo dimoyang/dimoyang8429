@@ -19,6 +19,14 @@ os.environ.setdefault("MEDITOUR_TESTING", "1")
 # 固定关闭演示账号，避免开发者本地 .env 开启开关后影响断言。
 os.environ["MEDITOUR_SEED_DEMO_USER"] = "0"
 
+# 邮件固定走 file 后端，写进测试专用 outbox，避免污染本地开发目录。
+TEST_OUTBOX = BACKEND_DIR / "test_mail_outbox.log"
+if TEST_OUTBOX.exists():
+    TEST_OUTBOX.unlink()
+os.environ.setdefault("MEDITOUR_MAIL_BACKEND", "file")
+os.environ.setdefault("MEDITOUR_MAIL_OUTBOX", str(TEST_OUTBOX))
+os.environ.setdefault("MEDITOUR_RESET_TOKEN_EXPIRE_MINUTES", "30")
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -52,3 +60,9 @@ def auth_headers(client) -> dict[str, str]:
     assert response.status_code == 200
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture(scope="session")
+def mail_outbox() -> Path:
+    """开发环境 file 邮件后端的输出文件。"""
+    return TEST_OUTBOX

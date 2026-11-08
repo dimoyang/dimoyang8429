@@ -3,6 +3,9 @@ __pycache__/
 .env
 *.db
 .pytest_cache/
+# 开发环境 file 邮件后端的输出目录与测试 outbox
+var/
+test_mail_outbox.log
 
 # 根 .gitignore 忽略了 *.txt，依赖清单需要纳入版本控制
 !requirements.txt

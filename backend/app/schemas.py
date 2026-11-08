@@ -36,6 +36,24 @@ class UserCreate(BaseModel):
     preferred_language: str = Field(default="en", max_length=10)
 
 
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=6, max_length=72)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=72)
+    new_password: str = Field(min_length=6, max_length=72)
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=72)
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

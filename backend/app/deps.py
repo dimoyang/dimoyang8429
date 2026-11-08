@@ -49,6 +49,10 @@ def get_current_user(
         raise _unauthorized("Invalid or expired token")
 
     user = db.get(User, user_id)
-    if user is None:
+    if user is None or user.deleted_at is not None:
+        raise _unauthorized("Invalid or expired token")
+
+    # 改密/重置/注销会把 token_version 自增，旧令牌即使未过期也立即失效。
+    if int(payload.get("ver", 0) or 0) != user.token_version:
         raise _unauthorized("Invalid or expired token")
     return user

@@ -33,6 +33,10 @@ class User(Base):
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     preferred_language: Mapped[str] = mapped_column(String(10), default="en")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    # 令牌版本：改密/重置/注销时自增，使已签发的 access/refresh 一并失效。
+    token_version: Mapped[int] = mapped_column(Integer, default=0)
+    # 软删除标记：保留用户行以维持订单外键，同时禁止登录。
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     bookings: Mapped[list["Booking"]] = relationship(back_populates="user")
 
@@ -165,3 +169,16 @@ class TokenRevocation(Base):
     token_type: Mapped[str] = mapped_column(String(20))
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     revoked_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class PasswordResetToken(Base):
+    """忘记密码令牌：只存 SHA-256 摘要，短时效且一次性。"""
+
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
