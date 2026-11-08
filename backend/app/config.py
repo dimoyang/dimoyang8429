@@ -29,9 +29,14 @@ class Settings:
     # 单一币种来源：种子数据与订单金额均引用此配置。
     DEFAULT_CURRENCY: str = os.getenv("MEDITOUR_CURRENCY", "EUR")
 
+    # 允许来源：逗号分隔的环境变量；未配置时保留本地 Flutter Web 默认端口。
     CORS_ORIGINS: list[str] = [
-        "http://localhost:8123",
-        "http://127.0.0.1:8123",
+        origin.strip()
+        for origin in os.getenv(
+            "MEDITOUR_CORS_ORIGINS",
+            "http://localhost:8123,http://127.0.0.1:8123",
+        ).split(",")
+        if origin.strip()
     ]
 
 

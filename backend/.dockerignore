@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 本地数据库与备份不入镜像
+*.db
+*.db-journal
+*.db-wal
+
+# 环境变量文件
+.env
+
+# 测试与本地验证脚本不进入运行镜像
+tests/
+scripts/
+
+# 其他
+.git/
+.gitignore
+Dockerfile
+.dockerignore
+README.md
