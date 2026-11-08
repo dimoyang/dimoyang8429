@@ -2,7 +2,7 @@
 """MediTour 后端接口验证脚本（仅使用 Python 标准库）。
 
 逐条验证前端依赖的 /api/v1 契约：注册、登录、鉴权、套餐、医院、预约、
-CORS 预检以及错误体形状。
+CORS 预检、错误体形状、账号闭环（找回/修改密码、注销）、多语言与数据导出。
 
 前置：先启动后端（在 i:\\meditour_app\\backend 下）
     $env:MEDITOUR_SECRET_KEY="<本地密钥>"
@@ -11,10 +11,12 @@ CORS 预检以及错误体形状。
 运行示例（系统 Python 即可，无需安装任何依赖）：
     python backend/scripts/verify_api.py
     python backend/scripts/verify_api.py --base-url http://10.0.2.2:8000/api/v1
-    python backend/scripts/verify_api.py --base-url http://192.168.1.10:8000/api/v1
+    python backend/scripts/verify_api.py --mail-outbox backend/var/mail_outbox.log
     python backend/scripts/verify_api.py --cleanup
 
-每次运行都会注册一个带时间戳和随机后缀的独立账号，不会改动演示账号。
+账号闭环验证需要后端使用开发环境 file 邮件后端（默认），脚本从 outbox
+文件读取重置令牌；使用 smtp 后端时该部分会明确失败而不会伪造通过。
+每次运行都会注册带时间戳和随机后缀的独立账号，不会改动演示账号。
 --cleanup 仅作用于本机默认的 backend/meditour.db；远程目标请手动清理。
 """
 
@@ -22,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import secrets
 import sqlite3
 import sys
@@ -34,6 +37,9 @@ from pathlib import Path
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8000/api/v1"
 DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "meditour.db"
+DEFAULT_MAIL_OUTBOX = (
+    Path(__file__).resolve().parent.parent / "var" / "mail_outbox.log"
+)
 
 
 class ConnectionFailure(RuntimeError):
@@ -134,7 +140,7 @@ class Checker:
         print(f"  NOTE  {text}")
 
     def section(self, index: int, title: str) -> None:
-        print(f"\n[{index}/10] {title}")
+        print(f"\n[{index}/13] {title}")
 
 
 class ApiClient:
@@ -176,6 +182,20 @@ class ApiClient:
             timeout=self.timeout,
         )
 
+    def delete_json(
+        self, path: str, payload: object, token: str | None = None
+    ) -> Response:
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        return request(
+            "DELETE",
+            self.url(path),
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            timeout=self.timeout,
+        )
+
 
 def cleanup_local(email: str, db_path: Path) -> None:
     if not db_path.exists():
@@ -197,6 +217,25 @@ def cleanup_local(email: str, db_path: Path) -> None:
     print(f"  清理完成：users={users}, bookings={bookings}（{db_path}）")
 
 
+def outbox_line_count(path: Path) -> int:
+    if not path.exists():
+        return 0
+    return len(path.read_text(encoding="utf-8").splitlines())
+
+
+def read_new_reset_tokens(path: Path, offset: int) -> list[str]:
+    """读取 outbox 中新增行里的重置令牌（开发环境 file 邮件后端）。"""
+    if not path.exists():
+        return []
+    lines = path.read_text(encoding="utf-8").splitlines()[offset:]
+    tokens: list[str] = []
+    for line in lines:
+        match = re.search(r"\btoken=(\S+)", line)
+        if match:
+            tokens.append(match.group(1))
+    return tokens
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="逐条验证 MediTour 后端 /api/v1 接口契约（仅标准库）。"
@@ -215,7 +254,14 @@ def main() -> int:
         action="store_true",
         help="验证后从本机默认 SQLite（backend/meditour.db）删除本次测试账号与订单",
     )
+    parser.add_argument(
+        "--mail-outbox",
+        default=str(DEFAULT_MAIL_OUTBOX),
+        help="开发环境 file 邮件后端的 outbox 路径，默认 backend/var/mail_outbox.log",
+    )
     args = parser.parse_args()
+
+    mail_outbox = Path(args.mail_outbox)
 
     api = ApiClient(args.base_url, args.timeout)
     checker = Checker()
@@ -834,6 +880,347 @@ def main() -> int:
     checker.check(
         isinstance(missing.body.get("detail"), list),
         "422 detail 为数组",
+    )
+
+    # 11. 账号闭环
+    checker.section(11, "账号闭环（找回/修改密码、注销）")
+    reset_email = f"verify-reset-{suffix}@meditour.com"
+    reset_password = "ResetStart123"
+    reset_new_password = "ResetFinal123"
+    api.post_json(
+        "/auth/register",
+        {
+            "email": reset_email,
+            "password": reset_password,
+            "full_name": "Reset Verifier",
+        },
+    )
+
+    outbox_offset = outbox_line_count(mail_outbox)
+    reset_request = api.post_json(
+        "/auth/password-reset/request", {"email": reset_email}
+    )
+    unknown_reset_request = api.post_json(
+        "/auth/password-reset/request",
+        {"email": f"verify-nobody-{suffix}@meditour.com"},
+    )
+    checker.check(
+        reset_request.status == 200,
+        "已注册邮箱请求重置返回 200",
+        f"实际 {reset_request.status} {fmt(reset_request.body)}",
+    )
+    checker.check(
+        unknown_reset_request.status == 200
+        and unknown_reset_request.body == reset_request.body,
+        "未注册邮箱返回完全相同的响应（防账号枚举）",
+        f"实际 {unknown_reset_request.status} {fmt(unknown_reset_request.body)}",
+    )
+
+    reset_tokens = read_new_reset_tokens(mail_outbox, outbox_offset)
+    checker.check(
+        bool(reset_tokens),
+        "开发环境 file 邮件后端写入了重置令牌",
+        f"outbox={mail_outbox}，新增令牌 {len(reset_tokens)} 个",
+    )
+    if not reset_tokens:
+        checker.note(
+            "未读到令牌：确认后端使用 MEDITOUR_MAIL_BACKEND=file，"
+            "且 --mail-outbox 指向真实文件；smtp 后端无法自动验证此段。"
+        )
+
+    if reset_tokens:
+        reset_token = reset_tokens[-1]
+        confirmed = api.post_json(
+            "/auth/password-reset/confirm",
+            {"token": reset_token, "new_password": reset_new_password},
+        )
+        checker.check(
+            confirmed.status == 200,
+            "用一次性令牌设置新密码返回 200",
+            f"实际 {confirmed.status} {fmt(confirmed.body)}",
+        )
+        checker.check(
+            api.post_form(
+                "/auth/login",
+                {"username": reset_email, "password": reset_password},
+            ).status
+            == 401,
+            "重置后旧密码无法登录",
+        )
+        reset_login = api.post_form(
+            "/auth/login",
+            {"username": reset_email, "password": reset_new_password},
+        )
+        reset_tokens_body = (
+            reset_login.body if isinstance(reset_login.body, dict) else {}
+        )
+        reset_access = reset_tokens_body.get("access_token")
+        reset_refresh = reset_tokens_body.get("refresh_token")
+        checker.check(
+            reset_login.status == 200 and is_str(reset_access),
+            "重置后新密码可以登录",
+            f"实际 {reset_login.status}",
+        )
+
+        reused_reset = api.post_json(
+            "/auth/password-reset/confirm",
+            {"token": reset_token, "new_password": "AnotherPass123"},
+        )
+        checker.check(
+            reused_reset.status == 400,
+            "重置令牌重复使用返回 400",
+            f"实际 {reused_reset.status} {fmt(reused_reset.body)}",
+        )
+
+        wrong_current = api.post_json(
+            "/auth/change-password",
+            {
+                "current_password": "WrongCurrent123",
+                "new_password": "ChangedAgain123",
+            },
+            token=reset_access,
+        )
+        checker.check(
+            wrong_current.status == 400,
+            "修改密码时当前密码错误返回 400",
+            f"实际 {wrong_current.status} {fmt(wrong_current.body)}",
+        )
+
+        changed = api.post_json(
+            "/auth/change-password",
+            {
+                "current_password": reset_new_password,
+                "new_password": "ChangedAgain123",
+            },
+            token=reset_access,
+        )
+        checker.check(
+            changed.status == 200,
+            "当前密码正确时修改成功",
+            f"实际 {changed.status} {fmt(changed.body)}",
+        )
+        checker.check(
+            api.get("/auth/me", token=reset_access).status == 401,
+            "改密后旧 access token 立即失效",
+        )
+        checker.check(
+            api.post_json(
+                "/auth/refresh", {"refresh_token": reset_refresh}
+            ).status
+            == 401,
+            "改密后旧 refresh token 立即失效",
+        )
+
+        final_login = api.post_form(
+            "/auth/login",
+            {"username": reset_email, "password": "ChangedAgain123"},
+        )
+        final_body = final_login.body if isinstance(final_login.body, dict) else {}
+        final_access = final_body.get("access_token")
+        checker.check(
+            final_login.status == 200 and is_str(final_access),
+            "改密后可用新密码重新登录",
+            f"实际 {final_login.status}",
+        )
+
+        wrong_delete = api.delete_json(
+            "/auth/account",
+            {"password": "WrongDelete123"},
+            token=final_access,
+        )
+        checker.check(
+            wrong_delete.status == 400,
+            "注销账号时密码错误返回 400",
+            f"实际 {wrong_delete.status} {fmt(wrong_delete.body)}",
+        )
+
+        deleted = api.delete_json(
+            "/auth/account",
+            {"password": "ChangedAgain123"},
+            token=final_access,
+        )
+        checker.check(
+            deleted.status == 200,
+            "密码正确时注销账号返回 200",
+            f"实际 {deleted.status} {fmt(deleted.body)}",
+        )
+        checker.check(
+            api.get("/auth/me", token=final_access).status == 401,
+            "注销后原 access token 失效",
+        )
+        checker.check(
+            api.post_form(
+                "/auth/login",
+                {"username": reset_email, "password": "ChangedAgain123"},
+            ).status
+            == 401,
+            "注销后无法再登录",
+        )
+
+    # 12. 多语言
+    checker.section(12, "医疗内容多语言（lang 参数与回退）")
+    baseline_packages = api.get("/medical/packages?page=1&page_size=100")
+    baseline_body = (
+        baseline_packages.body if isinstance(baseline_packages.body, dict) else {}
+    )
+    baseline_items = (
+        baseline_body.get("items")
+        if isinstance(baseline_body.get("items"), list)
+        else []
+    )
+
+    def find_by_name_en(rows: list, name_en: str) -> dict | None:
+        for row in rows:
+            if isinstance(row, dict) and row.get("name_en") == name_en:
+                return row
+        return None
+
+    knee_baseline = find_by_name_en(baseline_items, "Knee Replacement Surgery")
+    checker.check(
+        knee_baseline is not None
+        and knee_baseline.get("name") == "膝关节置换手术",
+        "不传 lang 时 name 仍为中文（向后兼容）",
+        fmt(knee_baseline and knee_baseline.get("name")),
+    )
+
+    zh_packages = api.get("/medical/packages?page=1&page_size=100&lang=zh")
+    en_packages = api.get("/medical/packages?page=1&page_size=100&lang=en")
+    de_packages = api.get("/medical/packages?page=1&page_size=100&lang=de")
+    zh_body = zh_packages.body if isinstance(zh_packages.body, dict) else {}
+    en_body = en_packages.body if isinstance(en_packages.body, dict) else {}
+    de_body = de_packages.body if isinstance(de_packages.body, dict) else {}
+    zh_knee = find_by_name_en(zh_body.get("items", []), "Knee Replacement Surgery")
+    en_knee = find_by_name_en(en_body.get("items", []), "Knee Replacement Surgery")
+    de_knee = find_by_name_en(de_body.get("items", []), "Knee Replacement Surgery")
+    de_implants = find_by_name_en(de_body.get("items", []), "Dental Implants")
+
+    checker.check(
+        zh_packages.status == 200
+        and zh_knee is not None
+        and zh_knee.get("name") == "膝关节置换手术",
+        "lang=zh 返回中文内容",
+        fmt(zh_knee and zh_knee.get("name")),
+    )
+    checker.check(
+        en_packages.status == 200
+        and en_knee is not None
+        and en_knee.get("name") == "Knee Replacement Surgery",
+        "lang=en 使用英文 name",
+        fmt(en_knee and en_knee.get("name")),
+    )
+    checker.check(
+        de_packages.status == 200
+        and de_knee is not None
+        and de_knee.get("name") == "Kniegelenkersatz (Knie-TEP)",
+        "lang=de 命中德语译文",
+        fmt(de_knee and de_knee.get("name")),
+    )
+    checker.check(
+        de_implants is not None
+        and de_implants.get("name") == "Dental Implants",
+        "无德语译文的套餐回退到英文（de → en → zh）",
+        fmt(de_implants and de_implants.get("name")),
+    )
+
+    de_hospitals = api.get("/medical/hospitals?lang=de")
+    de_hospital_list = (
+        de_hospitals.body if isinstance(de_hospitals.body, list) else []
+    )
+    de_union = find_by_name_en(
+        de_hospital_list, "Peking Union Medical College Hospital"
+    )
+    checker.check(
+        de_hospitals.status == 200
+        and de_union is not None
+        and de_union.get("name") == "Peking-Union-Krankenhaus",
+        "医院列表支持 lang=de",
+        fmt(de_union and de_union.get("name")),
+    )
+    checker.check(
+        api.get("/medical/packages?lang=it").status == 422,
+        "不支持的语言返回 422",
+    )
+
+    # 13. 数据导出
+    checker.section(13, "用户数据导出（仅本人）")
+    export = api.get("/auth/export", token=token)
+    export_body = export.body if isinstance(export.body, dict) else {}
+    checker.check(
+        export.status == 200,
+        "GET /auth/export 返回 200",
+        f"实际 {export.status} {fmt(export.body)}",
+    )
+    checker.check(
+        "attachment" in (header(export.headers, "Content-Disposition") or ""),
+        "响应带 attachment 下载头",
+        f"Content-Disposition={header(export.headers, 'Content-Disposition')}",
+    )
+    checker.check(
+        isinstance(export_body.get("account"), dict)
+        and export_body["account"].get("email") == email,
+        "导出账号信息属于当前用户",
+        fmt(export_body.get("account")),
+    )
+    export_bookings = (
+        export_body.get("bookings")
+        if isinstance(export_body.get("bookings"), list)
+        else []
+    )
+    checker.check(
+        any(
+            isinstance(item, dict)
+            and item.get("order_no") == created_body.get("order_no")
+            for item in export_bookings
+        ),
+        "导出包含本人订单",
+        f"订单数 {len(export_bookings)}",
+    )
+    checker.check(
+        isinstance(export_body.get("itineraries"), list)
+        and export_body.get("favorites") == [],
+        "导出包含 itineraries 与 favorites 字段",
+        fmt(
+            {
+                "itineraries": export_body.get("itineraries"),
+                "favorites": export_body.get("favorites"),
+            }
+        ),
+    )
+
+    other_email = f"verify-export-{suffix}@meditour.com"
+    api.post_json(
+        "/auth/register",
+        {"email": other_email, "password": "OtherExport123"},
+    )
+    other_login = api.post_form(
+        "/auth/login", {"username": other_email, "password": "OtherExport123"}
+    )
+    other_access = (
+        other_login.body.get("access_token")
+        if isinstance(other_login.body, dict)
+        else None
+    )
+    other_export = api.get("/auth/export", token=other_access)
+    other_body = other_export.body if isinstance(other_export.body, dict) else {}
+    checker.check(
+        other_export.status == 200
+        and other_body.get("account", {}).get("email") == other_email,
+        "另一个账号只能导出自己的账号信息",
+        fmt(other_body.get("account")),
+    )
+    checker.check(
+        other_body.get("bookings") == [] and other_body.get("itineraries") == [],
+        "另一个账号导出中不包含他人订单/行程",
+        fmt(
+            {
+                "bookings": other_body.get("bookings"),
+                "itineraries": other_body.get("itineraries"),
+            }
+        ),
+    )
+    checker.check(
+        api.get("/auth/export").status == 401,
+        "未登录访问导出接口返回 401",
     )
 
     # 汇总
