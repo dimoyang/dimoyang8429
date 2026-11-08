@@ -4,7 +4,7 @@ import secrets
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -166,14 +166,37 @@ def cancel_booking(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Booking not found",
         )
-    if booking.status != "pending":
+    # 条件更新让「检查状态 + 改状态」在数据库层不可分割：
+    # 只有第一个请求能命中 status='pending'，并发请求的 rowcount 为 0。
+    result = db.execute(
+        update(Booking)
+        .where(
+            Booking.id == booking_id,
+            Booking.user_id == current_user.id,
+            Booking.status == "pending",
+        )
+        .values(status="cancelled")
+    )
+    if result.rowcount == 0:
+        db.rollback()
+        # 回查区分「不存在/非本人」（404）与「状态已变」（409）。
+        current = db.scalar(
+            select(Booking).where(
+                Booking.id == booking_id,
+                Booking.user_id == current_user.id,
+            )
+        )
+        if current is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Booking not found",
+            )
         # 请求本身合法，但与资源当前状态冲突，因此用 409 而不是 422。
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Only pending bookings can be cancelled (current status: {booking.status})",
+            detail=f"Only pending bookings can be cancelled (current status: {current.status})",
         )
 
-    booking.status = "cancelled"
     db.commit()
     db.refresh(booking)
     return booking

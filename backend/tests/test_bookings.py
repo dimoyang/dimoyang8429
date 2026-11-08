@@ -177,6 +177,39 @@ def test_concurrent_duplicate_booking_is_settled_by_unique_index(
     assert rebooked.json()["status"] == "pending"
 
 
+def test_concurrent_cancel_only_one_succeeds(client, auth_headers) -> None:
+    """并发取消同一单：条件更新保证只有 1 个 200，其余 409。"""
+    appointment = future_iso(71)
+    created = client.post(
+        "/api/v1/bookings/",
+        json=booking_payload(appointment_date=appointment),
+        headers=auth_headers,
+    )
+    assert created.status_code == 201
+    booking_id = created.json()["id"]
+
+    attempts = 8
+    barrier = threading.Barrier(attempts)
+
+    def attempt() -> int:
+        barrier.wait(timeout=10)
+        return client.post(
+            f"/api/v1/bookings/{booking_id}/cancel", headers=auth_headers
+        ).status_code
+
+    with ThreadPoolExecutor(max_workers=attempts) as pool:
+        statuses = list(pool.map(lambda _: attempt(), range(attempts)))
+
+    assert statuses.count(200) == 1, statuses
+    assert statuses.count(409) == attempts - 1, statuses
+    assert set(statuses) <= {200, 409}
+
+    listed = client.get("/api/v1/bookings/", headers=auth_headers).json()
+    cancelled = [item for item in listed if item["id"] == booking_id]
+    assert len(cancelled) == 1
+    assert cancelled[0]["status"] == "cancelled"
+
+
 def test_cancel_pending_booking_and_reject_second_cancel(
     client, auth_headers
 ) -> None:
