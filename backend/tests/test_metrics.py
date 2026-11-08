@@ -45,3 +45,18 @@ def test_metrics_endpoint_can_be_disabled(client, monkeypatch) -> None:
     response = client.get("/metrics")
     assert response.status_code == 404
     assert response.json() == {"detail": "Not Found"}
+
+
+def test_metrics_endpoint_can_be_limited_to_allowed_ips(
+    client, monkeypatch
+) -> None:
+    monkeypatch.setattr(settings, "METRICS_ALLOWED_IPS", ["203.0.113.10"])
+    denied = client.get("/metrics")
+    assert denied.status_code == 404
+    assert denied.json() == {"detail": "Not Found"}
+
+    # TestClient 的来源主机固定为 testclient。
+    monkeypatch.setattr(settings, "METRICS_ALLOWED_IPS", ["testclient"])
+    allowed = client.get("/metrics")
+    assert allowed.status_code == 200
+    assert allowed.headers["content-type"].startswith("text/plain")

@@ -1,6 +1,7 @@
 """邮箱验证：注册发信、可重发、一次性令牌与不阻断登录。"""
 
 import re
+from datetime import datetime, timedelta, timezone
 from email import policy
 from email.parser import BytesParser
 
@@ -134,6 +135,44 @@ def test_resend_invalidates_previous_token(client, mail_outbox) -> None:
     assert verified_resend.status_code == 200
     assert verified_resend.json() == resent.json()
     assert mail_outbox.read_text(encoding="utf-8").splitlines() == lines_before
+
+
+def test_booking_requires_verified_email_when_switch_enabled(
+    client, mail_outbox, monkeypatch
+) -> None:
+    email = "verify-booking-gate@meditour.com"
+    assert register(client, email).status_code == 201
+    tokens = login(client, email)
+
+    package = client.get("/api/v1/medical/packages?page=1&page_size=1").json()
+    package_id = package["items"][0]["id"]
+    payload = {
+        "package_id": package_id,
+        "appointment_date": (
+            datetime.now(timezone.utc) + timedelta(days=30)
+        )
+        .replace(microsecond=0)
+        .isoformat(),
+        "contact_name": "Gate User",
+        "contact_phone": "+8613800000000",
+        "contact_email": email,
+    }
+
+    monkeypatch.setattr(settings, "REQUIRE_EMAIL_VERIFICATION", True)
+    denied = client.post(
+        "/api/v1/bookings/", json=payload, headers=bearer(tokens["access_token"])
+    )
+    assert denied.status_code == 403
+    assert denied.json() == {"detail": "Email verification required"}
+
+    token = latest_verification_token(mail_outbox)
+    assert client.post(VERIFY_CONFIRM, json={"token": token}).status_code == 200
+
+    allowed = client.post(
+        "/api/v1/bookings/", json=payload, headers=bearer(tokens["access_token"])
+    )
+    assert allowed.status_code == 201, allowed.text
+    assert allowed.json()["status"] == "pending"
 
 
 def test_expired_verification_token_is_rejected(

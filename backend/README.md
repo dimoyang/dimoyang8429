@@ -37,9 +37,16 @@ uvicorn app.main:app --reload --port 8000
 | `MEDITOUR_REFRESH_TOKEN_EXPIRE_DAYS` | 否 | `30` | refresh token 有效期（天） |
 | `MEDITOUR_RESET_TOKEN_EXPIRE_MINUTES` | 否 | `30` | 忘记密码令牌有效期（分钟） |
 | `MEDITOUR_EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES` | 否 | `60` | 邮箱验证令牌有效期（分钟） |
+| `MEDITOUR_REQUIRE_EMAIL_VERIFICATION` | 否 | `false` | 是否把“邮箱已验证”作为创建预约的前置条件；默认关闭，开启后未验证用户登录仍可用，但下单返回 403 |
 | `MEDITOUR_PUBLIC_BASE_URL` | 否 | `http://localhost:8123` | 邮件里链接的站点地址（重置密码、验证邮箱） |
 | `MEDITOUR_ENV` | 否 | `development` | 运行环境；设为 `production` 时 `/metrics` 默认关闭 |
 | `MEDITOUR_METRICS_ENABLED` | 否 | 开发 `true` / 生产 `false` | 是否开放 `/metrics`；显式设置优先于环境默认值 |
+| `MEDITOUR_METRICS_ALLOWED_IPS` | 否 | 空 | `/metrics` 来源白名单，精确 IP、逗号分隔；空表示不限来源（风险见「运行指标」） |
+| `MEDITOUR_TOKEN_RETENTION_DAYS` | 否 | `30` | 过期/已使用令牌与已失效会话的保留天数 |
+| `MEDITOUR_AUDIT_LOG_RETENTION_DAYS` | 否 | `365` | 审计日志保留天数 |
+| `MEDITOUR_SOFT_DELETED_ACCOUNT_RETENTION_DAYS` | 否 | `30` | 软删除账号的关联数据（行程、会话、令牌）保留天数；用户行与订单不删 |
+| `MEDITOUR_MAIL_PREVIEW_RETENTION_DAYS` | 否 | `14` | `mail_preview/` 的 `.eml` 与 outbox 索引行保留天数 |
+| `MEDITOUR_UPLOAD_TEMP_RETENTION_DAYS` | 否 | `1` | 上传目录中 `.tmp/.part/.upload` 临时文件保留天数 |
 | `MEDITOUR_MAIL_BACKEND` | 否 | `file` | 邮件实现：`file`（开发，写 outbox 文件）或 `smtp`（生产） |
 | `MEDITOUR_MAIL_OUTBOX` | 否 | `backend/var/mail_outbox.log` | `file` 后端的输出文件，已被 `.gitignore` 忽略 |
 | `MEDITOUR_SMTP_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_FROM` / `_STARTTLS` | 否 | 空 / `587` / 空 / 空 / `no-reply@meditour.local` / 开 | `smtp` 后端配置位 |
@@ -188,8 +195,8 @@ uvicorn app.main:app --reload --port 8000
 - `POST /api/v1/auth/email-verification/confirm`，请求体 `{"token": "..."}`：公开接口，令牌默认 60 分钟有效、只能成功使用一次；成功返回 `200`，无效/过期/已使用统一返回 `400`。
 - `POST /api/v1/auth/email-verification/request`：需要 Bearer 鉴权，重发验证邮件。已验证的账号不再发信，但无论当前是否已验证、发信是否成功，都返回**同一个** `200` 响应；重发会使之前未使用的令牌作废。
 - 验证状态通过 `email_verified` 返回：`POST /auth/register`、`GET /auth/me`，以及登录/刷新响应（`TokenResponse`）都带该字段。
-- **当前不阻断登录**：未验证用户与已验证用户的登录、下单、导出等权限完全相同。这是为了不打断前端尚未做验证引导的现有流程。
-- **上线前是否强制验证需要产品决策**（例如未验证只能浏览、不能下单，或登录后限制部分功能）。后端目前没有硬编码拦截；产品确认后需要另行实现并同步前端。
+- **当前不阻断登录**：未验证用户与已验证用户的登录、浏览、导出等权限完全相同。这是为了不打断前端尚未做验证引导的现有流程。
+- **强制验证是可配置开关，默认关闭**：`MEDITOUR_REQUIRE_EMAIL_VERIFICATION=true` 时，未验证用户仍可登录与浏览，但 `POST /bookings/` 返回 `403`（`detail="Email verification required"`）。默认 `false`，现有流程不受影响；产品确认要强制时只需改环境变量，无需改代码。测试 `test_booking_requires_verified_email_when_switch_enabled` 覆盖开关打开后的 403 与确认邮箱后的 201。
 
 ## 会话管理
 
@@ -373,6 +380,8 @@ python scripts/import_translations.py var/translations.csv
 
 安全提示：端点无鉴权，开放后任何能访问服务的人都能看到流量与错误分布。生产环境若开启，应在网关/内网层限制来源，或后续增加管理员鉴权；这是运维/产品决策，当前未硬编码。
 
+来源白名单：`MEDITOUR_METRICS_ALLOWED_IPS` 可填精确 IP（逗号分隔，**不支持 CIDR**）。默认空，表示不限制来源——此时任何能访问服务的客户端都能抓取指标。白名单非空时，来源 IP 不在名单内也返回 `404`，与“端点关闭”的响应一致，避免泄露白名单是否生效。反向代理场景下 `request.client.host` 是代理地址，需要按实际部署填写代理 IP 或在网关层做网段限制。
+
 ## 错误码对照表
 
 下表按后端代码的实际行为逐条整理，方便前端按状态码分流。除健康检查的 503 外，错误响应体统一为
@@ -382,8 +391,8 @@ python scripts/import_translations.py var/translations.csv
 | --- | --- | --- |
 | 400 | 请求格式合法，但业务前置条件不满足 | `POST /auth/password-reset/confirm` 令牌不存在、已使用或已过期（统一 `Invalid or expired reset token`）；`POST /auth/email-verification/confirm` 令牌不存在、已使用或已过期（统一 `Invalid or expired verification token`）；`POST /auth/change-password` 当前密码错误；`DELETE /auth/account` 密码错误 |
 | 401 | 未认证或凭据失效 | 任意需要 Bearer 的端点：缺少/为空/无效/过期/已吊销的 access token、`token_version` 不匹配、账号已注销（`Not authenticated` 或 `Invalid or expired token`，带 `WWW-Authenticate: Bearer`）；`POST /auth/login` 邮箱或密码错误（含已注销账号）；`POST /auth/refresh` refresh token 无效、过期、重复使用或所属用户失效；`POST /auth/logout` access/refresh token 无效，或 refresh token 不属于当前用户 |
-| 403 | 已认证但权限不足 | 非 `staff` 角色访问 `/staff/*` 端点，`detail="Staff privileges required"`。普通用户即使拥有该订单也不能借此修改状态 |
-| 404 | 资源不存在，或存在但不属于当前用户 | `POST /bookings/` 套餐不存在**或已下架**（下架套餐按不存在处理，不暴露其存在）；`POST /bookings/{id}/cancel`、`GET /staff/bookings/{id}`、`PATCH /staff/bookings/{id}/status` 订单不存在（用户侧与不存在/属于他人共用一个 404）；`GET/PUT/DELETE /itineraries/{id}` 行程不存在或属于他人；`GET /destinations/{id}` 目的地不存在；`/staff/packages|hospitals|destinations/{id}` 目标不存在；`DELETE /auth/sessions/{id}` 会话不存在、属于他人或已吊销；`GET /metrics` 指标端点关闭时 |
+| 403 | 已认证但权限不足 | 非 `staff` 角色访问 `/staff/*` 端点，`detail="Staff privileges required"`。普通用户即使拥有该订单也不能借此修改状态；`MEDITOUR_REQUIRE_EMAIL_VERIFICATION=true` 时未验证用户 `POST /bookings/` 返回 `detail="Email verification required"` |
+| 404 | 资源不存在，或存在但不属于当前用户 | `POST /bookings/` 套餐不存在**或已下架**（下架套餐按不存在处理，不暴露其存在）；`POST /bookings/{id}/cancel`、`GET /staff/bookings/{id}`、`PATCH /staff/bookings/{id}/status` 订单不存在（用户侧与不存在/属于他人共用一个 404）；`GET/PUT/DELETE /itineraries/{id}` 行程不存在或属于他人；`GET /destinations/{id}` 目的地不存在；`/staff/packages|hospitals|destinations/{id}` 目标不存在；`DELETE /auth/sessions/{id}` 会话不存在、属于他人或已吊销；`GET /metrics` 指标端点关闭或来源不在白名单时 |
 | 409 | 与资源当前状态冲突 | `POST /auth/register` 邮箱已注册；`POST /bookings/` 同用户同套餐同预约时间已有 `pending` 订单；`POST /bookings/{id}/cancel` 当前状态不是 `pending`；`PATCH /staff/bookings/{id}/status` 跳过中间状态或对已结束订单再流转；员工删除套餐时仍有订单、删除医院时仍有套餐、删除目的地时仍被行程引用；创建目的地时 slug 已存在 |
 | 413 | 请求体过大 | 任意端点：请求体超过 `MEDITOUR_MAX_REQUEST_BYTES`（默认 10 MiB），`detail="Request body too large"`；`POST /staff/uploads`：文件大于 `MEDITOUR_UPLOAD_MAX_BYTES`（默认 5 MiB），`detail` 为限制字节数 |
 | 415 | 上传文件类型不受支持 | `POST /staff/uploads`：声明类型不是 JPEG/PNG/WebP，或文件头与声明类型不符（防止把非图片改成 `.png` 后缀上传） |
@@ -558,6 +567,38 @@ users). Stop the backend before restoring, then re-run with --force to overwrite
 必须改为共享数据库（如 PostgreSQL）并使用数据库自带的备份/时间点恢复；
 把备份文件放到对象存储只是异地保存，不能替代数据库级备份。
 
+## 数据保留与清理
+
+`scripts/cleanup_data.py` 按保留期清理可再生的数据。**默认 dry-run**，只打印将删除的内容；确认后加 `--no-dry-run` 才真正写入。
+
+```bash
+cd backend
+# 预演（推荐先跑）：列出每类将删除的行数/文件数、示例 id 与释放空间
+python scripts/cleanup_data.py
+# 真正执行；非交互环境（cron / CI）需显式加 --yes
+python scripts/cleanup_data.py --no-dry-run --yes
+```
+
+| 数据 | 保留期变量 | 默认 | 清理规则 |
+| --- | --- | --- | --- |
+| `password_reset_tokens` / `email_verification_tokens` | `MEDITOUR_TOKEN_RETENTION_DAYS` | 30 天 | 过期或已使用超过保留期 |
+| `token_revocations` | 同上 | 30 天 | `expires_at` 超过保留期（此后令牌本身已过期，无需再记入黑名单） |
+| `auth_sessions` | 同上 | 30 天 | 过期或已吊销超过保留期 |
+| `audit_logs` | `MEDITOUR_AUDIT_LOG_RETENTION_DAYS` | 365 天 | 按 `created_at` |
+| 软删除账号的关联数据 | `MEDITOUR_SOFT_DELETED_ACCOUNT_RETENTION_DAYS` | 30 天 | 只删行程/每日安排、会话、重置与验证令牌 |
+| `mail_preview/*.eml` 与 outbox 索引行 | `MEDITOUR_MAIL_PREVIEW_RETENTION_DAYS` | 14 天 | `.eml` 按文件 mtime；outbox 按行首 ISO 时间戳裁剪（索引行含收件人与令牌） |
+| 上传目录临时文件 | `MEDITOUR_UPLOAD_TEMP_RETENTION_DAYS` | 1 天 | 仅 `.tmp` / `.part` / `.upload`，最终图片不删 |
+
+**软删除账号为什么不物理删除：**
+
+- `bookings.user_id` 外键引用用户行，物理删除会留下悬空引用或迫使级联删除订单；
+- 订单是交易/财务记录，需要保留用于对账与审计，不能因为用户注销就消失；
+- 注销接口已经做了匿名化（邮箱/姓名/电话/密码哈希被清空或替换），保留用户空壳行不构成隐私风险。
+
+因此清理任务对到期账号**只删除可再生的关联数据**，用户行与订单保留；脚本输出会注明「保留用户行与 N 条订单」。如果未来产品要求彻底删除账号，需要先决定订单的法定保留策略，再另做迁移，而不是在清理脚本里悄悄删。
+
+清理任务不在应用启动时自动执行，需要由运维按需手动运行或接入 cron。脚本只读取 `MEDITOUR_*` 配置与 `DATABASE_URL`，不访问网络。
+
 ## 测试
 
 ```bash
@@ -566,7 +607,7 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（103 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出与关闭开关。
+当前覆盖（110 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、强制验证开关（未验证下单 403、确认后 201）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出/关闭开关/来源白名单、数据保留清理（dry-run 不写入、只删过期数据、软删除账号保留用户行与订单、邮件与上传临时文件清理）。
 
 ## 接口验证脚本
 
@@ -592,6 +633,30 @@ python scripts/verify_api.py --cleanup
 账号闭环部分依赖开发环境 `MEDITOUR_MAIL_BACKEND=file` 写出的 outbox 文件；使用 `smtp` 后端时该段会明确失败并提示，不会伪造通过。
 
 全部通过时退出码为 0，有失败为 1，连接失败为 2。Android 模拟器访问宿主机可用 `http://10.0.2.2:8000/api/v1`。
+
+## 端到端冒烟脚本
+
+`scripts/smoke_journey.py` 只用标准库，把一条完整用户旅程串起来执行，适合上线验收与 CI：
+
+注册 → 从 outbox 读取验证邮件 → 确认邮箱 → 登录 → 读取个人资料 → 浏览套餐 → 浏览医院 →
+创建预约 → 查看订单 → 取消预约 → 导出数据 → 修改密码 → 用新密码登录 → 注销账号 →
+确认注销后登录被拒（共 15 步）。
+
+每一步都断言状态码与关键字段（如新账号 `email_verified=false`、确认后登录为 `true`、
+预约 `status=pending`、取消后 `cancelled`、导出包含当前订单、旧密码与新密码的登录结果等）。
+失败时会打印**断在第几步、步骤名、实际值**，并返回非零退出码。
+
+```bash
+# 先启动后端（file 邮件后端，开发默认）
+python scripts/smoke_journey.py
+python scripts/smoke_journey.py --base-url http://127.0.0.1:8000/api/v1 \
+  --mail-outbox var/mail_outbox.log
+```
+
+- 退出码：`0` 全部通过、`1` 业务断言失败、`2` 无法连接后端。最后一行输出 `通过 15/15，耗时 X.XXs`。
+- 需要后端使用 `file` 邮件后端才能从 outbox 读取验证令牌；`smtp` 后端会在第 2 步明确失败，不会伪造通过。
+- 每次运行使用随机账号（`smoke-<时间戳>-<随机串>@meditour.com`），最后一步注销，可重复执行。
+- 本机实测：15/15 通过，耗时 2.50s。
 
 ## 并发探测
 

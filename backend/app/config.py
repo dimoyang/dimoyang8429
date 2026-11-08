@@ -69,6 +69,11 @@ class Settings:
     EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES = int(
         os.getenv("MEDITOUR_EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES", "60")
     )
+    # 是否把“邮箱已验证”作为创建预约的前置条件。默认关闭；产品确认要强制
+    # 验证时再开启。开启后未验证用户仍可登录，只是不能下单（403）。
+    REQUIRE_EMAIL_VERIFICATION: bool = os.getenv(
+        "MEDITOUR_REQUIRE_EMAIL_VERIFICATION", "false"
+    ).strip().lower() in {"1", "true", "yes", "on"}
 
     # 运行环境：development / production。仅影响默认开关，不做硬编码限制。
     ENVIRONMENT = _ENVIRONMENT
@@ -77,6 +82,31 @@ class Settings:
         "MEDITOUR_METRICS_ENABLED",
         "false" if _ENVIRONMENT == "production" else "true",
     ).strip().lower() in {"1", "true", "yes", "on"}
+    # /metrics 来源白名单：精确 IP（逗号分隔），空表示不限来源。
+    # 只做字符串相等比较，不支持 CIDR；需要网段时应在网关层限制。
+    METRICS_ALLOWED_IPS: list[str] = [
+        ip.strip()
+        for ip in os.getenv("MEDITOUR_METRICS_ALLOWED_IPS", "").split(",")
+        if ip.strip()
+    ]
+
+    # 数据保留期（天）。清理脚本 scripts/cleanup_data.py 读取这些值。
+    TOKEN_RETENTION_DAYS: int = int(
+        os.getenv("MEDITOUR_TOKEN_RETENTION_DAYS", "30")
+    )
+    AUDIT_LOG_RETENTION_DAYS: int = int(
+        os.getenv("MEDITOUR_AUDIT_LOG_RETENTION_DAYS", "365")
+    )
+    # 软删除账号：到期只清理可再生的关联数据，不删用户行与订单（见 README）。
+    SOFT_DELETED_ACCOUNT_RETENTION_DAYS: int = int(
+        os.getenv("MEDITOUR_SOFT_DELETED_ACCOUNT_RETENTION_DAYS", "30")
+    )
+    MAIL_PREVIEW_RETENTION_DAYS: int = int(
+        os.getenv("MEDITOUR_MAIL_PREVIEW_RETENTION_DAYS", "14")
+    )
+    UPLOAD_TEMP_RETENTION_DAYS: int = int(
+        os.getenv("MEDITOUR_UPLOAD_TEMP_RETENTION_DAYS", "1")
+    )
 
     # 邮件实现：file（开发默认，写入 outbox 文件）/ smtp（生产配置位）。
     MAIL_BACKEND: str = os.getenv("MEDITOUR_MAIL_BACKEND", "file").strip().lower()

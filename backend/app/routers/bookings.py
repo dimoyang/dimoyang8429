@@ -37,6 +37,7 @@ def _generate_order_no() -> str:
     ),
     responses={
         401: {"description": "未登录或令牌无效"},
+        403: {"description": "服务端开启邮箱验证强制开关，但当前账号未验证"},
         404: {"description": "套餐不存在"},
         409: {"description": "同一套餐与预约时间已存在待处理订单"},
         422: {"description": "预约时间、联系方式或需要项校验失败"},
@@ -47,6 +48,13 @@ def create_booking(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Booking:
+    # 默认关闭：未验证用户仍可下单。产品确认强制验证后打开该开关即可生效。
+    if settings.REQUIRE_EMAIL_VERIFICATION and not current_user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email verification required",
+        )
+
     package = db.get(MedicalPackage, payload.package_id)
     if package is None:
         raise HTTPException(
