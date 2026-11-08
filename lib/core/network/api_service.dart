@@ -32,6 +32,8 @@ class ApiService {
     '/auth/login',
     '/auth/register',
     '/auth/refresh',
+    '/auth/password-reset/request',
+    '/auth/password-reset/confirm',
   };
 
   static bool _isPublicAuthPath(String path) {
@@ -227,6 +229,60 @@ class ApiService {
   /// 当前登录用户。
   Future<Map<String, dynamic>> getMe() {
     return _request(() => _dio.get<dynamic>('/auth/me'));
+  }
+
+  /// 请求密码重置邮件。
+  ///
+  /// 后端无论邮箱是否注册都返回同样的成功响应，避免账号枚举；
+  /// 调用方只能提示"如果已注册将收到邮件"，不能据此判断邮箱是否存在。
+  Future<void> requestPasswordReset(String email) async {
+    await _request(
+      () => _dio.post<dynamic>(
+        '/auth/password-reset/request',
+        data: {'email': email},
+      ),
+    );
+  }
+
+  /// 用一次性令牌设置新密码；成功后该账号已签发的令牌全部失效。
+  Future<void> confirmPasswordReset({
+    required String token,
+    required String newPassword,
+  }) async {
+    await _request(
+      () => _dio.post<dynamic>(
+        '/auth/password-reset/confirm',
+        data: {'token': token, 'new_password': newPassword},
+      ),
+    );
+  }
+
+  /// 修改当前账号密码；成功后所有旧令牌失效，需重新登录。
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _request(
+      () => _dio.post<dynamic>(
+        '/auth/change-password',
+        data: {
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        },
+      ),
+    );
+  }
+
+  /// 注销账号（软删除 + 匿名化）。
+  Future<void> deleteAccount(String password) async {
+    await _request(
+      () => _dio.delete<dynamic>('/auth/account', data: {'password': password}),
+    );
+  }
+
+  /// 导出本人数据（账号、订单、行程）为 JSON。
+  Future<Map<String, dynamic>> exportMyData() {
+    return _request(() => _dio.get<dynamic>('/auth/export'));
   }
 
   /// 医疗套餐列表。

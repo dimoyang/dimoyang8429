@@ -1,8 +1,14 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meditour_app/business/providers/auth_provider.dart';
 import 'package:meditour_app/business/providers/language_provider.dart';
 import 'package:meditour_app/core/constants/colors.dart';
+import 'package:meditour_app/core/network/api_exception.dart';
+import 'package:meditour_app/core/services/export_saver.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/language_picker_sheet.dart';
 import 'package:meditour_app/presentation/widgets/section_label.dart';
@@ -108,6 +114,36 @@ class ProfileScreen extends StatelessWidget {
                     title: l10n.logout,
                     onTap: () => auth.logout(),
                   ),
+                  const SizedBox(height: 20),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: SectionLabel(l10n.profileAccountSecurity),
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.lock_outline,
+                    title: l10n.profileChangePassword,
+                    subtitle: l10n.profileChangePasswordSub,
+                    onTap: () => context.pushNamed(
+                      'changePassword',
+                      queryParameters: const {'redirect': '/profile'},
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.download_outlined,
+                    title: l10n.profileExportData,
+                    subtitle: l10n.profileExportDataSub,
+                    onTap: () => unawaited(_exportData(context)),
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.delete_forever_outlined,
+                    iconColor: AppColors.danger,
+                    title: l10n.profileDeleteAccount,
+                    subtitle: l10n.profileDeleteAccountSub,
+                    onTap: () => context.pushNamed('deleteAccount'),
+                  ),
                 ],
               );
             },
@@ -161,17 +197,147 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
+/// 导出本人数据：Web 直接下载；其他平台降级为预览 + 复制到剪贴板。
+Future<void> _exportData(BuildContext context) async {
+  final l10n = AppLocalizations.of(context);
+  final navigator = Navigator.of(context, rootNavigator: true);
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 16),
+            Expanded(child: Text(l10n.exportPreparing)),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  String json;
+  try {
+    final data = await context.read<AuthProvider>().exportData();
+    json = const JsonEncoder.withIndent('  ').convert(data);
+  } catch (e) {
+    if (!context.mounted) {
+      return;
+    }
+    navigator.pop();
+    _showSnackBar(
+      context,
+      e is ApiException ? e.toLocalizedMessage(l10n) : l10n.exportFailed,
+    );
+    return;
+  }
+  if (!context.mounted) {
+    return;
+  }
+  navigator.pop();
+
+  final today = DateTime.now().toIso8601String().split('T').first;
+  final saved = await saveExport(json, filename: 'meditour-export-$today.json');
+  if (!context.mounted) {
+    return;
+  }
+  if (saved) {
+    _showSnackBar(context, l10n.exportDownloaded);
+    return;
+  }
+  await _showExportPreview(context, json);
+}
+
+Future<void> _showExportPreview(BuildContext context, String json) async {
+  final l10n = AppLocalizations.of(context);
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(l10n.exportDialogTitle),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.exportMobileHint,
+              style: const TextStyle(
+                color: AppColors.ink2,
+                fontSize: 12.5,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              height: 260,
+              width: double.maxFinite,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.pageBg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.line),
+              ),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  json,
+                  style: const TextStyle(
+                    color: AppColors.ink2,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: Text(l10n.close),
+        ),
+        FilledButton(
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: json));
+            if (dialogContext.mounted) {
+              Navigator.of(dialogContext).pop();
+            }
+            if (context.mounted) {
+              _showSnackBar(context, l10n.exportCopied);
+            }
+          },
+          child: Text(l10n.exportCopy),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showSnackBar(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+  );
+}
+
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? subtitle;
   final VoidCallback? onTap;
+  final Color? iconColor;
 
   const _SettingsTile({
     required this.icon,
     required this.title,
     this.subtitle,
     this.onTap,
+    this.iconColor,
   });
 
   @override
@@ -194,7 +360,7 @@ class _SettingsTile extends StatelessWidget {
             color: AppColors.primaryBg,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: AppColors.primary, size: 21),
+          child: Icon(icon, color: iconColor ?? AppColors.primary, size: 21),
         ),
         title: Text(
           title,

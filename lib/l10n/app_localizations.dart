@@ -1038,6 +1038,252 @@ abstract class AppLocalizations {
   /// **'Account'**
   String get profileAccount;
 
+  /// No description provided for @profileAccountSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Security'**
+  String get profileAccountSecurity;
+
+  /// No description provided for @loginForgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get loginForgotPassword;
+
+  /// No description provided for @forgotPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Password'**
+  String get forgotPasswordTitle;
+
+  /// No description provided for @forgotPasswordIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email address. If it is registered, we will send a reset link.'**
+  String get forgotPasswordIntro;
+
+  /// No description provided for @forgotPasswordSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reset link'**
+  String get forgotPasswordSend;
+
+  /// No description provided for @forgotPasswordSentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your email'**
+  String get forgotPasswordSentTitle;
+
+  /// No description provided for @forgotPasswordSentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'If this email is registered, we have sent a password reset link. It may take a few minutes.'**
+  String get forgotPasswordSentBody;
+
+  /// No description provided for @forgotPasswordHaveToken.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have a reset code? Set a new password'**
+  String get forgotPasswordHaveToken;
+
+  /// No description provided for @resetPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set New Password'**
+  String get resetPasswordTitle;
+
+  /// No description provided for @resetPasswordTokenLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset code'**
+  String get resetPasswordTokenLabel;
+
+  /// No description provided for @resetPasswordTokenError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the reset code from your email'**
+  String get resetPasswordTokenError;
+
+  /// No description provided for @newPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get newPasswordLabel;
+
+  /// No description provided for @resetPasswordButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Set new password'**
+  String get resetPasswordButton;
+
+  /// No description provided for @resetPasswordSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Password reset. Please log in with your new password.'**
+  String get resetPasswordSuccess;
+
+  /// No description provided for @resetPasswordInvalidToken.
+  ///
+  /// In en, this message translates to:
+  /// **'This reset code is invalid or expired. Please request a new one.'**
+  String get resetPasswordInvalidToken;
+
+  /// No description provided for @profileChangePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change password'**
+  String get profileChangePassword;
+
+  /// No description provided for @profileChangePasswordSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Update the password for this account'**
+  String get profileChangePasswordSub;
+
+  /// No description provided for @changePasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get changePasswordTitle;
+
+  /// No description provided for @changePasswordCurrentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get changePasswordCurrentLabel;
+
+  /// No description provided for @changePasswordButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Update password'**
+  String get changePasswordButton;
+
+  /// No description provided for @changePasswordSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed. Please log in again.'**
+  String get changePasswordSuccess;
+
+  /// No description provided for @changePasswordWrongCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'The current password is incorrect.'**
+  String get changePasswordWrongCurrent;
+
+  /// No description provided for @profileExportData.
+  ///
+  /// In en, this message translates to:
+  /// **'Export my data'**
+  String get profileExportData;
+
+  /// No description provided for @profileExportDataSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Download your account, bookings, and trips as JSON'**
+  String get profileExportDataSub;
+
+  /// No description provided for @exportPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing your export…'**
+  String get exportPreparing;
+
+  /// No description provided for @exportDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data export has started downloading.'**
+  String get exportDownloaded;
+
+  /// No description provided for @exportDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My data'**
+  String get exportDialogTitle;
+
+  /// No description provided for @exportMobileHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving files directly is not available on this platform. Copy the JSON below and save it yourself.'**
+  String get exportMobileHint;
+
+  /// No description provided for @exportCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy JSON'**
+  String get exportCopy;
+
+  /// No description provided for @exportCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied to clipboard.'**
+  String get exportCopied;
+
+  /// No description provided for @exportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not prepare your export. Please try again.'**
+  String get exportFailed;
+
+  /// No description provided for @profileDeleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get profileDeleteAccount;
+
+  /// No description provided for @profileDeleteAccountSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently close this account'**
+  String get profileDeleteAccountSub;
+
+  /// No description provided for @deleteAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get deleteAccountTitle;
+
+  /// No description provided for @deleteAccountConsequences.
+  ///
+  /// In en, this message translates to:
+  /// **'This cannot be undone. Pending bookings will be cancelled, trips will be deleted, and personal data will be anonymized.'**
+  String get deleteAccountConsequences;
+
+  /// No description provided for @deleteAccountButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete my account'**
+  String get deleteAccountButton;
+
+  /// No description provided for @deleteAccountConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this account?'**
+  String get deleteAccountConfirmTitle;
+
+  /// No description provided for @deleteAccountConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'All personal data will be removed or anonymized. This cannot be undone.'**
+  String get deleteAccountConfirmBody;
+
+  /// No description provided for @deleteAccountWrongPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'The password is incorrect.'**
+  String get deleteAccountWrongPassword;
+
+  /// No description provided for @deleteAccountSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been deleted.'**
+  String get deleteAccountSuccess;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
   /// No description provided for @loginTitle.
   ///
   /// In en, this message translates to:

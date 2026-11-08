@@ -514,6 +514,140 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profileAccount => 'Konto';
 
   @override
+  String get profileAccountSecurity => 'Kontosicherheit';
+
+  @override
+  String get loginForgotPassword => 'Passwort vergessen?';
+
+  @override
+  String get forgotPasswordTitle => 'Passwort zurücksetzen';
+
+  @override
+  String get forgotPasswordIntro =>
+      'Gib deine E-Mail-Adresse ein. Ist sie registriert, senden wir einen Link zum Zurücksetzen.';
+
+  @override
+  String get forgotPasswordSend => 'Link senden';
+
+  @override
+  String get forgotPasswordSentTitle => 'Prüfe dein E-Mail-Postfach';
+
+  @override
+  String get forgotPasswordSentBody =>
+      'Falls diese E-Mail-Adresse registriert ist, haben wir einen Link zum Zurücksetzen gesendet. Es kann einige Minuten dauern.';
+
+  @override
+  String get forgotPasswordHaveToken =>
+      'Du hast bereits einen Code? Neues Passwort setzen';
+
+  @override
+  String get resetPasswordTitle => 'Neues Passwort setzen';
+
+  @override
+  String get resetPasswordTokenLabel => 'Zurücksetzungs-Code';
+
+  @override
+  String get resetPasswordTokenError => 'Gib den Code aus der E-Mail ein';
+
+  @override
+  String get newPasswordLabel => 'Neues Passwort';
+
+  @override
+  String get resetPasswordButton => 'Neues Passwort speichern';
+
+  @override
+  String get resetPasswordSuccess =>
+      'Passwort zurückgesetzt. Bitte melde dich mit dem neuen Passwort an.';
+
+  @override
+  String get resetPasswordInvalidToken =>
+      'Der Code ist ungültig oder abgelaufen. Fordere bitte einen neuen an.';
+
+  @override
+  String get profileChangePassword => 'Passwort ändern';
+
+  @override
+  String get profileChangePasswordSub =>
+      'Passwort für dieses Konto aktualisieren';
+
+  @override
+  String get changePasswordTitle => 'Passwort ändern';
+
+  @override
+  String get changePasswordCurrentLabel => 'Aktuelles Passwort';
+
+  @override
+  String get changePasswordButton => 'Passwort aktualisieren';
+
+  @override
+  String get changePasswordSuccess =>
+      'Passwort geändert. Bitte melde dich erneut an.';
+
+  @override
+  String get changePasswordWrongCurrent => 'Das aktuelle Passwort ist falsch.';
+
+  @override
+  String get profileExportData => 'Meine Daten exportieren';
+
+  @override
+  String get profileExportDataSub =>
+      'Konto, Buchungen und Reisen als JSON herunterladen';
+
+  @override
+  String get exportPreparing => 'Export wird vorbereitet…';
+
+  @override
+  String get exportDownloaded => 'Der Datenexport wird heruntergeladen.';
+
+  @override
+  String get exportDialogTitle => 'Meine Daten';
+
+  @override
+  String get exportMobileHint =>
+      'Direktes Speichern von Dateien ist auf dieser Plattform nicht verfügbar. Kopiere das JSON unten und speichere es selbst.';
+
+  @override
+  String get exportCopy => 'JSON kopieren';
+
+  @override
+  String get exportCopied => 'In die Zwischenablage kopiert.';
+
+  @override
+  String get exportFailed => 'Export fehlgeschlagen. Bitte versuche es erneut.';
+
+  @override
+  String get profileDeleteAccount => 'Konto löschen';
+
+  @override
+  String get profileDeleteAccountSub => 'Dieses Konto dauerhaft schließen';
+
+  @override
+  String get deleteAccountTitle => 'Konto löschen';
+
+  @override
+  String get deleteAccountConsequences =>
+      'Dies kann nicht rückgängig gemacht werden. Ausstehende Buchungen werden storniert, Reisen gelöscht und persönliche Daten anonymisiert.';
+
+  @override
+  String get deleteAccountButton => 'Mein Konto löschen';
+
+  @override
+  String get deleteAccountConfirmTitle => 'Dieses Konto löschen?';
+
+  @override
+  String get deleteAccountConfirmBody =>
+      'Alle persönlichen Daten werden gelöscht oder anonymisiert. Dies kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get deleteAccountWrongPassword => 'Das Passwort ist falsch.';
+
+  @override
+  String get deleteAccountSuccess => 'Dein Konto wurde gelöscht.';
+
+  @override
+  String get close => 'Schließen';
+
+  @override
   String get loginTitle => 'Anmelden';
 
   @override

@@ -98,6 +98,52 @@ class AuthProvider extends ChangeNotifier {
     await login(email: email, password: password);
   }
 
+  /// 注销账号；成功后会话与本地缓存一并清除。
+  Future<void> deleteAccount(String password) async {
+    await ApiService.instance.deleteAccount(password);
+    await _clearSession();
+    notifyListeners();
+  }
+
+  /// 请求密码重置邮件。
+  ///
+  /// 后端无论邮箱是否注册都返回同一成功响应，因此这里不区分结果，
+  /// UI 也只应提示"如果已注册会收到邮件"。
+  Future<void> requestPasswordReset(String email) {
+    return ApiService.instance.requestPasswordReset(email);
+  }
+
+  /// 用一次性令牌重置密码；成功后旧会话令牌已全部失效，本地一并清除。
+  Future<void> confirmPasswordReset({
+    required String token,
+    required String newPassword,
+  }) async {
+    await ApiService.instance.confirmPasswordReset(
+      token: token,
+      newPassword: newPassword,
+    );
+    await _clearSession();
+    notifyListeners();
+  }
+
+  /// 修改密码；后端会让所有旧令牌失效，因此成功后主动清会话回到登录页。
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await ApiService.instance.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
+    await _clearSession();
+    notifyListeners();
+  }
+
+  /// 导出本人数据（账号、订单、行程）的 JSON。
+  Future<Map<String, dynamic>> exportData() {
+    return ApiService.instance.exportMyData();
+  }
+
   Future<void> logout() async {
     await _clearSession();
     notifyListeners();

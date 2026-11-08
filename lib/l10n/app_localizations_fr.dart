@@ -514,6 +514,141 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileAccount => 'Compte';
 
   @override
+  String get profileAccountSecurity => 'Sécurité du compte';
+
+  @override
+  String get loginForgotPassword => 'Mot de passe oublié ?';
+
+  @override
+  String get forgotPasswordTitle => 'Réinitialiser le mot de passe';
+
+  @override
+  String get forgotPasswordIntro =>
+      'Saisissez votre adresse e-mail. Si elle est enregistrée, nous enverrons un lien de réinitialisation.';
+
+  @override
+  String get forgotPasswordSend => 'Envoyer le lien';
+
+  @override
+  String get forgotPasswordSentTitle => 'Vérifiez votre boîte de réception';
+
+  @override
+  String get forgotPasswordSentBody =>
+      'Si cette adresse est enregistrée, nous avons envoyé un lien de réinitialisation. Cela peut prendre quelques minutes.';
+
+  @override
+  String get forgotPasswordHaveToken =>
+      'Vous avez déjà un code ? Définir un nouveau mot de passe';
+
+  @override
+  String get resetPasswordTitle => 'Définir un nouveau mot de passe';
+
+  @override
+  String get resetPasswordTokenLabel => 'Code de réinitialisation';
+
+  @override
+  String get resetPasswordTokenError => 'Saisissez le code reçu par e-mail';
+
+  @override
+  String get newPasswordLabel => 'Nouveau mot de passe';
+
+  @override
+  String get resetPasswordButton => 'Enregistrer le nouveau mot de passe';
+
+  @override
+  String get resetPasswordSuccess =>
+      'Mot de passe réinitialisé. Connectez-vous avec votre nouveau mot de passe.';
+
+  @override
+  String get resetPasswordInvalidToken =>
+      'Ce code est invalide ou expiré. Veuillez en demander un nouveau.';
+
+  @override
+  String get profileChangePassword => 'Modifier le mot de passe';
+
+  @override
+  String get profileChangePasswordSub =>
+      'Mettre à jour le mot de passe de ce compte';
+
+  @override
+  String get changePasswordTitle => 'Modifier le mot de passe';
+
+  @override
+  String get changePasswordCurrentLabel => 'Mot de passe actuel';
+
+  @override
+  String get changePasswordButton => 'Mettre à jour';
+
+  @override
+  String get changePasswordSuccess =>
+      'Mot de passe modifié. Veuillez vous reconnecter.';
+
+  @override
+  String get changePasswordWrongCurrent =>
+      'Le mot de passe actuel est incorrect.';
+
+  @override
+  String get profileExportData => 'Exporter mes données';
+
+  @override
+  String get profileExportDataSub =>
+      'Télécharger compte, réservations et voyages en JSON';
+
+  @override
+  String get exportPreparing => 'Préparation de l\'export…';
+
+  @override
+  String get exportDownloaded => 'Le téléchargement de vos données a commencé.';
+
+  @override
+  String get exportDialogTitle => 'Mes données';
+
+  @override
+  String get exportMobileHint =>
+      'L\'enregistrement direct de fichiers n\'est pas disponible sur cette plateforme. Copiez le JSON ci-dessous et enregistrez-le vous-même.';
+
+  @override
+  String get exportCopy => 'Copier le JSON';
+
+  @override
+  String get exportCopied => 'Copié dans le presse-papiers.';
+
+  @override
+  String get exportFailed => 'Échec de l\'export. Veuillez réessayer.';
+
+  @override
+  String get profileDeleteAccount => 'Supprimer le compte';
+
+  @override
+  String get profileDeleteAccountSub => 'Fermer définitivement ce compte';
+
+  @override
+  String get deleteAccountTitle => 'Supprimer le compte';
+
+  @override
+  String get deleteAccountConsequences =>
+      'Action irréversible : les réservations en attente seront annulées, les voyages supprimés et les données personnelles anonymisées.';
+
+  @override
+  String get deleteAccountButton => 'Supprimer mon compte';
+
+  @override
+  String get deleteAccountConfirmTitle => 'Supprimer ce compte ?';
+
+  @override
+  String get deleteAccountConfirmBody =>
+      'Toutes les données personnelles seront supprimées ou anonymisées. Action irréversible.';
+
+  @override
+  String get deleteAccountWrongPassword => 'Le mot de passe est incorrect.';
+
+  @override
+  String get deleteAccountSuccess => 'Votre compte a été supprimé.';
+
+  @override
+  String get close => 'Fermer';
+
+  @override
   String get loginTitle => 'Connexion';
 
   @override

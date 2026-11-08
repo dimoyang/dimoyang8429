@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meditour_app/presentation/screens/booking_screen.dart';
 import 'package:meditour_app/presentation/screens/bookings_screen.dart';
+import 'package:meditour_app/presentation/screens/change_password_screen.dart';
+import 'package:meditour_app/presentation/screens/delete_account_screen.dart';
 import 'package:meditour_app/presentation/screens/destination_detail_screen.dart';
 import 'package:meditour_app/presentation/screens/destination_search_screen.dart';
+import 'package:meditour_app/presentation/screens/forgot_password_screen.dart';
 import 'package:meditour_app/presentation/screens/home_screen.dart';
 import 'package:meditour_app/presentation/screens/itinerary_editor_screen.dart';
 import 'package:meditour_app/presentation/screens/itinerary_screen.dart';
@@ -12,6 +15,7 @@ import 'package:meditour_app/presentation/screens/main_shell_screen.dart';
 import 'package:meditour_app/presentation/screens/medical_list_screen.dart';
 import 'package:meditour_app/presentation/screens/profile_screen.dart';
 import 'package:meditour_app/presentation/screens/register_screen.dart';
+import 'package:meditour_app/presentation/screens/reset_password_screen.dart';
 import 'package:meditour_app/presentation/screens/service_detail_screen.dart';
 import 'package:meditour_app/presentation/screens/travel_tools_screen.dart';
 
@@ -80,6 +84,33 @@ class AppRouter {
         path: '/register',
         name: 'register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        name: 'forgotPassword',
+        builder: (context, state) => ForgotPasswordScreen(
+          redirect: state.uri.queryParameters['redirect'],
+        ),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        name: 'resetPassword',
+        builder: (context, state) => ResetPasswordScreen(
+          token: state.uri.queryParameters['token'],
+          redirect: state.uri.queryParameters['redirect'],
+        ),
+      ),
+      GoRoute(
+        path: '/change-password',
+        name: 'changePassword',
+        builder: (context, state) => ChangePasswordScreen(
+          redirect: state.uri.queryParameters['redirect'],
+        ),
+      ),
+      GoRoute(
+        path: '/delete-account',
+        name: 'deleteAccount',
+        builder: (context, state) => const DeleteAccountScreen(),
       ),
       GoRoute(
         path: '/bookings',

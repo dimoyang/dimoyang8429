@@ -82,6 +82,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           fontSize: 16, fontWeight: FontWeight.w700),
                     ),
             ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _submitting ? null : _openForgotPassword,
+                child: Text(
+                  l10n.loginForgotPassword,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    color: AppColors.primaryDark,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 14),
             Center(
               child: TextButton(
@@ -133,6 +148,17 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _submitting = false);
       }
     }
+  }
+
+  void _openForgotPassword() {
+    final redirect = widget.redirect;
+    // 忘记密码/重置密码成功后仍需登录；把原本要去的站内路径一路带下去。
+    final safeRedirect =
+        (redirect != null && redirect.startsWith('/')) ? redirect : null;
+    context.pushNamed(
+      'forgotPassword',
+      queryParameters: {if (safeRedirect != null) 'redirect': safeRedirect},
+    );
   }
 
   void _navigateBack() {

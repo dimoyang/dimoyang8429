@@ -511,6 +511,138 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileAccount => 'Account';
 
   @override
+  String get profileAccountSecurity => 'Account Security';
+
+  @override
+  String get loginForgotPassword => 'Forgot password?';
+
+  @override
+  String get forgotPasswordTitle => 'Reset Password';
+
+  @override
+  String get forgotPasswordIntro =>
+      'Enter your email address. If it is registered, we will send a reset link.';
+
+  @override
+  String get forgotPasswordSend => 'Send reset link';
+
+  @override
+  String get forgotPasswordSentTitle => 'Check your email';
+
+  @override
+  String get forgotPasswordSentBody =>
+      'If this email is registered, we have sent a password reset link. It may take a few minutes.';
+
+  @override
+  String get forgotPasswordHaveToken =>
+      'Already have a reset code? Set a new password';
+
+  @override
+  String get resetPasswordTitle => 'Set New Password';
+
+  @override
+  String get resetPasswordTokenLabel => 'Reset code';
+
+  @override
+  String get resetPasswordTokenError => 'Enter the reset code from your email';
+
+  @override
+  String get newPasswordLabel => 'New password';
+
+  @override
+  String get resetPasswordButton => 'Set new password';
+
+  @override
+  String get resetPasswordSuccess =>
+      'Password reset. Please log in with your new password.';
+
+  @override
+  String get resetPasswordInvalidToken =>
+      'This reset code is invalid or expired. Please request a new one.';
+
+  @override
+  String get profileChangePassword => 'Change password';
+
+  @override
+  String get profileChangePasswordSub => 'Update the password for this account';
+
+  @override
+  String get changePasswordTitle => 'Change Password';
+
+  @override
+  String get changePasswordCurrentLabel => 'Current password';
+
+  @override
+  String get changePasswordButton => 'Update password';
+
+  @override
+  String get changePasswordSuccess => 'Password changed. Please log in again.';
+
+  @override
+  String get changePasswordWrongCurrent => 'The current password is incorrect.';
+
+  @override
+  String get profileExportData => 'Export my data';
+
+  @override
+  String get profileExportDataSub =>
+      'Download your account, bookings, and trips as JSON';
+
+  @override
+  String get exportPreparing => 'Preparing your export…';
+
+  @override
+  String get exportDownloaded => 'Your data export has started downloading.';
+
+  @override
+  String get exportDialogTitle => 'My data';
+
+  @override
+  String get exportMobileHint =>
+      'Saving files directly is not available on this platform. Copy the JSON below and save it yourself.';
+
+  @override
+  String get exportCopy => 'Copy JSON';
+
+  @override
+  String get exportCopied => 'Copied to clipboard.';
+
+  @override
+  String get exportFailed => 'Could not prepare your export. Please try again.';
+
+  @override
+  String get profileDeleteAccount => 'Delete account';
+
+  @override
+  String get profileDeleteAccountSub => 'Permanently close this account';
+
+  @override
+  String get deleteAccountTitle => 'Delete Account';
+
+  @override
+  String get deleteAccountConsequences =>
+      'This cannot be undone. Pending bookings will be cancelled, trips will be deleted, and personal data will be anonymized.';
+
+  @override
+  String get deleteAccountButton => 'Delete my account';
+
+  @override
+  String get deleteAccountConfirmTitle => 'Delete this account?';
+
+  @override
+  String get deleteAccountConfirmBody =>
+      'All personal data will be removed or anonymized. This cannot be undone.';
+
+  @override
+  String get deleteAccountWrongPassword => 'The password is incorrect.';
+
+  @override
+  String get deleteAccountSuccess => 'Your account has been deleted.';
+
+  @override
+  String get close => 'Close';
+
+  @override
   String get loginTitle => 'Log In';
 
   @override

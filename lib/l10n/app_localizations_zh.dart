@@ -490,6 +490,129 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileAccount => '账号';
 
   @override
+  String get profileAccountSecurity => '账号与安全';
+
+  @override
+  String get loginForgotPassword => '忘记密码？';
+
+  @override
+  String get forgotPasswordTitle => '重置密码';
+
+  @override
+  String get forgotPasswordIntro => '输入邮箱地址。如果该邮箱已注册，我们会发送重置链接。';
+
+  @override
+  String get forgotPasswordSend => '发送重置邮件';
+
+  @override
+  String get forgotPasswordSentTitle => '请查收邮件';
+
+  @override
+  String get forgotPasswordSentBody => '如果该邮箱已注册，我们已发送密码重置邮件，请稍候几分钟查看。';
+
+  @override
+  String get forgotPasswordHaveToken => '已有重置令牌？设置新密码';
+
+  @override
+  String get resetPasswordTitle => '设置新密码';
+
+  @override
+  String get resetPasswordTokenLabel => '重置令牌';
+
+  @override
+  String get resetPasswordTokenError => '请输入邮件中的重置令牌';
+
+  @override
+  String get newPasswordLabel => '新密码';
+
+  @override
+  String get resetPasswordButton => '设置新密码';
+
+  @override
+  String get resetPasswordSuccess => '密码已重置，请使用新密码登录。';
+
+  @override
+  String get resetPasswordInvalidToken => '重置令牌无效或已过期，请重新申请。';
+
+  @override
+  String get profileChangePassword => '修改密码';
+
+  @override
+  String get profileChangePasswordSub => '更新该账号的登录密码';
+
+  @override
+  String get changePasswordTitle => '修改密码';
+
+  @override
+  String get changePasswordCurrentLabel => '当前密码';
+
+  @override
+  String get changePasswordButton => '更新密码';
+
+  @override
+  String get changePasswordSuccess => '密码已修改，请重新登录。';
+
+  @override
+  String get changePasswordWrongCurrent => '当前密码不正确。';
+
+  @override
+  String get profileExportData => '导出我的数据';
+
+  @override
+  String get profileExportDataSub => '以 JSON 下载账号、订单与行程数据';
+
+  @override
+  String get exportPreparing => '正在准备导出…';
+
+  @override
+  String get exportDownloaded => '数据导出已开始下载。';
+
+  @override
+  String get exportDialogTitle => '我的数据';
+
+  @override
+  String get exportMobileHint => '当前平台不支持直接保存文件，可复制下方的 JSON 后自行保存。';
+
+  @override
+  String get exportCopy => '复制 JSON';
+
+  @override
+  String get exportCopied => '已复制到剪贴板。';
+
+  @override
+  String get exportFailed => '导出失败，请重试。';
+
+  @override
+  String get profileDeleteAccount => '注销账号';
+
+  @override
+  String get profileDeleteAccountSub => '永久关闭该账号';
+
+  @override
+  String get deleteAccountTitle => '注销账号';
+
+  @override
+  String get deleteAccountConsequences => '此操作不可恢复：待确认订单将被取消，行程将被删除，个人数据将被匿名化。';
+
+  @override
+  String get deleteAccountButton => '确认注销账号';
+
+  @override
+  String get deleteAccountConfirmTitle => '确认注销账号？';
+
+  @override
+  String get deleteAccountConfirmBody => '个人数据将被删除或匿名化，且无法恢复。';
+
+  @override
+  String get deleteAccountWrongPassword => '密码不正确。';
+
+  @override
+  String get deleteAccountSuccess => '账号已注销。';
+
+  @override
+  String get close => '关闭';
+
+  @override
   String get loginTitle => '登录';
 
   @override
