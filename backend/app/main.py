@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import Base, SessionLocal, engine
 from app.db_migrate import ensure_database_schema
+from app.logging_config import RequestLoggingMiddleware, configure_logging
 from app.routers import auth, bookings, destinations, health, itineraries, medical
 from app.seed import seed_data
 
@@ -25,6 +26,8 @@ async def lifespan(_: FastAPI):
     yield
 
 
+configure_logging()
+
 app = FastAPI(title=settings.APP_NAME, version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
@@ -32,8 +35,11 @@ app.add_middleware(
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
 )
+
+# 后添加的中间件位于外层，确保所有响应（含 CORS 预检）都带 request id 与耗时日志。
+app.add_middleware(RequestLoggingMiddleware)
 
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)

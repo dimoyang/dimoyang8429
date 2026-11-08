@@ -346,6 +346,29 @@ def main() -> int:
         f"实际 {forged.status} {fmt(forged.body)}",
     )
 
+    health = api.get("/health")
+    health_body = health.body if isinstance(health.body, dict) else {}
+    checker.check(
+        health.status == 200
+        and health_body.get("status") == "ok"
+        and health_body.get("database") == "ok",
+        "健康检查返回 status/database 均为 ok",
+        f"实际 {health.status} {fmt(health.body)}",
+    )
+    checker.check(
+        bool(header(health.headers, "X-Request-ID")),
+        "响应包含 X-Request-ID",
+        f"值 {header(health.headers, 'X-Request-ID')}",
+    )
+    traced = api.get(
+        "/health", headers={"X-Request-ID": "verify-trace-123"}
+    )
+    checker.check(
+        header(traced.headers, "X-Request-ID") == "verify-trace-123",
+        "上游传入的 X-Request-ID 被透传",
+        f"值 {header(traced.headers, 'X-Request-ID')}",
+    )
+
     # 4. /medical/packages
     checker.section(4, "/medical/packages 分页与字段")
     packages = api.get("/medical/packages?page=1&page_size=100")
