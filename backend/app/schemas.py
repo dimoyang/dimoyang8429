@@ -252,6 +252,10 @@ class BookingResponse(BaseModel):
     currency: str
     status: str
     created_at: datetime
+    # 状态时间戳：未发生对应流转时为空，前端可据此展示时间线。
+    confirmed_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    completed_at: datetime | None = None
 
     @field_serializer("appointment_date")
     def serialize_appointment_date(self, value: datetime) -> str:
@@ -264,6 +268,10 @@ class BookingResponse(BaseModel):
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
         return value.isoformat(timespec="seconds").replace("+00:00", "Z")
+
+    @field_serializer("confirmed_at", "cancelled_at", "completed_at")
+    def serialize_status_times(self, value: datetime | None) -> str | None:
+        return None if value is None else _serialize_utc_datetime(value)
 
 
 def _serialize_local_datetime(value: datetime) -> str:
@@ -311,6 +319,9 @@ class StaffBookingListItem(BaseModel):
     currency: str
     status: str
     created_at: datetime
+    confirmed_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    completed_at: datetime | None = None
     contact_name: str
     contact_phone: str
     contact_email: str
@@ -322,6 +333,10 @@ class StaffBookingListItem(BaseModel):
     @field_serializer("created_at")
     def serialize_created_at(self, value: datetime) -> str:
         return _serialize_utc_datetime(value)
+
+    @field_serializer("confirmed_at", "cancelled_at", "completed_at")
+    def serialize_status_times(self, value: datetime | None) -> str | None:
+        return None if value is None else _serialize_utc_datetime(value)
 
     @field_serializer("contact_phone")
     def serialize_contact_phone(self, value: str) -> str:
@@ -348,6 +363,9 @@ class StaffBookingDetail(BaseModel):
     currency: str
     status: str
     created_at: datetime
+    confirmed_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    completed_at: datetime | None = None
     contact_name: str
     contact_phone: str
     contact_email: str
@@ -364,6 +382,10 @@ class StaffBookingDetail(BaseModel):
     def serialize_created_at(self, value: datetime) -> str:
         return _serialize_utc_datetime(value)
 
+    @field_serializer("confirmed_at", "cancelled_at", "completed_at")
+    def serialize_status_times(self, value: datetime | None) -> str | None:
+        return None if value is None else _serialize_utc_datetime(value)
+
 
 class StaffBookingPage(BaseModel):
     items: list[StaffBookingListItem]
@@ -376,11 +398,39 @@ class StaffBookingPage(BaseModel):
 class BookingStatusUpdate(BaseModel):
     """员工可执行的订单状态变更目标。
 
-    只接受 confirmed / completed；具体是否允许由服务端按当前状态判断，
-    非法目标值属于请求格式错误（422），非法流转属于状态冲突（409）。
+    只接受 confirmed / completed / cancelled；具体能否从当前状态流转由
+    服务端判断：非法目标值属于请求格式错误（422），非法流转属于状态
+    冲突（409）。completed 与 cancelled 是终态，不能再退回 pending。
     """
 
-    status: Literal["confirmed", "completed"]
+    status: Literal["confirmed", "completed", "cancelled"]
+
+
+class AuditLogItem(BaseModel):
+    """审计记录：谁、何时、对什么做了什么、改前改后是什么。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    actor_user_id: int
+    actor_email: str
+    action: str
+    entity_type: str
+    entity_id: str
+    details: dict | None = None
+    created_at: datetime
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return _serialize_utc_datetime(value)
+
+
+class AuditLogPage(BaseModel):
+    items: list[AuditLogItem]
+    total: int
+    page: int
+    page_size: int
+    pages: int
 
 
 class DestinationExperience(BaseModel):

@@ -162,7 +162,7 @@ def test_audit_logs_keep_recent_rows(client) -> None:
                     actor_email=actor_email,
                     action="view",
                     entity_type="retention_test",
-                    entity_id=1,
+                    entity_id="1",
                     created_at=old,
                 ),
                 AuditLog(
@@ -170,7 +170,7 @@ def test_audit_logs_keep_recent_rows(client) -> None:
                     actor_email=actor_email,
                     action="view",
                     entity_type="retention_test",
-                    entity_id=2,
+                    entity_id="2",
                     created_at=recent,
                 ),
             ]
@@ -191,13 +191,13 @@ def test_audit_logs_keep_recent_rows(client) -> None:
             db, now, 365, dry_run=True
         )
         assert preview.count >= 1
-        assert sorted(_rows(db)) == [1, 2]
+        assert sorted(_rows(db)) == ["1", "2"]
 
     with SessionLocal() as db:
         retention.cleanup_audit_logs(db, now, 365, dry_run=False)
 
     with SessionLocal() as db:
-        assert _rows(db) == [2]
+        assert _rows(db) == ["2"]
 
 
 def test_soft_deleted_account_keeps_user_row_and_booking(client) -> None:

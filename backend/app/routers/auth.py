@@ -13,11 +13,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app import rate_limit
+from app.audit import record_audit
 from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user, get_token_payload
 from app.mailer import send_email_verification, send_password_reset
 from app.models import (
+    AuthSession,
     Booking,
     EmailVerificationToken,
     Itinerary,
@@ -649,6 +651,15 @@ def delete_account(
     user.password_hash = hash_password(secrets.token_urlsafe(32))
     user.token_version += 1
     user.deleted_at = now
+    # 注销后会话不再可用；显式吊销，避免巡检把“软删除账号 + 活跃会话”判为脏数据。
+    db.execute(
+        update(AuthSession)
+        .where(
+            AuthSession.user_id == user.id,
+            AuthSession.revoked_at.is_(None),
+        )
+        .values(revoked_at=now)
+    )
 
     db.commit()
     return {"detail": "Account deleted and personal data anonymized"}
@@ -735,6 +746,18 @@ def export_my_data(
         # 后端没有收藏表；收藏目前只存在客户端本地。
         "favorites": [],
     }
+    record_audit(
+        db,
+        actor=current_user,
+        action="user.export",
+        entity_type="user",
+        entity_id=current_user.id,
+        after={
+            "bookings": len(bookings),
+            "itineraries": len(itineraries),
+        },
+    )
+    db.commit()
     return JSONResponse(
         content=payload,
         headers={

@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.audit import record_audit
 from app.database import get_db
 from app.deps import require_staff
 from app.models import (
@@ -195,14 +196,30 @@ def update_package(
     package_id: int,
     payload: PackageUpdate,
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_staff),
+    staff: User = Depends(require_staff),
 ) -> MedicalPackage:
     package = _get_package(db, package_id)
     changes = payload.model_dump(exclude_unset=True, exclude_none=True)
     if "hospital_id" in changes:
         _require_hospital_exists(db, changes["hospital_id"])
+    before = {
+        field: getattr(package, field)
+        for field in changes
+        if getattr(package, field) != changes[field]
+    }
     for field, value in changes.items():
         setattr(package, field, value)
+    # 只有真正发生变化的字段才写审计，避免空 PATCH 产生噪声。
+    if before:
+        record_audit(
+            db,
+            actor=staff,
+            action="package.update",
+            entity_type="package",
+            entity_id=package.id,
+            before=before,
+            after={field: changes[field] for field in before},
+        )
     db.commit()
     db.refresh(package)
     return package
@@ -226,7 +243,7 @@ def update_package(
 def delete_package(
     package_id: int,
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_staff),
+    staff: User = Depends(require_staff),
 ) -> Response:
     package = _get_package(db, package_id)
     referenced = db.scalar(
@@ -240,6 +257,20 @@ def delete_package(
                 "deactivate it (is_active=false) instead of deleting"
             ),
         )
+    record_audit(
+        db,
+        actor=staff,
+        action="package.delete",
+        entity_type="package",
+        entity_id=package.id,
+        before={
+            "name": package.name,
+            "price": package.price,
+            "currency": package.currency,
+            "is_active": package.is_active,
+            "hospital_id": package.hospital_id,
+        },
+    )
     db.delete(package)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -371,7 +402,7 @@ def update_hospital(
 def delete_hospital(
     hospital_id: int,
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_staff),
+    staff: User = Depends(require_staff),
 ) -> Response:
     hospital = _get_hospital(db, hospital_id)
     referenced = db.scalar(
@@ -384,6 +415,18 @@ def delete_hospital(
             status_code=status.HTTP_409_CONFLICT,
             detail="Hospital still has packages; move or delete them first",
         )
+    record_audit(
+        db,
+        actor=staff,
+        action="hospital.delete",
+        entity_type="hospital",
+        entity_id=hospital.id,
+        before={
+            "name": hospital.name,
+            "name_en": hospital.name_en,
+            "level": hospital.level,
+        },
+    )
     db.delete(hospital)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -545,7 +588,7 @@ def _destination_reference(db: Session, destination_id: str) -> str | None:
 def delete_destination(
     destination_id: str,
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_staff),
+    staff: User = Depends(require_staff),
 ) -> Response:
     destination = _get_destination(db, destination_id)
     reference = _destination_reference(db, destination.id)
@@ -557,6 +600,18 @@ def delete_destination(
                 f"{reference}"
             ),
         )
+    record_audit(
+        db,
+        actor=staff,
+        action="destination.delete",
+        entity_type="destination",
+        entity_id=destination.id,
+        before={
+            "name": destination.name,
+            "name_en": destination.name_en,
+            "sort_order": destination.sort_order,
+        },
+    )
     db.delete(destination)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

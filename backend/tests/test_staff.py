@@ -201,10 +201,10 @@ def test_staff_rejects_illegal_transitions(client, auth_headers) -> None:
     )
     assert missing.status_code == 404
 
-    # 目标状态本身不在允许集合内，属于请求格式错误。
+    # 目标状态本身不在允许集合内（pending 不是可写入的目标），属于请求格式错误。
     invalid_value = client.patch(
         f"/api/v1/staff/bookings/{booking['id']}/status",
-        json={"status": "cancelled"},
+        json={"status": "pending"},
         headers=staff_headers,
     )
     assert invalid_value.status_code == 422
@@ -269,7 +269,7 @@ def test_staff_detail_view_is_audited_but_list_is_not(client, auth_headers) -> N
             .select_from(AuditLog)
             .where(
                 AuditLog.entity_type == "booking",
-                AuditLog.entity_id == booking["id"],
+                AuditLog.entity_id == str(booking["id"]),
             )
         )
     assert count == 0, "列表查询不应产生审计记录"
@@ -286,7 +286,7 @@ def test_staff_detail_view_is_audited_but_list_is_not(client, auth_headers) -> N
                 select(AuditLog)
                 .where(
                     AuditLog.entity_type == "booking",
-                    AuditLog.entity_id == booking["id"],
+                    AuditLog.entity_id == str(booking["id"]),
                 )
                 .order_by(AuditLog.id)
             ).all()
@@ -298,7 +298,7 @@ def test_staff_detail_view_is_audited_but_list_is_not(client, auth_headers) -> N
         assert row.actor_email == staff_email
         assert row.action == "booking.view"
         assert row.entity_type == "booking"
-        assert row.entity_id == booking["id"]
+        assert row.entity_id == str(booking["id"])
         assert row.created_at is not None
 
 
@@ -316,7 +316,7 @@ def test_forbidden_detail_access_is_not_audited(client, auth_headers) -> None:
             .select_from(AuditLog)
             .where(
                 AuditLog.entity_type == "booking",
-                AuditLog.entity_id == booking["id"],
+                AuditLog.entity_id == str(booking["id"]),
             )
         )
     assert count == 0

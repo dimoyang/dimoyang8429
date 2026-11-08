@@ -1477,7 +1477,8 @@ def main() -> int:
         checker.check(
             api.patch_json(
                 f"/staff/bookings/{staff_booking.get('id')}/status",
-                {"status": "cancelled"},
+                # cancelled 现在是合法目标值；用 pending 验证“不是可写入的目标”。
+                {"status": "pending"},
                 token=staff_token,
             ).status
             == 422,

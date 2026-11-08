@@ -6,7 +6,13 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 
 from app.database import SessionLocal
-from app.models import Booking, Itinerary, PasswordResetToken, User
+from app.models import (
+    AuthSession,
+    Booking,
+    Itinerary,
+    PasswordResetToken,
+    User,
+)
 
 TOKEN_PATTERN = re.compile(r"\btoken=(\S+)")
 
@@ -280,3 +286,12 @@ def test_delete_account_anonymizes_data_and_blocks_login(client) -> None:
             select(Itinerary).where(Itinerary.user_id == user.id)
         ).all()
         assert remaining == []
+
+        # 注销后会话全部吊销，避免“软删除账号 + 活跃会话”的脏数据。
+        active_sessions = db.scalars(
+            select(AuthSession).where(
+                AuthSession.user_id == user.id,
+                AuthSession.revoked_at.is_(None),
+            )
+        ).all()
+        assert active_sessions == []

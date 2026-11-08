@@ -8,10 +8,11 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from app.audit import record_audit
 from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user
-from app.models import Booking, MedicalPackage, User
+from app.models import Booking, MedicalPackage, User, utcnow
 from app.schemas import BookingCreate, BookingResponse
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
@@ -149,12 +150,13 @@ def list_my_bookings(
     summary="取消自己的待处理订单",
     description=(
         "需要 Bearer access token。仅允许 `pending -> cancelled`；"
+        "已确认（confirmed）的订单不允许用户自助取消，需联系员工处理。"
         "订单不存在或属于他人统一按 404 处理，避免泄露他人订单是否存在。"
     ),
     responses={
         401: {"description": "未登录或令牌无效"},
         404: {"description": "订单不存在或不属于当前用户"},
-        409: {"description": "订单当前状态不是 pending"},
+        409: {"description": "订单已确认需员工取消，或当前状态不是 pending"},
     },
 )
 def cancel_booking(
@@ -183,7 +185,7 @@ def cancel_booking(
             Booking.user_id == current_user.id,
             Booking.status == "pending",
         )
-        .values(status="cancelled")
+        .values(status="cancelled", cancelled_at=utcnow())
     )
     if result.rowcount == 0:
         db.rollback()
@@ -199,12 +201,30 @@ def cancel_booking(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Booking not found",
             )
+        if current.status == "confirmed":
+            # 已确认的订单已经进入员工处理流程，用户不能单方面取消。
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Confirmed bookings cannot be cancelled by the user; "
+                    "please contact staff"
+                ),
+            )
         # 请求本身合法，但与资源当前状态冲突，因此用 409 而不是 422。
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Only pending bookings can be cancelled (current status: {current.status})",
         )
 
+    record_audit(
+        db,
+        actor=current_user,
+        action="booking.cancel",
+        entity_type="booking",
+        entity_id=booking_id,
+        before={"status": "pending"},
+        after={"status": "cancelled"},
+    )
     db.commit()
     db.refresh(booking)
     return booking

@@ -130,6 +130,17 @@ class Booking(Base):
     currency: Mapped[str] = mapped_column(String(8))
     status: Mapped[str] = mapped_column(String(30), default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    # 状态时间戳：分别记录确认、取消、完成的时刻，便于对账与审计。
+    # 迁移前的历史行留空（无法回溯真实时间），巡检脚本会单独列出。
+    confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    cancelled_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
 
     user: Mapped[User] = relationship(back_populates="bookings")
     package: Mapped["MedicalPackage"] = relationship()
@@ -276,10 +287,12 @@ class AuthSession(Base):
 
 
 class AuditLog(Base):
-    """敏感数据访问审计：记录谁、何时、访问了哪条业务记录。
+    """操作审计：记录谁、何时、对什么做了什么、改前改后是什么。
 
-    员工查看订单详情（含完整电话、备注）时写入；列表查询不写，
-    避免把一次列表浏览拆成大量无意义记录。
+    目前覆盖：员工查看订单详情、员工流转订单状态、员工改价/删除内容、
+    用户取消订单、用户导出数据。列表类只读查询不写，避免噪声。
+    `details` 存 JSON（`{"before": {...}, "after": {...}}`），实体 id 统一
+    用字符串保存，兼容整数主键与目的地 slug。
     """
 
     __tablename__ = "audit_logs"
@@ -288,6 +301,12 @@ class AuditLog(Base):
             "ix_audit_logs_entity",
             "entity_type",
             "entity_id",
+            "created_at",
+        ),
+        # 审计查询接口按操作类型 + 时间范围过滤。
+        Index(
+            "ix_audit_logs_action_created_at",
+            "action",
             "created_at",
         ),
     )
@@ -300,7 +319,9 @@ class AuditLog(Base):
     actor_email: Mapped[str] = mapped_column(String(255))
     action: Mapped[str] = mapped_column(String(60))
     entity_type: Mapped[str] = mapped_column(String(40))
-    entity_id: Mapped[int] = mapped_column(Integer)
+    entity_id: Mapped[str] = mapped_column(String(64))
+    # 变更前后快照；只读访问（如查看详情）为空。
+    details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 

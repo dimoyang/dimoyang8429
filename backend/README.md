@@ -23,6 +23,29 @@ uvicorn app.main:app --reload --port 8000
 演示账号仅在 `MEDITOUR_SEED_DEMO_USER=1` 时创建（`.env.example` 已为本地开启）；关闭开关只会停止创建，不会删除库里已有的账号。
 接口文档：`http://127.0.0.1:8000/docs`。
 
+### 一键运维脚本（Windows）
+
+不想记上面的命令时，用 `scripts/dev_server.ps1`：
+
+```powershell
+cd backend
+.\scripts\dev_server.ps1 start     # 后台启动，日志写 var/dev_server.log
+.\scripts\dev_server.ps1 status    # 进程、端口与健康检查
+.\scripts\dev_server.ps1 restart
+.\scripts\dev_server.ps1 stop
+.\scripts\dev_server.ps1 start -Port 8001 -Force   # 换端口；强制结束占用端口的进程
+```
+
+脚本会处理三类常见问题：
+
+- **端口占用**：先查 `Get-NetTCPConnection`，占用者是本服务则直接停止；是其它进程时
+  默认拒绝并打印 PID/进程名，确认后可加 `-Force` 结束它。
+- **虚拟环境缺失**：自动创建 `backend/.venv` 并安装 `requirements.txt`（首次执行较慢）。
+- **密钥未设置**：若 `backend/.env` 不存在，从 `.env.example` 复制并写入随机的
+  `MEDITOUR_SECRET_KEY`；已有占位值也会被替换。`.env` 已被 `.gitignore` 忽略。
+
+PID 写入 `backend/var/dev_server.pid`；重复 `start` 不会启动第二个实例。
+
 ## 环境变量
 
 | 变量 | 必填 | 默认值 | 说明 |
@@ -73,15 +96,34 @@ uvicorn app.main:app --reload --port 8000
   并发请求也只有一个成功，其余返回同样形状的 409。取消后可以重新预约同一时段。
 - 取消接口：`POST /api/v1/bookings/{id}/cancel`，只能取消自己的 `pending` 订单。
   - 不存在或属于他人：404（不暴露他人订单是否存在）。
-  - 当前状态不是 `pending`：409。请求本身合法，但与资源当前状态冲突，因此用 409 而非 422；422 仅用于请求体校验失败。
-  - 取消后 `status` 变为 `cancelled`，其余响应字段保持不变。
+  - 已确认（`confirmed`）：409，提示 `Confirmed bookings cannot be cancelled by the user; please contact staff`。
+    已确认订单已进入员工处理流程，用户不能单方面取消，需由员工操作。
+  - 其它非 `pending` 状态（`completed` / `cancelled`）：409。请求本身合法，但与资源
+    当前状态冲突，因此用 409 而非 422；422 仅用于请求体校验失败。
+  - 取消后 `status` 变为 `cancelled`，写入 `cancelled_at`，其余响应字段保持不变。
   - 取消使用条件更新（仅当 `status='pending'` 时生效）；并发取消同一订单只有一个
     返回 200，其余按状态冲突返回 409，不会出现多个请求都“成功取消”。
+  - 每次成功取消写入审计：`action=booking.cancel`，`details` 记录
+    `before={"status": "pending"}`、`after={"status": "cancelled"}`。
 
 ## 订单运营与员工角色
 
-订单状态只允许两种前进路径：`pending → confirmed → completed`；取消仍由用户侧
-`POST /api/v1/bookings/{id}/cancel` 完成（`pending → cancelled`）。
+订单状态机（`completed` / `cancelled` 是终态，任何角色都不能再流转）：
+
+```text
+pending ──> confirmed ──> completed
+   │             │
+   └──> cancelled <┘
+```
+
+- 用户侧：`pending → cancelled`（自助取消）；`confirmed` 不允许用户取消，需员工操作。
+- 员工侧：`pending → confirmed|cancelled`、`confirmed → completed|cancelled`。
+- `completed` / `cancelled` 再流转一律 409；把 `completed` “退回 pending” 也不是合法
+  目标值，返回 422（`status` 只接受 confirmed/completed/cancelled）。
+- 状态时间戳：`confirmed_at`、`cancelled_at`、`completed_at` 只在对应流转发生时写入，
+  互不覆盖。迁移前的历史订单这三列为 NULL（无法回溯真实时刻），巡检脚本会单列出来。
+- 状态流转使用条件更新（`WHERE id=? AND status=<读到的状态>`），两个员工同时操作时
+  只有一个成功，另一个返回 409（`Booking status changed concurrently...`）。
 
 角色只有 `user` 与 `staff`，注册接口不接受客户端指定 `role`，因此普通用户无法
 自助提升。授予方式有两种，都需要服务端权限：
@@ -107,12 +149,44 @@ uvicorn app.main:app --reload --port 8000
 - `GET /api/v1/staff/bookings/{id}`：详情返回完整联系方式与备注，并写入 `audit_logs`
   审计记录（操作者 id/邮箱、`action=booking.view`、`entity_type=booking`、`entity_id`、
   `created_at`）。列表访问不记录审计；审计写入失败时不会返回敏感详情。
-- `PATCH /api/v1/staff/bookings/{id}/status`，请求体 `{"status": "confirmed"}` 或
-  `{"status": "completed"}`。
+- `PATCH /api/v1/staff/bookings/{id}/status`，请求体 `{"status": "confirmed"}`、
+  `{"status": "completed"}` 或 `{"status": "cancelled"}`。
   - 非 `staff`：403；未登录：401；订单不存在：404。
-  - 跳过中间状态或对已结束订单再流转：409。
-  - 目标值不是 `confirmed` / `completed`：422（请求体校验失败）。
+  - 跳过中间状态（`pending → completed`）或对已结束订单再流转：409。
+  - 目标值不是 `confirmed` / `completed` / `cancelled`：422（请求体校验失败）。
+  - 成功流转写入对应时间戳与审计（`action=booking.status_change`，含变更前后状态）。
 - 普通用户即使拥有订单本身，也不能调用以上员工接口修改状态（测试覆盖 403）。
+
+### 审计日志
+
+所有审计写入 `audit_logs`，字段包括操作者 id/邮箱、`action`、`entity_type`、
+`entity_id`、`details`（JSON 的 `before` / `after` 快照）与 `created_at`。
+`entity_id` 统一为字符串，兼容整数主键与目的地 slug。
+
+| 事件 | `action` | 谁触发 | `details` |
+| --- | --- | --- | --- |
+| 员工查看订单详情 | `booking.view` | 员工 | 无（只读访问） |
+| 员工流转订单状态 | `booking.status_change` | 员工 | `{"before":{"status":...},"after":{"status":...}}` |
+| 用户取消订单 | `booking.cancel` | 用户 | 同上 |
+| 员工改价/改内容 | `package.update` | 员工 | 仅实际变化的字段前后值 |
+| 员工删除内容 | `package.delete` / `hospital.delete` / `destination.delete` | 员工 | 删除前快照（名称、价格、状态等） |
+| 用户导出数据 | `user.export` | 用户 | `{"after":{"bookings":N,"itineraries":N}}` |
+
+员工查询接口：
+
+```text
+GET /api/v1/staff/audit-logs
+  ?action=booking.status_change        # 精确匹配
+  &entity_type=booking&entity_id=42    # 可选
+  &actor_user_id=7                     # 可选
+  &created_from=2026-11-01T00:00:00Z   # 含边界，无时区按 UTC
+  &created_to=2026-11-08T23:59:59Z
+  &page=1&page_size=20                 # page_size 上限 100
+```
+
+- 仅 `staff` 可访问（否则 403），按 `created_at` 倒序返回。
+- `created_from > created_to` 返回 422。
+- 审计与业务写入同事务提交：写不进去就不返回敏感数据，避免出现无记录的访问。
 
 ## 内容运营（员工）
 
@@ -418,10 +492,10 @@ python scripts/import_translations.py var/translations.csv
 | 401 | 未认证或凭据失效 | 任意需要 Bearer 的端点：缺少/为空/无效/过期/已吊销的 access token、`token_version` 不匹配、账号已注销（`Not authenticated` 或 `Invalid or expired token`，带 `WWW-Authenticate: Bearer`）；`POST /auth/login` 邮箱或密码错误（含已注销账号）；`POST /auth/refresh` refresh token 无效、过期、重复使用或所属用户失效；`POST /auth/logout` access/refresh token 无效，或 refresh token 不属于当前用户 |
 | 403 | 已认证但权限不足 | 非 `staff` 角色访问 `/staff/*` 端点，`detail="Staff privileges required"`。普通用户即使拥有该订单也不能借此修改状态；`MEDITOUR_REQUIRE_EMAIL_VERIFICATION=true` 时未验证用户 `POST /bookings/` 返回 `detail="Email verification required"` |
 | 404 | 资源不存在，或存在但不属于当前用户 | `POST /bookings/` 套餐不存在**或已下架**（下架套餐按不存在处理，不暴露其存在）；`POST /bookings/{id}/cancel`、`GET /staff/bookings/{id}`、`PATCH /staff/bookings/{id}/status` 订单不存在（用户侧与不存在/属于他人共用一个 404）；`GET/PUT/DELETE /itineraries/{id}` 行程不存在或属于他人；`GET /destinations/{id}` 目的地不存在；`/staff/packages|hospitals|destinations/{id}` 目标不存在；`DELETE /auth/sessions/{id}` 会话不存在、属于他人或已吊销；`GET /metrics` 指标端点关闭或来源不在白名单时 |
-| 409 | 与资源当前状态冲突 | `POST /auth/register` 邮箱已注册；`POST /bookings/` 同用户同套餐同预约时间已有 `pending` 订单；`POST /bookings/{id}/cancel` 当前状态不是 `pending`；`PATCH /staff/bookings/{id}/status` 跳过中间状态或对已结束订单再流转；员工删除套餐时仍有订单、删除医院时仍有套餐、删除目的地时仍被行程引用；创建目的地时 slug 已存在 |
+| 409 | 与资源当前状态冲突 | `POST /auth/register` 邮箱已注册；`POST /bookings/` 同用户同套餐同预约时间已有 `pending` 订单；`POST /bookings/{id}/cancel` 当前状态不是 `pending`，其中 `confirmed` 订单会提示需联系员工；`PATCH /staff/bookings/{id}/status` 跳过中间状态、对已结束订单再流转或并发状态已变；员工删除套餐时仍有订单、删除医院时仍有套餐、删除目的地时仍被行程引用；创建目的地时 slug 已存在 |
 | 413 | 请求体过大 | 任意端点：请求体超过 `MEDITOUR_MAX_REQUEST_BYTES`（默认 10 MiB），`detail="Request body too large"`；`POST /staff/uploads`：文件大于 `MEDITOUR_UPLOAD_MAX_BYTES`（默认 5 MiB），`detail` 为限制字节数 |
 | 415 | 上传文件类型不受支持 | `POST /staff/uploads`：声明类型不是 JPEG/PNG/WebP，或文件头与声明类型不符（防止把非图片改成 `.png` 后缀上传） |
-| 422 | 请求体或查询参数校验失败 | 字段缺失/类型错误、邮箱格式、密码长度（6–72）、`notes` 超过 2000 字、预约时间不在未来、`contact_phone` 非 7–15 位、行程日期/目的地/每日编号不合法；分页 `page < 1`、`page_size < 1` 或 `> 100`；员工列表 `status` 不在 `pending/confirmed/completed/cancelled`；员工改状态的目标值不是 `confirmed/completed`；员工创建/更新套餐时 `hospital_id` 指向不存在的医院、`price ≤ 0`、`duration_days < 1`；目的地 slug 不符合 `^[a-z0-9][a-z0-9-]*$`；上传空文件；`lang` 不在 `zh/en/de/fr`（`detail` 为字符串 `Unsupported lang; supported values: ...`，其余为字段错误数组） |
+| 422 | 请求体或查询参数校验失败 | 字段缺失/类型错误、邮箱格式、密码长度（6–72）、`notes` 超过 2000 字、预约时间不在未来、`contact_phone` 非 7–15 位、行程日期/目的地/每日编号不合法；分页 `page < 1`、`page_size < 1` 或 `> 100`；员工列表 `status` 不在 `pending/confirmed/completed/cancelled`；员工改状态的目标值不是 `confirmed/completed/cancelled`；审计查询 `created_from > created_to`；员工创建/更新套餐时 `hospital_id` 指向不存在的医院、`price ≤ 0`、`duration_days < 1`；目的地 slug 不符合 `^[a-z0-9][a-z0-9-]*$`；上传空文件；`lang` 不在 `zh/en/de/fr`（`detail` 为字符串 `Unsupported lang; supported values: ...`，其余为字段错误数组） |
 | 429 | 触发登录限流 | 仅 `POST /auth/login`：同一 IP + 邮箱 300 秒内失败 5 次，响应带 `Retry-After` 秒数；成功登录会清零计数 |
 | 503 | 依赖服务不可用 | 仅 `GET /health`：数据库 `SELECT 1` 失败，返回 `{"status":"error","database":"unavailable"}`（不是 `detail` 结构） |
 | 500 | 未预期的服务端异常 | 任意端点：由异常兜底中间件统一返回 `{"detail": "Internal server error"}`；堆栈只写服务端日志，不返回响应体 |
@@ -456,7 +530,12 @@ python -m alembic stamp head
 
 迁移 `d1a4b7c9e2f3` 新增 `users.email_verified_at`、`email_verification_tokens` 与
 `auth_sessions`，只创建结构和可空列，不改动已有行，可在现有数据上直接升级。
-当前 head 即 `d1a4b7c9e2f3`。
+
+迁移 `a7c2e9f4b6d1` 新增订单的 `confirmed_at` / `cancelled_at` / `completed_at`
+（可空），审计表的 `details`（JSON，可空），并把 `audit_logs.entity_id` 从整数放宽为
+`String(64)` 以支持目的地 slug。已有订单的三列保持 NULL（无法回溯真实时刻，巡检脚本
+会列在“需人工判断”），已有审计行的整数值按文本保留。该迁移也可在现有数据上直接升级。
+当前 head 即 `a7c2e9f4b6d1`。
 
 ## PostgreSQL 切换脚手架（未验证）
 
@@ -520,6 +599,9 @@ docker compose down -v       # 连数据一起删
 - [ ] 重置密码邮件：收件人语言、`.eml` 或 SMTP 实际送达
 - [ ] 下单并发：同用户同套餐同时间只产生一个 `pending`，其余 409，无 500
 - [ ] 员工订单列表分页与时间排序、审计写入
+- [ ] 订单状态机：终态不可流转、已确认订单用户不可取消、时间戳正确落地
+- [ ] 审计查询接口按操作类型与时间范围过滤正常
+- [ ] `scripts/check_data_consistency.py` 无“确定异常”（历史数据单独确认）
 - [ ] 套餐下架后公开列表隐藏、下单 404、改价不影响历史订单金额
 - [ ] 内容 CRUD 与删除保护（409）、上传 URL 在容器内可访问
 - [ ] 数据导出与备份策略（PG 用 `pg_dump`，本仓库 SQLite 备份脚本不适用）
@@ -624,6 +706,40 @@ python scripts/cleanup_data.py --no-dry-run --yes
 
 清理任务不在应用启动时自动执行，需要由运维按需手动运行或接入 cron。脚本只读取 `MEDITOUR_*` 配置与 `DATABASE_URL`，不访问网络。
 
+## 数据一致性巡检
+
+`scripts/check_data_consistency.py` 是**只读**脚本，只执行 SELECT，不修改数据：
+
+```bash
+cd backend
+python scripts/check_data_consistency.py
+python scripts/check_data_consistency.py --max-examples 10
+python scripts/check_data_consistency.py --database-url sqlite:///./meditour.db
+```
+
+输出分两类，避免把“设计如此”的数据当成 bug：
+
+**确定异常**（违反数据模型不变量，退出码 1）：
+
+| 检查 | 说明 |
+| --- | --- |
+| 订单引用不存在的套餐 | `bookings.package_id` 指向已不存在的套餐 |
+| 行程 / 行程每日安排引用不存在的目的地 | `destination_ids` 中的 slug 已不在 `destinations` 表 |
+| 同一时段多条 pending 订单 | 同一 `(user_id, package_id, appointment_date)` 多于 1 条 pending |
+| 软删除账号仍有有效会话 | 用户 `deleted_at` 非空，但会话未吊销且未过期 |
+| 状态与时间戳互相矛盾 | `pending` 带任一状态时间戳；`confirmed` 带取消/完成时间；`completed` 带取消时间；`cancelled` 带完成时间 |
+
+**需人工判断**（可能是正常业务结果，退出码不受影响）：
+
+| 检查 | 为什么不自动判错 |
+| --- | --- |
+| 状态缺少对应时间戳 | 迁移前的历史订单无法回溯真实时刻 |
+| 订单金额 ≠ 套餐当前价格 | 价格快照是设计，调价后历史订单不跟着变 |
+| 预约时间已过但仍是 pending | 可能是用户爽约或员工未及时处理，需要运营确认 |
+| 套餐已下架但仍有 pending 订单 | 下单后下架属正常，是否需要通知改约由业务决定 |
+
+未发现确定异常时退出码为 0，便于接入定时任务；脚本不自动修复任何数据。
+
 ## 联调演示数据
 
 默认种子只有 2 家医院、2 个套餐、4 个目的地，列表/筛选/分页看不出问题。设置
@@ -661,7 +777,7 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（116 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、强制验证开关（未验证下单 403、确认后 201）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出/关闭开关/来源白名单、数据保留清理（dry-run 不写入、只删过期数据、软删除账号保留用户行与订单、邮件与上传临时文件清理）、前后端契约核对（11 个端点的字段名/类型/可空性）、联调演示种子（默认关闭、数量与分类/价格覆盖、重复执行幂等）、列表接口查询次数为常数（订单/行程/套餐/医院/目的地/员工订单）、连接池容量与配置一致、SQLite WAL/busy_timeout/synchronous 实际生效。
+当前覆盖（124 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联（含会话吊销）、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、强制验证开关（未验证下单 403、确认后 201）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出/关闭开关/来源白名单、数据保留清理（dry-run 不写入、只删过期数据、软删除账号保留用户行与订单、邮件与上传临时文件清理）、前后端契约核对（11 个端点的字段名/类型/可空性）、联调演示种子（默认关闭、数量与分类/价格覆盖、重复执行幂等）、列表接口查询次数为常数（订单/行程/套餐/医院/目的地/员工订单）、连接池容量与配置一致、SQLite WAL/busy_timeout/synchronous 实际生效、订单状态机终态锁死与时间戳（用户不能取消已确认、员工可取消、completed 不能退回 pending）、审计覆盖（取消/流转/改价/删除/导出）与查询过滤（操作类型/时间范围/权限）。
 
 ## 接口验证脚本
 
