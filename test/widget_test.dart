@@ -1,12 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meditour_app/app/app.dart';
 import 'package:meditour_app/business/providers/auth_provider.dart';
+import 'package:meditour_app/business/providers/destination_provider.dart';
 import 'package:meditour_app/business/providers/favorites_provider.dart';
 import 'package:meditour_app/business/providers/itinerary_provider.dart';
 import 'package:meditour_app/business/providers/language_provider.dart';
 import 'package:meditour_app/core/constants/app_constant.dart';
+import 'package:meditour_app/data/models/travel_itinerary.dart';
 import 'package:meditour_app/data/respositories/service_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/destination_card.dart';
@@ -51,6 +55,7 @@ void main() {
     expect(context.read<AuthProvider>(), isNotNull);
     expect(context.read<ItineraryProvider>(), isNotNull);
     expect(context.read<FavoritesProvider>(), isNotNull);
+    expect(context.read<DestinationProvider>(), isNotNull);
   });
 
   testWidgets('service card lays out under unbounded ListView height', (
@@ -159,5 +164,65 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('偏好设置'), findsOneWidget);
     expect(find.text('特色服务 · 健康之旅'), findsOneWidget);
+  });
+
+  testWidgets('itinerary editor keeps per-day place arrangement on save', (
+    WidgetTester tester,
+  ) async {
+    final start = DateTime(2026, 12, 1);
+    final end = DateTime(2026, 12, 2);
+    final seeded = TravelItinerary(
+      id: 'trip_test',
+      title: '测试行程',
+      startDate: start,
+      endDate: end,
+      destinationIds: const ['beijing', 'shanghai'],
+      days: const [
+        ItineraryDay(dayNumber: 1, destinationIds: ['beijing']),
+        ItineraryDay(dayNumber: 2),
+      ],
+      notes: '',
+      createdAt: start,
+      updatedAt: start,
+    );
+    SharedPreferences.setMockInitialValues({
+      'language_code': 'zh',
+      'travel_itineraries': [jsonEncode(seeded.toJson())],
+    });
+
+    await tester.pumpWidget(const MeditourApp(initialLanguageCode: 'zh'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('行程'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('测试行程'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('第 1 天'), findsOneWidget);
+
+    // 第一天已有北京，从弹层里把上海加入这一天。
+    await tester.tap(find.text('添加地点').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, '上海'));
+    await tester.pumpAndSettle();
+    expect(find.text('上海'), findsNWidgets(2));
+
+    // 把上海上移到北京之前，再保存，确认按天顺序被持久化。
+    await tester.tap(find.byTooltip('下移').first);
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('itinerarySaveButton')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('itinerarySaveButton')));
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byType(NavigationBar));
+    final saved = context.read<ItineraryProvider>().findById('trip_test');
+    expect(saved, isNotNull);
+    expect(saved!.days.first.destinationIds, ['shanghai', 'beijing']);
+    expect(saved.days[1].destinationIds, isEmpty);
   });
 }

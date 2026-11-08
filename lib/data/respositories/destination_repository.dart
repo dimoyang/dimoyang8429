@@ -237,21 +237,21 @@ class DestinationRepository {
   /// 最近一次远程拉取是否回退到了示例/缓存数据（用于 UI 离线提示）。
   static bool get lastLoadWasSample => _lastLoadWasSample;
 
-  /// 当前可用目的地列表（同步读取，先由 [restoreCache]/[refresh] 填充）。
-  static List<Destination> get destinations => List.unmodifiable(_cache);
-
-  /// 仅测试用：重置缓存与回退标记。
+  /// 仅测试用：重置缓存与回退标记，返回重置后的样例列表。
   @visibleForTesting
-  static void resetForTesting() {
+  static List<Destination> resetForTesting() {
     _cache = sampleDestinations;
     _lastLoadWasSample = false;
+    return List.unmodifiable(_cache);
   }
 
   /// 启动时恢复上次成功拉取的持久缓存；无缓存或解析失败时保持示例数据。
-  static Future<void> restoreCache() async {
+  ///
+  /// 返回恢复后的列表，调用方无需再读取仓储内部状态。
+  static Future<List<Destination>> restoreCache() async {
     final raw = await StorageService.getCachedDestinations();
     if (raw == null || raw.isEmpty) {
-      return;
+      return List.unmodifiable(_cache);
     }
     try {
       final decoded = jsonDecode(raw);
@@ -268,6 +268,7 @@ class DestinationRepository {
     } on FormatException {
       // 缓存损坏时忽略，保持示例数据。
     }
+    return List.unmodifiable(_cache);
   }
 
   /// 远程拉取最新目的地列表。
@@ -296,15 +297,5 @@ class DestinationRepository {
       _lastLoadWasSample = true;
       return List.unmodifiable(_cache);
     }
-  }
-
-  /// 根据 id 查找目的地
-  static Destination? findById(String id) {
-    for (final destination in _cache) {
-      if (destination.id == id) {
-        return destination;
-      }
-    }
-    return null;
   }
 }

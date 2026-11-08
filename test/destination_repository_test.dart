@@ -67,9 +67,9 @@ void main() {
     expect(DestinationRepository.lastLoadWasSample, isFalse);
 
     // 持久缓存恢复：重置内存缓存后仍能从 SharedPreferences 还原。
-    DestinationRepository.resetForTesting();
-    expect(DestinationRepository.destinations.first.id, 'beijing');
-    await DestinationRepository.restoreCache();
-    expect(DestinationRepository.destinations.single.id, 'remote-city');
+    final reset = DestinationRepository.resetForTesting();
+    expect(reset.first.id, 'beijing');
+    final restored = await DestinationRepository.restoreCache();
+    expect(restored.single.id, 'remote-city');
   });
 }

@@ -1,21 +1,29 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:meditour_app/data/models/destination.dart';
 import 'package:meditour_app/data/respositories/destination_repository.dart';
 
 /// 目的地数据状态：提供加载/空/错误三态，供页面订阅。
 class DestinationProvider extends ChangeNotifier {
-  List<Destination> _destinations = DestinationRepository.destinations;
+  List<Destination> _destinations = DestinationRepository.sampleDestinations;
   bool _isLoading = false;
   Object? _lastError;
   bool _initialized = false;
   bool _initialLoadCompleted = false;
+  bool _skeletonGraceElapsed = false;
+  Timer? _skeletonTimer;
 
   List<Destination> get destinations => _destinations;
 
   bool get isLoading => _isLoading;
 
   /// 首次远端加载尚未结束：首页据此展示骨架，而不是直接闪出内置样例。
-  bool get isInitialLoading => _isLoading && !_initialLoadCompleted;
+  ///
+  /// 骨架最多展示 [_skeletonGrace]，之后即使请求仍在重试也先展示本地数据，
+  /// 避免后端很慢时出现“骨架一直转”的假死观感。
+  bool get isInitialLoading =>
+      _isLoading && !_initialLoadCompleted && !_skeletonGraceElapsed;
 
   bool get hasError => _lastError != null;
 
@@ -23,8 +31,9 @@ class DestinationProvider extends ChangeNotifier {
   bool get isEmpty =>
       !_isLoading && _lastError == null && _destinations.isEmpty;
 
-  /// 是否回退到了持久缓存或内置示例（用于离线提示）。
-  bool get isOfflineFallback => DestinationRepository.lastLoadWasSample;
+  /// 是否没能从远端拿到最新数据、正在展示本地缓存/内置样例（用于离线提示）。
+  bool get isOfflineFallback =>
+      DestinationRepository.lastLoadWasSample || _lastError != null;
 
   String get heroImageUrl => DestinationRepository.heroImageUrl;
 
@@ -44,8 +53,7 @@ class DestinationProvider extends ChangeNotifier {
     }
     _initialized = true;
 
-    await DestinationRepository.restoreCache();
-    _destinations = DestinationRepository.destinations;
+    _destinations = await DestinationRepository.restoreCache();
     notifyListeners();
 
     await refresh(lang: lang);
@@ -55,15 +63,35 @@ class DestinationProvider extends ChangeNotifier {
     _isLoading = true;
     _lastError = null;
     notifyListeners();
+    if (!_initialLoadCompleted) {
+      _skeletonGraceElapsed = false;
+      _skeletonTimer?.cancel();
+      _skeletonTimer = Timer(_skeletonGrace, () {
+        _skeletonGraceElapsed = true;
+        notifyListeners();
+      });
+    }
 
     try {
       _destinations = await DestinationRepository.refresh(lang: lang);
     } catch (error) {
       _lastError = error;
     } finally {
+      _skeletonTimer?.cancel();
+      _skeletonTimer = null;
+      _skeletonGraceElapsed = true;
       _isLoading = false;
       _initialLoadCompleted = true;
       notifyListeners();
     }
+  }
+
+  /// 骨架展示上限；超过后先展示本地数据，请求结果到达再安静更新。
+  static const Duration _skeletonGrace = Duration(seconds: 2);
+
+  @override
+  void dispose() {
+    _skeletonTimer?.cancel();
+    super.dispose();
   }
 }

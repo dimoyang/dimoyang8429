@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:meditour_app/business/providers/destination_provider.dart';
 import 'package:meditour_app/business/providers/itinerary_provider.dart';
 import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/data/models/destination.dart';
 import 'package:meditour_app/data/models/travel_itinerary.dart';
-import 'package:meditour_app/data/respositories/destination_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/error_state.dart';
+import 'package:meditour_app/presentation/widgets/offline_data_hint.dart';
 import 'package:provider/provider.dart';
 
 /// Lists locally saved itineraries and provides their management actions.
@@ -17,6 +18,7 @@ class ItineraryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<ItineraryProvider>();
+    final destinationProvider = context.watch<DestinationProvider>();
 
     return Scaffold(
       backgroundColor: AppColors.pageBg,
@@ -34,7 +36,7 @@ class ItineraryScreen extends StatelessWidget {
       ),
       body: SafeArea(
         top: false,
-        child: _buildBody(l10n, provider),
+        child: _buildBody(l10n, provider, destinationProvider),
       ),
       floatingActionButton: provider.isLoaded && provider.itineraries.isNotEmpty
           ? FloatingActionButton.extended(
@@ -46,7 +48,11 @@ class ItineraryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBody(AppLocalizations l10n, ItineraryProvider provider) {
+  Widget _buildBody(
+    AppLocalizations l10n,
+    ItineraryProvider provider,
+    DestinationProvider destinationProvider,
+  ) {
     if (provider.loadFailed) {
       return ErrorState(
         icon: Icons.route_outlined,
@@ -61,7 +67,22 @@ class ItineraryScreen extends StatelessWidget {
     if (provider.itineraries.isEmpty) {
       return const _EmptyItinerary();
     }
-    return _ItineraryList(itineraries: provider.itineraries);
+    final list = _ItineraryList(
+      itineraries: provider.itineraries,
+      destinationProvider: destinationProvider,
+    );
+    if (!destinationProvider.isOfflineFallback) {
+      return list;
+    }
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: OfflineDataHint(message: l10n.medicalOfflineHint),
+        ),
+        Expanded(child: list),
+      ],
+    );
   }
 }
 
@@ -135,8 +156,12 @@ class _EmptyItinerary extends StatelessWidget {
 
 class _ItineraryList extends StatelessWidget {
   final List<TravelItinerary> itineraries;
+  final DestinationProvider destinationProvider;
 
-  const _ItineraryList({required this.itineraries});
+  const _ItineraryList({
+    required this.itineraries,
+    required this.destinationProvider,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +172,10 @@ class _ItineraryList extends StatelessWidget {
       itemBuilder: (context, index) => Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
-          child: _ItineraryCard(itinerary: itineraries[index]),
+          child: _ItineraryCard(
+            itinerary: itineraries[index],
+            destinationProvider: destinationProvider,
+          ),
         ),
       ),
     );
@@ -156,8 +184,12 @@ class _ItineraryList extends StatelessWidget {
 
 class _ItineraryCard extends StatelessWidget {
   final TravelItinerary itinerary;
+  final DestinationProvider destinationProvider;
 
-  const _ItineraryCard({required this.itinerary});
+  const _ItineraryCard({
+    required this.itinerary,
+    required this.destinationProvider,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +197,7 @@ class _ItineraryCard extends StatelessWidget {
     final languageCode = Localizations.localeOf(context).languageCode;
     final dateFormatter = MaterialLocalizations.of(context);
     final destinations = itinerary.destinationIds
-        .map(DestinationRepository.findById)
+        .map(destinationProvider.findById)
         .whereType<Destination>()
         .toList();
 

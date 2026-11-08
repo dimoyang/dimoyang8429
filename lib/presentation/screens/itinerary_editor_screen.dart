@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:meditour_app/business/providers/destination_provider.dart';
 import 'package:meditour_app/business/providers/itinerary_provider.dart';
 import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/data/models/travel_itinerary.dart';
-import 'package:meditour_app/data/respositories/destination_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/error_state.dart';
+import 'package:meditour_app/presentation/widgets/offline_data_hint.dart';
 import 'package:provider/provider.dart';
 
 /// Creates or edits a locally saved itinerary.
@@ -81,9 +82,10 @@ class _ItineraryEditorScreenState extends State<ItineraryEditorScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final provider = context.watch<ItineraryProvider>();
+    final destinationProvider = context.watch<DestinationProvider>();
     final languageCode = Localizations.localeOf(context).languageCode;
     final destinationNames = {
-      for (final destination in DestinationRepository.destinations)
+      for (final destination in destinationProvider.destinations)
         destination.id: destination.getName(languageCode),
     };
 
@@ -144,6 +146,10 @@ class _ItineraryEditorScreenState extends State<ItineraryEditorScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
                 children: [
+                  if (destinationProvider.isOfflineFallback) ...[
+                    OfflineDataHint(message: l10n.medicalOfflineHint),
+                    const SizedBox(height: 16),
+                  ],
                   _SectionLabel(text: l10n.itineraryNameLabel),
                   TextFormField(
                     key: const Key('itineraryTitleField'),
@@ -171,7 +177,7 @@ class _ItineraryEditorScreenState extends State<ItineraryEditorScreen> {
                     child: Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: DestinationRepository.destinations.map((item) {
+                      children: destinationProvider.destinations.map((item) {
                         final selected = _destinationIds.contains(item.id);
                         return FilterChip(
                           key: Key('destinationChip_${item.id}'),
@@ -462,12 +468,10 @@ class _ItineraryEditorScreenState extends State<ItineraryEditorScreen> {
   }
 
   String destinationNamesFor(String id, String languageCode) {
-    for (final destination in DestinationRepository.destinations) {
-      if (destination.id == id) {
-        return destination.getName(languageCode);
-      }
-    }
-    return id;
+    return context.read<DestinationProvider>().findById(id)?.getName(
+              languageCode,
+            ) ??
+        id;
   }
 
   void _removePlaceFromDay(int dayIndex, int placeIndex) {
