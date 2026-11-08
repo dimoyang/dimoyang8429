@@ -12,10 +12,10 @@ class AppTheme {
   static const List<String> supportedLanguageCodes = ['en', 'de', 'fr', 'zh'];
 
   static ThemeData light() {
-    // 用品牌色作为种子生成同色系配色，并把主色固定为品牌色本身，
-    // 使 AppBar、按钮、导航指示器与输入框焦点色都落在同一套青绿色系。
+    // 用品牌色作为种子生成同色系配色；控件主色固定为加深青绿，
+    // 保证 AppBar/按钮上的白色文字对比度达到 4.5:1（品牌亮色仅作装饰）。
     final colorScheme = ColorScheme.fromSeed(seedColor: seedColor).copyWith(
-      primary: AppColors.primary,
+      primary: AppColors.primaryDark,
       onPrimary: Colors.white,
     );
     return _base(colorScheme);

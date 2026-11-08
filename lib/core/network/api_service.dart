@@ -153,11 +153,53 @@ class ApiService {
   @visibleForTesting
   set dioForTesting(Dio dio) => _dio = dio;
 
+  /// GET 幂等请求的最大重试次数（不含首次请求）。
+  ///
+  /// 仅用于网络抖动与 5xx；非幂等请求（预约、取消订单、注销）绝不重试。
+  static int maxGetRetries = 2;
+
+  /// 指数退避基数：第 n 次重试等待 base * 2^(n-1)。
+  static Duration retryBaseDelay = const Duration(milliseconds: 300);
+
+  /// 判断异常是否值得重试：网络层失败或服务端 5xx（501/505 除外）。
+  static bool _isRetryable(DioException error) {
+    final status = error.response?.statusCode;
+    if (status != null) {
+      return status >= 500 && status <= 599 && status != 501 && status != 505;
+    }
+    return switch (error.type) {
+      DioExceptionType.connectionTimeout ||
+      DioExceptionType.sendTimeout ||
+      DioExceptionType.receiveTimeout ||
+      DioExceptionType.connectionError ||
+      DioExceptionType.unknown =>
+        true,
+      _ => false,
+    };
+  }
+
+  /// 对 GET 请求做有限重试；其他方法直接抛出，保证写操作只执行一次。
+  Future<Response<dynamic>> _sendWithRetry(
+    Future<Response<dynamic>> Function() call,
+  ) async {
+    for (var attempt = 0;; attempt++) {
+      try {
+        return await call();
+      } on DioException catch (error) {
+        final isGet = error.requestOptions.method.toUpperCase() == 'GET';
+        if (!isGet || attempt >= maxGetRetries || !_isRetryable(error)) {
+          rethrow;
+        }
+        await Future<void>.delayed(retryBaseDelay * (1 << attempt));
+      }
+    }
+  }
+
   Future<Map<String, dynamic>> _request(
     Future<Response<dynamic>> Function() call,
   ) async {
     try {
-      final response = await call();
+      final response = await _sendWithRetry(call);
       final data = response.data;
       if (data is Map<String, dynamic>) {
         return data;
@@ -175,7 +217,7 @@ class ApiService {
     Future<Response<dynamic>> Function() call,
   ) async {
     try {
-      final response = await call();
+      final response = await _sendWithRetry(call);
       final data = response.data;
       if (data is List) {
         return data

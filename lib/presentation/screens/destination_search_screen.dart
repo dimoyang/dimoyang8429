@@ -6,6 +6,7 @@ import 'package:meditour_app/data/respositories/destination_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/destination_card.dart';
 import 'package:meditour_app/presentation/widgets/error_state.dart';
+import 'package:meditour_app/presentation/widgets/skeleton.dart';
 import 'package:provider/provider.dart';
 
 /// 支持关键词和收藏筛选的目的地搜索页。
@@ -110,7 +111,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                     onRetry: favorites.load,
                   )
                 : _favoritesOnly && !favorites.isLoaded
-                    ? const Center(child: CircularProgressIndicator())
+                    ? _buildGridSkeleton(l10n)
                     : destinations.isEmpty
                         ? _EmptySearchResult(favoritesOnly: _favoritesOnly)
                         : LayoutBuilder(
@@ -141,6 +142,34 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                           ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 收藏筛选加载骨架：卡片比例与 DestinationCard 一致，避免加载完成跳版。
+  Widget _buildGridSkeleton(AppLocalizations l10n) {
+    return SkeletonArea(
+      label: l10n.loading,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 900
+              ? 4
+              : constraints.maxWidth >= 600
+                  ? 3
+                  : 2;
+          return GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: destinationCardAspectRatio(context),
+            ),
+            itemCount: columns * 2,
+            itemBuilder: (_, __) => const SkeletonDestinationCard(),
+          );
+        },
       ),
     );
   }

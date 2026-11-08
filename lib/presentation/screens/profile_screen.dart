@@ -69,7 +69,7 @@ class ProfileScreen extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 21,
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: AppColors.primaryDark,
                           child: Text(
                             user.displayName.isNotEmpty
                                 ? user.displayName[0].toUpperCase()
@@ -348,47 +348,49 @@ class _SettingsTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         side: const BorderSide(color: AppColors.line),
       ),
-      child: ListTile(
-        onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.primaryBg,
+      child: MergeSemantics(
+        child: ListTile(
+          onTap: onTap,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: iconColor ?? AppColors.primary, size: 21),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: AppColors.ink,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.primaryBg,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: iconColor ?? AppColors.primary, size: 21),
           ),
-        ),
-        subtitle: subtitle == null
-            ? null
-            : Text(
-                subtitle!,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.ink2,
-                  fontSize: 12,
-                  height: 1.4,
+          title: Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.ink,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          subtitle: subtitle == null
+              ? null
+              : Text(
+                  subtitle!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.ink2,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
                 ),
-              ),
-        trailing: onTap == null
-            ? null
-            : const Icon(
-                Icons.chevron_right,
-                color: AppColors.ink3,
-                size: 20,
-              ),
+          trailing: onTap == null
+              ? null
+              : const Icon(
+                  Icons.chevron_right,
+                  color: AppColors.ink3,
+                  size: 20,
+                ),
+        ),
       ),
     );
   }

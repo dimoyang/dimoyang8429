@@ -26,7 +26,7 @@ Future<void> showLanguagePickerSheet(BuildContext context) {
               title: Text(
                 name,
                 style: TextStyle(
-                  color: selected ? AppColors.primary : AppColors.ink,
+                  color: selected ? AppColors.primaryDark : AppColors.ink,
                   fontSize: 15,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
                 ),
@@ -34,7 +34,7 @@ Future<void> showLanguagePickerSheet(BuildContext context) {
               trailing: selected
                   ? const Icon(
                       Icons.check_circle,
-                      color: AppColors.primary,
+                      color: AppColors.primaryDark,
                       size: 20,
                     )
                   : null,

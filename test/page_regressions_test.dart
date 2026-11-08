@@ -40,6 +40,7 @@ const _bookingResultJson = {
 
 void main() {
   final originalDio = ApiService.instance.dioForTesting;
+  final originalRetryDelay = ApiService.retryBaseDelay;
 
   setUpAll(() async {
     await initializeDateFormatting();
@@ -49,10 +50,13 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     TokenStore.resetForTesting();
     ServiceRepository.resetForTesting();
+    // 测试里不真实等待退避；重试次数语义由 api_service_retry_test 覆盖。
+    ApiService.retryBaseDelay = Duration.zero;
   });
 
   tearDown(() {
     ApiService.instance.dioForTesting = originalDio;
+    ApiService.retryBaseDelay = originalRetryDelay;
   });
 
   testWidgets('服务详情错误态显示并可重试', (tester) async {

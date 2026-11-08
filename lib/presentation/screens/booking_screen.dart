@@ -11,6 +11,7 @@ import 'package:meditour_app/data/respositories/service_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:meditour_app/presentation/widgets/form_field.dart';
+import 'package:meditour_app/presentation/widgets/skeleton.dart';
 import 'package:provider/provider.dart';
 
 /// 预约页面
@@ -67,11 +68,7 @@ class _BookingScreenState extends State<BookingScreen> {
       future: _serviceFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return Scaffold(
-            backgroundColor: AppColors.pageBg,
-            appBar: AppBar(title: Text(l10n.btnBookConsult)),
-            body: const Center(child: CircularProgressIndicator()),
-          );
+          return _buildSkeleton(l10n);
         }
         if (snapshot.hasError) {
           final error = snapshot.error;
@@ -97,6 +94,44 @@ class _BookingScreenState extends State<BookingScreen> {
         }
         return _buildForm(context, l10n, service);
       },
+    );
+  }
+
+  /// 表单加载骨架：字段高度与真实 AppFormField 一致，避免回填时跳版。
+  Widget _buildSkeleton(AppLocalizations l10n) {
+    return Scaffold(
+      backgroundColor: AppColors.pageBg,
+      appBar: AppBar(title: Text(l10n.btnBookConsult)),
+      body: SkeletonArea(
+        label: l10n.loading,
+        child: ListView(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          children: const [
+            SkeletonBox(height: 70, radius: 14),
+            SizedBox(height: 18),
+            _SkeletonField(),
+            SizedBox(height: 14),
+            _SkeletonField(),
+            SizedBox(height: 14),
+            _SkeletonField(),
+            SizedBox(height: 14),
+            _SkeletonField(),
+            SizedBox(height: 18),
+            SkeletonLine(widthFactor: 0.24, height: 13),
+            SizedBox(height: 6),
+            SkeletonBox(height: 40, radius: 8),
+            SizedBox(height: 6),
+            SkeletonBox(height: 40, radius: 8),
+            SizedBox(height: 6),
+            SkeletonBox(height: 40, radius: 8),
+            SizedBox(height: 18),
+            _SkeletonField(height: 78),
+            SizedBox(height: 22),
+            SkeletonBox(height: 52, radius: 999),
+          ],
+        ),
+      ),
     );
   }
 
@@ -421,7 +456,7 @@ class _BookingScreenState extends State<BookingScreen> {
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.primaryDark,
               ),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
@@ -527,6 +562,25 @@ class _BookingScreenState extends State<BookingScreen> {
           },
         ),
       ),
+    );
+  }
+}
+
+/// 表单字段占位：标签行 + 输入框。
+class _SkeletonField extends StatelessWidget {
+  final double height;
+
+  const _SkeletonField({this.height = 46});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SkeletonLine(widthFactor: 0.22, height: 12),
+        const SizedBox(height: 6),
+        SkeletonBox(height: height, radius: 12),
+      ],
     );
   }
 }

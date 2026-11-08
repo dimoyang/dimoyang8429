@@ -225,6 +225,7 @@
   "deleteAccountWrongPassword": "The password is incorrect.",
   "deleteAccountSuccess": "Your account has been deleted.",
   "close": "Close",
+  "loading": "Loading…",
   "loginTitle": "Log In",
   "registerTitle": "Create Account",
   "emailLabel": "Email",

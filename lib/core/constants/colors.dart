@@ -34,6 +34,6 @@ class AppColors {
   /// 贴士卡背景
   static const Color tipBg = Color(0xFFFFF7E0);
 
-  /// 危险色（表单错误）
-  static const Color danger = Color(0xFFEF4444);
+  /// 危险色（表单错误；白底对比度 ≥ 4.5:1）
+  static const Color danger = Color(0xFFDC2626);
 }

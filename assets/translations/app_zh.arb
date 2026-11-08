@@ -218,6 +218,7 @@
   "deleteAccountWrongPassword": "密码不正确。",
   "deleteAccountSuccess": "账号已注销。",
   "close": "关闭",
+  "loading": "加载中…",
   "loginTitle": "登录",
   "registerTitle": "注册账号",
   "emailLabel": "邮箱",

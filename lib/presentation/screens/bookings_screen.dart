@@ -8,6 +8,7 @@ import 'package:meditour_app/data/models/booking.dart';
 import 'package:meditour_app/data/respositories/booking_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/error_state.dart';
+import 'package:meditour_app/presentation/widgets/skeleton.dart';
 import 'package:provider/provider.dart';
 
 /// 我的预约订单列表页。
@@ -113,7 +114,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
     AuthProvider auth,
   ) {
     if (!auth.isInitialized) {
-      return const Center(child: CircularProgressIndicator());
+      return _buildSkeleton(l10n);
     }
     if (!auth.isLoggedIn) {
       return _buildLoginGuide(context, l10n);
@@ -125,7 +126,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return _buildSkeleton(l10n);
         }
         if (snapshot.hasError) {
           final error = snapshot.error;
@@ -161,6 +162,20 @@ class _BookingsScreenState extends State<BookingsScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// 加载骨架：与订单卡片同宽同高，避免数据到达时跳版。
+  Widget _buildSkeleton(AppLocalizations l10n) {
+    return SkeletonArea(
+      label: l10n.loading,
+      child: ListView.separated(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        itemCount: 3,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (_, __) => const _SkeletonBookingCard(),
+      ),
     );
   }
 
@@ -358,6 +373,50 @@ class _BookingCard extends StatelessWidget {
   }
 }
 
+/// 与订单卡片同尺寸的静态占位卡。
+///
+/// 卡高按"标题行 + 三条信息 + 取消按钮"估算，数据到达时版式基本不跳。
+class _SkeletonBookingCard extends StatelessWidget {
+  const _SkeletonBookingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: SkeletonLine(widthFactor: 0.5, height: 15)),
+              SizedBox(width: 8),
+              SkeletonBox(width: 56, height: 21, radius: 999),
+            ],
+          ),
+          SizedBox(height: 10),
+          SkeletonLine(widthFactor: 0.62, height: 12),
+          SizedBox(height: 10),
+          SkeletonLine(widthFactor: 0.55, height: 12),
+          SizedBox(height: 10),
+          SkeletonLine(widthFactor: 0.4, height: 12),
+          SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: SkeletonBox(width: 64, height: 22, radius: 6),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 图标 + 文案信息行，窄屏与大字号下自动换行。
 class _InfoRow extends StatelessWidget {
   final IconData icon;
@@ -436,7 +495,7 @@ class _StatusChip extends StatelessWidget {
       case 'completed':
         return (
           l10n.bookingsStatusCompleted,
-          AppColors.ink2,
+          const Color(0xFF475569),
           const Color(0xFFEEF2F6),
         );
       case 'cancelled':
@@ -450,7 +509,7 @@ class _StatusChip extends StatelessWidget {
         // 后端出现未知状态时用本地化兜底，避免直接把英文变量暴露给用户。
         return (
           l10n.bookingsStatusUnknown,
-          AppColors.ink2,
+          const Color(0xFF475569),
           const Color(0xFFEEF2F6)
         );
     }

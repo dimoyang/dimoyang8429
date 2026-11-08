@@ -218,6 +218,7 @@
   "deleteAccountWrongPassword": "Le mot de passe est incorrect.",
   "deleteAccountSuccess": "Votre compte a été supprimé.",
   "close": "Fermer",
+  "loading": "Chargement…",
   "loginTitle": "Connexion",
   "registerTitle": "Créer un compte",
   "emailLabel": "E-mail",

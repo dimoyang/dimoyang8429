@@ -613,6 +613,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get close => '关闭';
 
   @override
+  String get loading => '加载中…';
+
+  @override
   String get loginTitle => '登录';
 
   @override

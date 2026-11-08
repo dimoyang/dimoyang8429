@@ -218,6 +218,7 @@
   "deleteAccountWrongPassword": "Das Passwort ist falsch.",
   "deleteAccountSuccess": "Dein Konto wurde gelöscht.",
   "close": "Schließen",
+  "loading": "Wird geladen…",
   "loginTitle": "Anmelden",
   "registerTitle": "Konto erstellen",
   "emailLabel": "E-Mail",

@@ -6,6 +6,7 @@ import 'package:meditour_app/data/respositories/service_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:meditour_app/presentation/widgets/service_card.dart';
+import 'package:meditour_app/presentation/widgets/skeleton.dart';
 
 /// 健康之旅列表页（医疗服务隐藏入口）
 class MedicalListScreen extends StatefulWidget {
@@ -27,6 +28,25 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
     } catch (_) {
       // 错误由 FutureBuilder 以错误态呈现。
     }
+  }
+
+  /// 加载骨架：间距、卡片高度与真实列表一致，避免加载完成时大幅跳动。
+  Widget _buildSkeleton(AppLocalizations l10n) {
+    return SkeletonArea(
+      label: l10n.loading,
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 26),
+        children: [
+          const SkeletonBox(height: 68, radius: 14),
+          const SizedBox(height: 16),
+          for (var i = 0; i < 3; i++) ...[
+            const _SkeletonServiceCard(),
+            if (i < 2) const SizedBox(height: 14),
+          ],
+        ],
+      ),
+    );
   }
 
   /// 后端返回空列表时的空数据态，避免整页只剩留白。
@@ -86,7 +106,7 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
+            return _buildSkeleton(l10n);
           }
           if (snapshot.hasError) {
             final error = snapshot.error;
@@ -156,6 +176,47 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// 与 ServiceCard 尺寸对齐的静态占位卡（图 140 + 文案区）。
+class _SkeletonServiceCard extends StatelessWidget {
+  const _SkeletonServiceCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SkeletonBox(height: 140, radius: 0),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                SkeletonLine(widthFactor: 0.72, height: 14),
+                SizedBox(height: 8),
+                SkeletonLine(widthFactor: 0.45, height: 11),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    SkeletonBox(width: 82, height: 13, radius: 6),
+                    Spacer(),
+                    SkeletonBox(width: 62, height: 13, radius: 6),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

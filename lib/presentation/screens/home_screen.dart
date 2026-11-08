@@ -55,7 +55,7 @@ class HomeScreen extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.primary, AppColors.primaryDark],
+          colors: [AppColors.primaryDark, Color(0xFF115E59)],
         ),
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
       ),
@@ -94,8 +94,10 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: 1),
                     Text(
                       l10n.appSubtitle,
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 11),
+                      style: const TextStyle(
+                        color: Color(0xEBFFFFFF),
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
@@ -106,7 +108,7 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             l10n.tagline,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            style: const TextStyle(color: Color(0xEBFFFFFF), fontSize: 14),
           ),
           const SizedBox(height: 2),
           Text(
@@ -374,7 +376,7 @@ class _LanguageButton extends StatelessWidget {
       button: true,
       label: current.$2,
       child: Material(
-        color: Colors.white.withValues(alpha: 0.16),
+        color: Colors.black.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
         clipBehavior: Clip.antiAlias,
         child: InkWell(

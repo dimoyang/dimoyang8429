@@ -648,6 +648,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get close => 'Schließen';
 
   @override
+  String get loading => 'Wird geladen…';
+
+  @override
   String get loginTitle => 'Anmelden';
 
   @override

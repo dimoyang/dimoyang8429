@@ -649,6 +649,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get close => 'Fermer';
 
   @override
+  String get loading => 'Chargement…';
+
+  @override
   String get loginTitle => 'Connexion';
 
   @override

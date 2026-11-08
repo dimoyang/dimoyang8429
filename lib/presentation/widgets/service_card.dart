@@ -113,7 +113,7 @@ class ServiceCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
+                              color: AppColors.primaryDark,
                             ),
                           ),
                         ],

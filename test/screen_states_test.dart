@@ -15,6 +15,7 @@ import 'package:meditour_app/data/respositories/service_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/screens/bookings_screen.dart';
 import 'package:meditour_app/presentation/screens/medical_list_screen.dart';
+import 'package:meditour_app/presentation/widgets/skeleton.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -69,6 +70,7 @@ Map<String, Object> _orderJson({required int id, required String status}) {
 
 void main() {
   final originalDio = ApiService.instance.dioForTesting;
+  final originalRetryDelay = ApiService.retryBaseDelay;
 
   setUpAll(() async {
     await initializeDateFormatting();
@@ -78,10 +80,13 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     TokenStore.resetForTesting();
     ServiceRepository.resetForTesting();
+    // 测试里不真实等待退避；重试次数语义由 api_service_retry_test 覆盖。
+    ApiService.retryBaseDelay = Duration.zero;
   });
 
   tearDown(() {
     ApiService.instance.dioForTesting = originalDio;
+    ApiService.retryBaseDelay = originalRetryDelay;
   });
 
   testWidgets('医疗列表错误态显示并可重试', (tester) async {
@@ -354,6 +359,39 @@ void main() {
     expect(find.text('该预约当前状态不可取消'), findsNothing);
     expect(listCalls, 2);
   });
+
+  testWidgets('医疗列表加载中显示静态骨架并保持可稳定等待', (tester) async {
+    final semantics = tester.ensureSemantics();
+    _installHangingApi();
+
+    await tester.pumpWidget(_app(home: const MedicalListScreen()));
+    await tester.pump();
+
+    expect(find.byType(SkeletonBox), findsWidgets);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    // 读屏只播报一次"加载中"，不会逐个念占位块。
+    expect(find.bySemanticsLabel('加载中…'), findsOneWidget);
+
+    // 静态占位没有循环动画，pumpAndSettle 必须能正常结束。
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+  });
+
+  testWidgets('订单列表加载中显示静态骨架并保持可稳定等待', (tester) async {
+    _installFakeApi(_bookingRoutes(bookings: <Object>[]));
+    final auth = await _loggedInAuth(tester);
+    _installHangingApi();
+
+    await tester.pumpWidget(_app(home: const BookingsScreen(), auth: auth));
+    await tester.pump();
+
+    expect(find.byType(SkeletonBox), findsWidgets);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }
 
 /// 订单页依赖的登录、当前用户与订单列表三个端点。
@@ -391,6 +429,13 @@ Future<AuthProvider> _loggedInAuth(WidgetTester tester) async {
 void _installFakeApi(ResponseBody Function(RequestOptions) handler) {
   final dio = Dio(BaseOptions(baseUrl: 'http://fake.local/api/v1'))
     ..httpClientAdapter = _FakeAdapter(handler);
+  ApiService.instance.dioForTesting = dio;
+}
+
+/// 模拟请求一直挂起，用于验证加载骨架的稳定性。
+void _installHangingApi() {
+  final dio = Dio(BaseOptions(baseUrl: 'http://fake.local/api/v1'))
+    ..httpClientAdapter = _HangingAdapter();
   ApiService.instance.dioForTesting = dio;
 }
 
@@ -464,6 +509,20 @@ class _FakeAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     return _handler(options);
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+class _HangingAdapter implements HttpClientAdapter {
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) {
+    return Completer<ResponseBody>().future;
   }
 
   @override

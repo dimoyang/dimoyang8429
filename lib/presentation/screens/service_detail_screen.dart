@@ -10,6 +10,7 @@ import 'package:meditour_app/presentation/widgets/back_button.dart';
 import 'package:meditour_app/presentation/widgets/detail_bottom_bar.dart';
 import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
+import 'package:meditour_app/presentation/widgets/skeleton.dart';
 import 'package:meditour_app/presentation/widgets/stat_tile.dart';
 
 /// 服务详情页
@@ -45,11 +46,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       future: _serviceFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return Scaffold(
-            backgroundColor: AppColors.pageBg,
-            appBar: AppBar(title: Text(l10n.medicalListTitle)),
-            body: const Center(child: CircularProgressIndicator()),
-          );
+          return _buildSkeleton(l10n);
         }
         if (snapshot.hasError) {
           final error = snapshot.error;
@@ -72,6 +69,56 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         }
         return _buildContent(context, service, l10n);
       },
+    );
+  }
+
+  /// 详情加载骨架：hero、标题、统计块与正文段落的占位。
+  ///
+  /// 比例按真实布局估算，图片与统计块到位后不会出现明显跳动。
+  Widget _buildSkeleton(AppLocalizations l10n) {
+    return Scaffold(
+      backgroundColor: AppColors.pageBg,
+      appBar: AppBar(title: Text(l10n.medicalListTitle)),
+      body: SkeletonArea(
+        label: l10n.loading,
+        child: ListView(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          children: [
+            const AspectRatio(
+              aspectRatio: 4 / 3,
+              child: SkeletonBox(radius: 0),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  SkeletonLine(widthFactor: 0.62, height: 23),
+                  SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(child: _SkeletonStatTile()),
+                      SizedBox(width: 10),
+                      Expanded(child: _SkeletonStatTile()),
+                    ],
+                  ),
+                  SizedBox(height: 20),
+                  SkeletonLine(widthFactor: 0.28, height: 15),
+                  SizedBox(height: 12),
+                  SkeletonLine(widthFactor: 1, height: 13),
+                  SizedBox(height: 9),
+                  SkeletonLine(widthFactor: 0.92, height: 13),
+                  SizedBox(height: 9),
+                  SkeletonLine(widthFactor: 0.86, height: 13),
+                  SizedBox(height: 9),
+                  SkeletonLine(widthFactor: 0.4, height: 13),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -223,7 +270,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             padding: EdgeInsets.only(top: 2),
             child: Text('✓ ',
                 style: TextStyle(
-                    color: AppColors.primary, fontWeight: FontWeight.w700)),
+                    color: AppColors.primaryDark, fontWeight: FontWeight.w700)),
           ),
           Expanded(
             child: Text(
@@ -275,6 +322,30 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 与 StatTile 等高的静态占位块。
+class _SkeletonStatTile extends StatelessWidget {
+  const _SkeletonStatTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          SkeletonLine(widthFactor: 0.55, height: 10),
+          SizedBox(height: 5),
+          SkeletonLine(widthFactor: 0.72, height: 13),
         ],
       ),
     );

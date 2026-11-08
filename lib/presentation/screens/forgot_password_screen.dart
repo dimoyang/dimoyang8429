@@ -126,13 +126,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           color: AppColors.primary,
         ),
         const SizedBox(height: 16),
-        Text(
-          l10n.forgotPasswordSentTitle,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppColors.ink,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
+        // 结果页整体替换，读屏需要主动播报"邮件已发送"。
+        Semantics(
+          liveRegion: true,
+          child: Text(
+            l10n.forgotPasswordSentTitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.ink,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         const SizedBox(height: 8),
