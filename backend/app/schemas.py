@@ -16,7 +16,17 @@ from pydantic import (
 
 class TokenResponse(BaseModel):
     access_token: str
+    # 新增字段；现有前端会忽略它，保持向后兼容。
+    refresh_token: str
     token_type: str = "bearer"
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str = Field(min_length=1)
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str | None = None
 
 
 class UserCreate(BaseModel):

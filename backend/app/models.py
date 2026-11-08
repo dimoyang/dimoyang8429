@@ -1,6 +1,6 @@
 """ORM 模型：覆盖 P1 端点所需实体。"""
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from sqlalchemy import (
     JSON,
@@ -18,6 +18,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
+def utcnow() -> datetime:
+    """SQLite DateTime 保存 naive UTC；用 timezone-aware now 避免 utcnow 弃用。"""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -27,7 +32,7 @@ class User(Base):
     full_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     preferred_language: Mapped[str] = mapped_column(String(10), default="en")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     bookings: Mapped[list["Booking"]] = relationship(back_populates="user")
 
@@ -79,7 +84,7 @@ class Booking(Base):
     total_price: Mapped[float] = mapped_column(Float)
     currency: Mapped[str] = mapped_column(String(8))
     status: Mapped[str] = mapped_column(String(30), default="pending")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     user: Mapped[User] = relationship(back_populates="bookings")
     package: Mapped["MedicalPackage"] = relationship()
@@ -124,9 +129,9 @@ class Itinerary(Base):
     # 行程整体涉及的目的地；每日安排见 ItineraryDay。
     destination_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     notes: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, default=utcnow, onupdate=utcnow
     )
 
     days: Mapped[list["ItineraryDay"]] = relationship(
@@ -148,3 +153,15 @@ class ItineraryDay(Base):
     notes: Mapped[str] = mapped_column(Text, default="")
 
     itinerary: Mapped[Itinerary] = relationship(back_populates="days")
+
+
+class TokenRevocation(Base):
+    """已吊销的令牌（按 jti）。持久化在数据库，重启后仍然有效。"""
+
+    __tablename__ = "token_revocations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    jti: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    token_type: Mapped[str] = mapped_column(String(20))
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    revoked_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

@@ -134,7 +134,7 @@ class Checker:
         print(f"  NOTE  {text}")
 
     def section(self, index: int, title: str) -> None:
-        print(f"\n[{index}/9] {title}")
+        print(f"\n[{index}/10] {title}")
 
 
 class ApiClient:
@@ -299,6 +299,20 @@ def main() -> int:
         bad_login.status == 401,
         "错误密码返回 401",
         f"实际 {bad_login.status} {fmt(bad_login.body)}",
+    )
+
+    limited_email = f"verify-rate-{suffix}@meditour.com"
+    statuses = [
+        api.post_form(
+            "/auth/login",
+            {"username": limited_email, "password": "WrongPassword123"},
+        ).status
+        for _ in range(6)
+    ]
+    checker.check(
+        statuses[:5] == [401] * 5 and statuses[5] == 429,
+        "连续失败 5 次后登录被限流",
+        f"实际状态序列 {statuses}",
     )
 
     # 3. /auth/me
@@ -511,6 +525,57 @@ def main() -> int:
         f"服务端接受情况：{created.status}"
     )
 
+    duplicate = api.post_json("/bookings/", booking_payload, token=token)
+    checker.check(
+        duplicate.status == 409
+        and isinstance(duplicate.body, dict)
+        and isinstance(duplicate.body.get("detail"), str),
+        "同用户同套餐同时间重复提交返回 409",
+        f"实际 {duplicate.status} {fmt(duplicate.body)}",
+    )
+
+    past_payload = {
+        **booking_payload,
+        "appointment_date": (
+            datetime.now() - timedelta(days=1)
+        ).isoformat(),
+    }
+    checker.check(
+        api.post_json("/bookings/", past_payload, token=token).status == 422,
+        "过去的 appointment_date 返回 422",
+    )
+
+    long_notes = api.post_json(
+        "/bookings/", {**booking_payload, "notes": "x" * 2001}, token=token
+    )
+    checker.check(
+        long_notes.status == 422,
+        "超长 notes 返回 422",
+        f"实际 {long_notes.status}",
+    )
+
+    bad_phone = api.post_json(
+        "/bookings/",
+        {**booking_payload, "contact_phone": "not-a-phone"},
+        token=token,
+    )
+    checker.check(
+        bad_phone.status == 422,
+        "无效手机号返回 422",
+        f"实际 {bad_phone.status}",
+    )
+
+    bad_email = api.post_json(
+        "/bookings/",
+        {**booking_payload, "contact_email": "not-an-email"},
+        token=token,
+    )
+    checker.check(
+        bad_email.status == 422,
+        "无效联系邮箱返回 422",
+        f"实际 {bad_email.status}",
+    )
+
     package_ids = [
         item.get("id")
         for item in items
@@ -618,8 +683,79 @@ def main() -> int:
         f"实际 {cancel_again.status} {fmt(cancel_again.body)}",
     )
 
-    # 8. CORS 预检
-    checker.section(8, "CORS 预检")
+    # 8. 令牌刷新与登出
+    checker.section(8, "令牌刷新与登出")
+    login_refresh = (
+        login.body.get("refresh_token") if isinstance(login.body, dict) else None
+    )
+    checker.check(
+        is_str(login_refresh) and bool(login_refresh),
+        "登录响应包含 refresh_token",
+        f"长度 {len(login_refresh) if isinstance(login_refresh, str) else 'N/A'}",
+    )
+
+    refreshed = api.post_json(
+        "/auth/refresh", {"refresh_token": login_refresh}
+    )
+    refreshed_body = refreshed.body if isinstance(refreshed.body, dict) else {}
+    new_access = refreshed_body.get("access_token")
+    new_refresh = refreshed_body.get("refresh_token")
+    checker.check(
+        refreshed.status == 200
+        and is_str(new_access)
+        and is_str(new_refresh)
+        and new_access != new_refresh,
+        "refresh 返回新的 access/refresh 令牌",
+        f"实际 {refreshed.status}",
+    )
+
+    reuse = api.post_json(
+        "/auth/refresh", {"refresh_token": login_refresh}
+    )
+    checker.check(
+        reuse.status == 401
+        and isinstance(reuse.body, dict)
+        and isinstance(reuse.body.get("detail"), str),
+        "旧 refresh token 重复使用返回 401",
+        f"实际 {reuse.status} {fmt(reuse.body)}",
+    )
+
+    checker.check(
+        api.get("/auth/me", token=new_access).status == 200,
+        "新 access token 可用",
+    )
+
+    logout = api.post_json(
+        "/auth/logout",
+        {"refresh_token": new_refresh},
+        token=new_access,
+    )
+    checker.check(
+        logout.status == 200
+        and isinstance(logout.body, dict)
+        and isinstance(logout.body.get("detail"), str),
+        "登出返回 200 且 detail 为字符串",
+        f"实际 {logout.status} {fmt(logout.body)}",
+    )
+    after_logout = api.get("/auth/me", token=new_access)
+    checker.check(
+        after_logout.status == 401
+        and isinstance(after_logout.body, dict)
+        and isinstance(after_logout.body.get("detail"), str),
+        "登出后的 access token 被拒绝",
+        f"实际 {after_logout.status} {fmt(after_logout.body)}",
+    )
+    refresh_after_logout = api.post_json(
+        "/auth/refresh", {"refresh_token": new_refresh}
+    )
+    checker.check(
+        refresh_after_logout.status == 401,
+        "登出后的 refresh token 被拒绝",
+        f"实际 {refresh_after_logout.status}",
+    )
+
+    # 9. CORS 预检
+    checker.section(9, "CORS 预检")
     origin = "http://localhost:8123"
     preflight = request(
         "OPTIONS",
@@ -651,8 +787,8 @@ def main() -> int:
         f"access-control-allow-headers={allow_headers or '缺失'}",
     )
 
-    # 9. 错误体形状
-    checker.section(9, "错误体形状")
+    # 10. 错误体形状
+    checker.section(10, "错误体形状")
     for name, response in (
         ("401", no_token),
         ("404", unknown),

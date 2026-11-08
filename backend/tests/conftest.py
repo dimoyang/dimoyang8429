@@ -11,7 +11,9 @@ TEST_DB = BACKEND_DIR / "test_meditour.db"
 if TEST_DB.exists():
     TEST_DB.unlink()
 
-os.environ.setdefault("MEDITOUR_SECRET_KEY", "test-secret-key-for-pytest")
+os.environ.setdefault(
+    "MEDITOUR_SECRET_KEY", "test-secret-key-for-pytest-32-bytes-minimum"
+)
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{TEST_DB.as_posix()}")
 os.environ.setdefault("MEDITOUR_TESTING", "1")
 # 固定关闭演示账号，避免开发者本地 .env 开启开关后影响断言。

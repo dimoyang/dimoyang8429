@@ -19,8 +19,13 @@ class Settings:
 
     SECRET_KEY: str = os.getenv("MEDITOUR_SECRET_KEY", os.getenv("SECRET_KEY", ""))
     JWT_ALGORITHM = "HS256"
-    # 前端没有刷新机制，使用 7 天有效期。
-    ACCESS_TOKEN_EXPIRE_DAYS = 7
+    # 前端目前只用 access token；refresh token 供后续客户端升级使用。
+    ACCESS_TOKEN_EXPIRE_DAYS = int(
+        os.getenv("MEDITOUR_ACCESS_TOKEN_EXPIRE_DAYS", "7")
+    )
+    REFRESH_TOKEN_EXPIRE_DAYS = int(
+        os.getenv("MEDITOUR_REFRESH_TOKEN_EXPIRE_DAYS", "30")
+    )
 
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL", f"sqlite:///{(BASE_DIR / 'meditour.db').as_posix()}"
