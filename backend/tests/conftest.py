@@ -13,6 +13,7 @@ if TEST_DB.exists():
 
 os.environ.setdefault("MEDITOUR_SECRET_KEY", "test-secret-key-for-pytest")
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{TEST_DB.as_posix()}")
+os.environ.setdefault("MEDITOUR_TESTING", "1")
 
 import pytest
 from fastapi.testclient import TestClient
