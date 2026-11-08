@@ -79,7 +79,9 @@ uvicorn app.main:app --reload --port 8000
 
 - `GET /api/v1/staff/bookings`：分页 `page` / `page_size`（上限 100）/ `status` 过滤；
   列表项**不含 `notes`**，`contact_phone`、`contact_email` 返回打码值。
-- `GET /api/v1/staff/bookings/{id}`：详情返回完整联系方式与备注（敏感字段访问审计见后续更新）。
+- `GET /api/v1/staff/bookings/{id}`：详情返回完整联系方式与备注，并写入 `audit_logs`
+  审计记录（操作者 id/邮箱、`action=booking.view`、`entity_type=booking`、`entity_id`、
+  `created_at`）。列表访问不记录审计；审计写入失败时不会返回敏感详情。
 - `PATCH /api/v1/staff/bookings/{id}/status`，请求体 `{"status": "confirmed"}` 或
   `{"status": "completed"}`。
   - 非 `staff`：403；未登录：401；订单不存在：404。
@@ -180,7 +182,7 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（47 项）：预约字段与校验分支、重复提交、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、日志脱敏与 request id。
+当前覆盖（49 项）：预约字段与校验分支、重复提交、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、日志脱敏与 request id。
 
 ## 接口验证脚本
 

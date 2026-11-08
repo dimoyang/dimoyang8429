@@ -191,6 +191,35 @@ class PasswordResetToken(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class AuditLog(Base):
+    """敏感数据访问审计：记录谁、何时、访问了哪条业务记录。
+
+    员工查看订单详情（含完整电话、备注）时写入；列表查询不写，
+    避免把一次列表浏览拆成大量无意义记录。
+    """
+
+    __tablename__ = "audit_logs"
+    __table_args__ = (
+        Index(
+            "ix_audit_logs_entity",
+            "entity_type",
+            "entity_id",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    actor_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), index=True
+    )
+    # 冗余保存操作者邮箱：用户后续被匿名化后仍能还原当时的操作人。
+    actor_email: Mapped[str] = mapped_column(String(255))
+    action: Mapped[str] = mapped_column(String(60))
+    entity_type: Mapped[str] = mapped_column(String(40))
+    entity_id: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class ContentTranslation(Base):
     """多语言内容：按实体 + 字段存译文，避免为每种语言平铺列。
 

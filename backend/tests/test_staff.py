@@ -3,10 +3,11 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 
-import pytest
+from sqlalchemy import func, select
 
 from app.config import settings
 from app.database import SessionLocal
+from app.models import AuditLog, User
 from app.staff import grant_staff, revoke_staff
 
 
@@ -229,3 +230,75 @@ def test_login_grants_staff_from_allowlist_and_revoke_takes_effect(
     # 角色每次请求都从数据库读取，撤销后旧令牌立即失去员工权限。
     denied = client.get("/api/v1/staff/bookings", headers=headers)
     assert denied.status_code == 403
+
+
+def test_staff_detail_view_is_audited_but_list_is_not(client, auth_headers) -> None:
+    staff_email, staff_headers = _make_staff(client)
+    booking = _create_booking(client, auth_headers, days=85)
+
+    with SessionLocal() as db:
+        actor = db.scalar(select(User).where(User.email == staff_email))
+        assert actor is not None
+        actor_id = actor.id
+
+    listing = client.get(
+        "/api/v1/staff/bookings?page=1&page_size=100", headers=staff_headers
+    )
+    assert listing.status_code == 200
+    with SessionLocal() as db:
+        count = db.scalar(
+            select(func.count())
+            .select_from(AuditLog)
+            .where(
+                AuditLog.entity_type == "booking",
+                AuditLog.entity_id == booking["id"],
+            )
+        )
+    assert count == 0, "列表查询不应产生审计记录"
+
+    for _ in range(2):
+        detail = client.get(
+            f"/api/v1/staff/bookings/{booking['id']}", headers=staff_headers
+        )
+        assert detail.status_code == 200
+
+    with SessionLocal() as db:
+        rows = list(
+            db.scalars(
+                select(AuditLog)
+                .where(
+                    AuditLog.entity_type == "booking",
+                    AuditLog.entity_id == booking["id"],
+                )
+                .order_by(AuditLog.id)
+            ).all()
+        )
+
+    assert len(rows) == 2
+    for row in rows:
+        assert row.actor_user_id == actor_id
+        assert row.actor_email == staff_email
+        assert row.action == "booking.view"
+        assert row.entity_type == "booking"
+        assert row.entity_id == booking["id"]
+        assert row.created_at is not None
+
+
+def test_forbidden_detail_access_is_not_audited(client, auth_headers) -> None:
+    booking = _create_booking(client, auth_headers, days=86)
+
+    denied = client.get(
+        f"/api/v1/staff/bookings/{booking['id']}", headers=auth_headers
+    )
+    assert denied.status_code == 403
+
+    with SessionLocal() as db:
+        count = db.scalar(
+            select(func.count())
+            .select_from(AuditLog)
+            .where(
+                AuditLog.entity_type == "booking",
+                AuditLog.entity_id == booking["id"],
+            )
+        )
+    assert count == 0

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.deps import require_staff
-from app.models import Booking, User
+from app.models import AuditLog, Booking, User
 from app.schemas import (
     BookingStatusUpdate,
     StaffBookingDetail,
@@ -80,10 +80,23 @@ def list_bookings(
 def get_booking(
     booking_id: int,
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_staff),
+    staff: User = Depends(require_staff),
 ) -> Booking:
-    """订单详情：返回完整联系方式与备注。"""
-    return _get_booking(db, booking_id)
+    """订单详情：返回完整联系方式与备注，并写入敏感数据访问审计。"""
+    booking = _get_booking(db, booking_id)
+    db.add(
+        AuditLog(
+            actor_user_id=staff.id,
+            actor_email=staff.email,
+            action="booking.view",
+            entity_type="booking",
+            entity_id=booking.id,
+        )
+    )
+    # 审计与读取同事务提交：写不进去就不返回敏感数据，避免出现无记录的访问。
+    db.commit()
+    db.refresh(booking)
+    return booking
 
 
 @router.patch(
