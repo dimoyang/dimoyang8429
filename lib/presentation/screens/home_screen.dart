@@ -72,7 +72,9 @@ class HomeScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Center(
-                  child: Text('🐉', style: TextStyle(fontSize: 20)),
+                  child: ExcludeSemantics(
+                    child: Text('🐉', style: TextStyle(fontSize: 20)),
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -117,12 +119,11 @@ class HomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           // 搜索栏
-          GestureDetector(
-            onTap: () => context.pushNamed('destinationSearch'),
+          Semantics(
+            button: true,
+            label: l10n.searchHint,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
               decoration: BoxDecoration(
-                color: Colors.white,
                 borderRadius: BorderRadius.circular(999),
                 boxShadow: const [
                   BoxShadow(
@@ -132,15 +133,29 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.search, size: 17, color: AppColors.ink3),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.searchHint,
-                    style: const TextStyle(color: AppColors.ink3, fontSize: 14),
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(999),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => context.pushNamed('destinationSearch'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 11),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search,
+                            size: 17, color: AppColors.ink3),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.searchHint,
+                          style: const TextStyle(
+                              color: AppColors.ink3, fontSize: 14),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -230,20 +245,11 @@ class HomeScreen extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 9),
         itemBuilder: (context, index) {
           final chip = chips[index];
-          return GestureDetector(
-            onTap: () {
-              if (index == 0 || index == 1) {
-                context.go('/travel-tools');
-              } else if (index == 3) {
-                context.go('/itinerary');
-              } else {
-                _showToast(context, l10n.chipComingSoon);
-              }
-            },
+          return Semantics(
+            button: true,
+            label: chip.$2,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: Colors.white,
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(color: AppColors.line),
                 boxShadow: const [
@@ -254,18 +260,41 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  Text(chip.$1, style: const TextStyle(fontSize: 13)),
-                  const SizedBox(width: 6),
-                  Text(
-                    chip.$2,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.ink2,
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(999),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () {
+                    if (index == 0 || index == 1) {
+                      context.go('/travel-tools');
+                    } else if (index == 3) {
+                      context.go('/itinerary');
+                    } else {
+                      _showToast(context, l10n.chipComingSoon);
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ExcludeSemantics(
+                          child: Text(chip.$1,
+                              style: const TextStyle(fontSize: 13)),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          chip.$2,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.ink2,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           );
@@ -302,7 +331,7 @@ class HomeScreen extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 4 / 5,
+        childAspectRatio: destinationCardAspectRatio(context),
         children:
             destinations.map((d) => DestinationCard(destination: d)).toList(),
       ),
@@ -341,25 +370,32 @@ class _LanguageButton extends StatelessWidget {
       (o) => o.$1 == currentCode,
       orElse: () => LanguageProvider.languageOptions.first,
     );
-    return GestureDetector(
-      onTap: () => showLanguagePickerSheet(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          children: [
-            Text(current.$3, style: const TextStyle(fontSize: 14)),
-            const SizedBox(width: 4),
-            Text(
-              current.$2,
-              style: const TextStyle(color: Colors.white, fontSize: 11.5),
+    return Semantics(
+      button: true,
+      label: current.$2,
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => showLanguagePickerSheet(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              children: [
+                ExcludeSemantics(
+                  child: Text(current.$3, style: const TextStyle(fontSize: 14)),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  current.$2,
+                  style: const TextStyle(color: Colors.white, fontSize: 11.5),
+                ),
+                const SizedBox(width: 2),
+                const Icon(Icons.expand_more, color: Colors.white70, size: 14),
+              ],
             ),
-            const SizedBox(width: 2),
-            const Icon(Icons.expand_more, color: Colors.white70, size: 14),
-          ],
+          ),
         ),
       ),
     );
@@ -385,7 +421,8 @@ class _TipCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(icon, style: const TextStyle(fontSize: 13)),
+          ExcludeSemantics(
+              child: Text(icon, style: const TextStyle(fontSize: 13))),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

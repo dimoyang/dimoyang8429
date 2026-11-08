@@ -105,6 +105,8 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
+              // 样例数据不足一屏时也允许下拉刷新。
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 26),
               children: [
                 Container(
@@ -116,7 +118,9 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('💚', style: TextStyle(fontSize: 14)),
+                      const ExcludeSemantics(
+                        child: Text('💚', style: TextStyle(fontSize: 14)),
+                      ),
                       const SizedBox(width: 9),
                       Expanded(
                         child: Text(

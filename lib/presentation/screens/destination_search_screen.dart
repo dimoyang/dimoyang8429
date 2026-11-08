@@ -73,30 +73,27 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 320),
-                    child: SegmentedButton<bool>(
-                      expandedInsets: EdgeInsets.zero,
-                      showSelectedIcon: false,
-                      segments: [
-                        ButtonSegment(
-                          value: false,
-                          icon: const Icon(Icons.public, size: 18),
-                          label: Text(l10n.destinationFilterAll),
-                        ),
-                        ButtonSegment(
-                          value: true,
-                          icon: const Icon(Icons.favorite_outline, size: 18),
-                          label: Text(l10n.destinationFilterFavorites),
-                        ),
-                      ],
-                      selected: {_favoritesOnly},
-                      onSelectionChanged: (selection) {
-                        setState(() => _favoritesOnly = selection.first);
-                      },
-                    ),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<bool>(
+                    expandedInsets: EdgeInsets.zero,
+                    showSelectedIcon: false,
+                    segments: [
+                      ButtonSegment(
+                        value: false,
+                        icon: const Icon(Icons.public, size: 18),
+                        label: Text(l10n.destinationFilterAll),
+                      ),
+                      ButtonSegment(
+                        value: true,
+                        icon: const Icon(Icons.favorite_outline, size: 18),
+                        label: Text(l10n.destinationFilterFavorites),
+                      ),
+                    ],
+                    selected: {_favoritesOnly},
+                    onSelectionChanged: (selection) {
+                      setState(() => _favoritesOnly = selection.first);
+                    },
                   ),
                 ),
               ],
@@ -128,7 +125,9 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                                   crossAxisCount: columns,
                                   mainAxisSpacing: 12,
                                   crossAxisSpacing: 12,
-                                  childAspectRatio: 4 / 5,
+                                  childAspectRatio: destinationCardAspectRatio(
+                                    context,
+                                  ),
                                 ),
                                 itemCount: destinations.length,
                                 itemBuilder: (context, index) =>

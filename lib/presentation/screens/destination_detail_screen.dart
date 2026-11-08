@@ -145,15 +145,23 @@ class DestinationDetailScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
       children: [
-        Text(
-          destination.getName(langCode),
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+        Flexible(
+          child: Text(
+            destination.getName(langCode),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+          ),
         ),
         if (langCode != 'zh') ...[
           const SizedBox(width: 10),
-          Text(
-            destination.name,
-            style: const TextStyle(fontSize: 13, color: AppColors.ink3),
+          Flexible(
+            child: Text(
+              destination.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, color: AppColors.ink3),
+            ),
           ),
         ],
       ],
@@ -226,7 +234,9 @@ class DestinationDetailScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(11),
             ),
             child: Center(
-              child: Text(exp.icon, style: const TextStyle(fontSize: 18)),
+              child: ExcludeSemantics(
+                child: Text(exp.icon, style: const TextStyle(fontSize: 18)),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -271,7 +281,9 @@ class DestinationDetailScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('💡', style: TextStyle(fontSize: 13)),
+          const ExcludeSemantics(
+            child: Text('💡', style: TextStyle(fontSize: 13)),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

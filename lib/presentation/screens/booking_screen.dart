@@ -242,7 +242,9 @@ class _BookingScreenState extends State<BookingScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Center(
-              child: Text('🏥', style: TextStyle(fontSize: 20)),
+              child: ExcludeSemantics(
+                child: Text('🏥', style: TextStyle(fontSize: 20)),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -272,41 +274,71 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Widget _buildDateField(BuildContext context, AppLocalizations l10n) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(l10n.formDate,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 6),
-        GestureDetector(
-          onTap: () => _pickDate(context),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.line),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.calendar_today_outlined,
-                    size: 16, color: AppColors.ink3),
-                const SizedBox(width: 8),
-                Text(
-                  _selectedDate == null
-                      ? l10n.formDateHint
-                      : '${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color:
-                        _selectedDate == null ? AppColors.ink3 : AppColors.ink,
+    return FormField<DateTime>(
+      initialValue: _selectedDate,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      validator: (_) => _selectedDate == null ? l10n.formDateError : null,
+      builder: (field) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.formDate,
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            Semantics(
+              button: true,
+              label: l10n.formDate,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () async {
+                  await _pickDate(context);
+                  field.didChange(_selectedDate);
+                },
+                child: Ink(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: field.hasError ? AppColors.danger : AppColors.line,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined,
+                          size: 16, color: AppColors.ink3),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _selectedDate == null
+                              ? l10n.formDateHint
+                              : '${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: _selectedDate == null
+                                ? AppColors.ink3
+                                : AppColors.ink,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ],
+            if (field.hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 6, left: 12),
+                child: Text(
+                  field.errorText!,
+                  style: const TextStyle(fontSize: 12, color: AppColors.danger),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -327,11 +359,8 @@ class _BookingScreenState extends State<BookingScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    final date = _selectedDate;
-    if (date == null) {
-      _showSnackBar(l10n.formDateError);
-      return;
-    }
+    // 日期由 FormField 内联校验，验证通过后必定有值。
+    final date = _selectedDate!;
 
     final auth = context.read<AuthProvider>();
     if (!auth.isLoggedIn) {
@@ -414,82 +443,91 @@ class _BookingScreenState extends State<BookingScreen> {
     return Scaffold(
       backgroundColor: AppColors.pageBg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check, color: Colors.white, size: 40),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                l10n.bookingSuccess,
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.bookingSuccessDesc,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 14, color: AppColors.ink2, height: 1.7),
-              ),
-              const SizedBox(height: 20),
-              if (result != null) ...[
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryBg,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '${l10n.bookingNo} ${result.orderNo}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryDark,
-                        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+              child: ConstrainedBox(
+                constraints:
+                    BoxConstraints(minHeight: constraints.maxHeight - 48),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${l10n.bookingTotal} '
-                        '${result.currency} ${result.totalPrice.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          color: AppColors.ink2,
+                      child: const Icon(Icons.check,
+                          color: Colors.white, size: 40),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      l10n.bookingSuccess,
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.bookingSuccessDesc,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 14, color: AppColors.ink2, height: 1.7),
+                    ),
+                    const SizedBox(height: 20),
+                    if (result != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBg,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              '${l10n.bookingNo} ${result.orderNo}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primaryDark,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${l10n.bookingTotal} '
+                              '${result.currency} ${result.totalPrice.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.ink2,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 32),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                onPressed: () => context.go('/'),
-                child: Text(
-                  l10n.btnBackHome,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w700),
+                    const SizedBox(height: 32),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      onPressed: () => context.go('/'),
+                      child: Text(
+                        l10n.btnBackHome,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
