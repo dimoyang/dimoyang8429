@@ -53,6 +53,8 @@ uvicorn app.main:app --reload --port 8000
 - `appointment_date` 必须是未来时间，过去时间返回 422。
 - `notes` 最长 2000 字符；`contact_phone` 允许 `+` 开头、7–15 位数字（空格、括号、短横线会被规范化）；`contact_email` 必须是合法邮箱。
 - 同一用户对同一套餐、同一预约时间只允许一个 `pending` 订单，重复提交返回 409；换日期不受影响。
+  该规则同时由部分唯一索引 `uq_bookings_pending_slot`（`WHERE status = 'pending'`）保证，
+  并发请求也只有一个成功，其余返回同样形状的 409。取消后可以重新预约同一时段。
 - 取消接口：`POST /api/v1/bookings/{id}/cancel`，只能取消自己的 `pending` 订单。
   - 不存在或属于他人：404（不暴露他人订单是否存在）。
   - 当前状态不是 `pending`：409。请求本身合法，但与资源当前状态冲突，因此用 409 而非 422；422 仅用于请求体校验失败。
@@ -362,6 +364,11 @@ python -m alembic stamp head
 `stamp` 只写入版本号，不改动表和数据；之后 `alembic upgrade head` 即可正常执行。
 测试环境（`MEDITOUR_TESTING=1`）仍使用 `create_all`，不依赖迁移执行顺序。
 
+迁移 `b3c9d1e5f7a2`（部分唯一索引 `uq_bookings_pending_slot`）升级前会先清理历史竞态
+留下的重复 pending 行：同一 `(user_id, package_id, appointment_date)` 保留 id 最小的一条，
+其余改为 `cancelled`（不删除订单，也不改动金额），然后创建索引。升级输出会打印处理条数；
+本机 `meditour.db` 上实测清理了 2 条，升级后重复组为 0。
+
 ## PostgreSQL 切换脚手架（未验证）
 
 > **重要：当前开发机没有 Docker，`docker-compose.yml` 从未构建或运行过，项目也从未在
@@ -406,8 +413,9 @@ docker compose down -v       # 连数据一起删
    JSON 字段查询；若以后要按 JSON 内部字段过滤，需要改用 `jsonb` + GIN 索引。
 5. **自增主键**：SQLite 的 `INTEGER PRIMARY KEY` 与 PostgreSQL 的序列语义不同；
    迁移后确认每张表的 sequence 起点与现有最大 id 一致。
-6. **并发与连接池**：SQLite 同一时刻只有一个写者；PostgreSQL 真正并发。下单的唯一性
-   目前靠应用层查重 + 唯一约束（`order_no`），切库后要重跑并发探测（见“并发探测”）。
+6. **并发与连接池**：SQLite 同一时刻只有一个写者；PostgreSQL 真正并发。下单唯一性由
+   部分唯一索引 `uq_bookings_pending_slot`（`WHERE status = 'pending'`）保证，SQLite 与
+   PostgreSQL 都支持条件索引；切库后必须重跑并发探测确认索引生效（见“并发探测”）。
 7. **DDL 事务**：PostgreSQL 的 DDL 可回滚，SQLite（batch mode）行为不同；迁移失败时
    的恢复步骤要按 PG 重新演练。
 8. **标识符大小写**：现有表名/列名全部小写，SQLAlchemy 不会加引号；新增迁移时保持
@@ -503,7 +511,7 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（87 项）：预约字段与校验分支、重复提交、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id。
+当前覆盖（88 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id。
 
 ## 接口验证脚本
 
@@ -529,35 +537,61 @@ python scripts/verify_api.py --cleanup
 
 ## 并发探测
 
-`scripts/concurrency_probe.py` 只用标准库（`urllib` + `threading.Barrier`），对三条关键路径各打一轮并发，**只看状态码分布与错误率，不是性能基准**：
+`scripts/concurrency_probe.py` 只用标准库（`urllib` + `threading.Barrier`），对关键路径
+各打一轮并发，**只看状态码分布与错误率，不是性能基准**：
 
-- `login-rate-limit`：同一邮箱连续错误密码，观察 401 是否切换为 429；
-- `booking-create`：同一用户、同一套餐、同一预约时间并发下单，验证是否只产生一个 `pending`；
-- `bookings-list`：并发读取订单列表，观察锁竞争/连接问题导致的 5xx。
+- `login-rate-limit`：同一邮箱连续错误密码，观察 401 与 429；
+- `booking-create`：同一用户、同一套餐、同一预约时间并发下单，应只有 1 个 201；
+- `booking-cancel`：并发取消同一个 pending 订单，应只有 1 个 200、其余 409；
+- `bookings-list`：并发读取订单列表，观察锁竞争/连接问题导致的 5xx；
+- `refresh-token`：同一个 refresh token 并发刷新，应只有 1 个 200、其余 401；
+- `upload`（需员工账号）：并发上传同一张图片，观察是否 5xx、返回路径是否唯一；
+- `staff-price-update`（需员工账号）：并发修改同一套餐价格，检查最终值是否可预期，
+  结束后恢复原价。
 
 ```bash
 # 先启动后端；脚本会注册临时用户，结束时注销该账号（其 pending 订单会被取消）
 python scripts/concurrency_probe.py --threads 12
-python scripts/concurrency_probe.py --base-url http://10.0.2.2:8000/api/v1 --threads 20
+
+# 上传与改价场景需要已有 staff 账号（可用 scripts/manage_staff.py 创建）
+python scripts/concurrency_probe.py --threads 12 \
+  --staff-email probe-staff@meditour.com --staff-password ProbeStaff123456
 ```
 
-本机（SQLite，12 线程）的真实输出：
+本机（SQLite，12 线程，修复后）的真实输出：
 
 ```text
-[login-rate-limit] requests=12 | 401: 5, 429: 7 | errors(5xx/network)=0 (0%) | p50=31ms p95=34ms max=34ms
-[booking-create] requests=12 | 201: 3, 409: 9 | errors(5xx/network)=0 (0%) | p50=104ms p95=135ms max=135ms
-[bookings-list] requests=12 | 200: 12 | errors(5xx/network)=0 (0%) | p50=56ms p95=57ms max=57ms
+[login-rate-limit] requests=12 | 401: 7, 429: 5 | errors(5xx/network)=0 (0%) | p50=50ms p95=53ms max=53ms
+[booking-create] requests=12 | 201: 1, 409: 11 | errors(5xx/network)=0 (0%) | p50=154ms p95=173ms max=173ms
+[booking-cancel] requests=12 | 200: 7, 409: 5 | errors(5xx/network)=0 (0%) | p50=223ms p95=295ms max=295ms
+[bookings-list] requests=12 | 200: 12 | errors(5xx/network)=0 (0%) | p50=70ms p95=77ms max=77ms
+[refresh-token] requests=12 | 200: 1, 401: 11 | errors(5xx/network)=0 (0%) | p50=136ms p95=177ms max=177ms
+[upload] requests=12 | 201: 12 | errors(5xx/network)=0 (0%) | p50=111ms p95=120ms max=120ms
+  upload success=12 unique_paths=12
+[staff-price-update] requests=12 | 200: 12 | errors(5xx/network)=0 (0%) | p50=230ms p95=355ms max=355ms
+  original=15000.0 final=15009.0 in_submitted=True
+  restore original price -> 200
 cleanup: DELETE /auth/account -> 200
 ```
 
-结果解读与已知缺陷：
+结果解读：
 
-- 登录限流按预期工作：先返回 401，达到失败阈值后返回 429；没有 5xx。
-- 订单列表并发读取没有 5xx，本机未观察到连接池耗尽。
-- **`booking-create` 出现 3 个 201**：同一用户、同一套餐、同一预约时间本应只有一个成功，其余应为 409。根因是「先查是否存在 pending，再插入」属于应用层查重，两条语句之间没有原子性，`bookings` 表也没有对应唯一约束；并发请求在查重时都没看到 pending，于是一起插入成功。
-  建议修复（本次只暴露、未改动业务语义）：为 pending 订单加部分唯一索引
-  `(user_id, package_id, appointment_date) WHERE status = 'pending'`，插入时捕获
-  `IntegrityError` 并返回 409；或使用数据库级约束/行锁保证原子性。
+- **重复预约已修复**：`booking-create` 从修复前的 `201: 3, 409: 9` 变为
+  `201: 1, 409: 11`。应用层预检查之外由部分唯一索引兜底，`IntegrityError` 统一转成
+  既有形状的 409。
+- `refresh-token` 只有 1 个 200，其余 401，说明 refresh 轮换在并发下仍只成功一次。
+- `upload` 12 个请求全部 201，12 个返回路径互不重复。
+- `staff-price-update` 12 个 PATCH 全部 200，最终价格是提交值之一（最后提交者胜出），
+  恢复原价成功；没有 5xx 或半写状态。
+- **已知缺陷（本次未修）：并发取消不是原子的。** `booking-cancel` 出现 7 个 200、
+  5 个 409，本应只有 1 个 200。原因是取消也是「读状态 → 改状态 → 提交」，多个请求
+  都读到 `pending` 后各自提交成功；最终状态仍是 `cancelled`，没有脏数据或 5xx，但
+  状态码语义不准确。建议改为条件更新
+  （`UPDATE ... SET status='cancelled' WHERE id=? AND user_id=? AND status='pending'`，
+  `rowcount=0` 时返回 409）。
+- 登录限流并发下出现 7 个 401（阈值是 5 次失败）：多个请求在计数落库前同时通过阈值
+  检查，属于限流器自身的计数竞态，最终仍有请求被 429 拦截；不影响安全边界，但严格
+  限流需要原子计数（数据库或 Redis）。
 - 该脚本不测吞吐量、不构造慢查询；SQLite 的写并发受全局写锁限制，结果不能直接外推到
   PostgreSQL。
 
