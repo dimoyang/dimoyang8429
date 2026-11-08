@@ -11,6 +11,11 @@ from app.config import settings
 from app.database import Base, SessionLocal, engine
 from app.db_migrate import ensure_database_schema
 from app.logging_config import RequestLoggingMiddleware, configure_logging
+from app.middleware import (
+    ErrorFallbackMiddleware,
+    RequestSizeLimitMiddleware,
+    SecurityHeadersMiddleware,
+)
 from app.routers import (
     auth,
     bookings,
@@ -67,6 +72,15 @@ app = FastAPI(
     openapi_tags=TAGS_METADATA,
 )
 
+# 中间件按「后添加的在最外层」生效。从内到外的顺序是：
+# 请求日志 → 请求体限流 → 500 兜底 → 安全头 → CORS。
+# 这样 413/500 也经过安全头与 CORS，异常兜底日志仍能拿到 request_id。
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(
+    RequestSizeLimitMiddleware, max_bytes=settings.MAX_REQUEST_BYTES
+)
+app.add_middleware(ErrorFallbackMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -74,9 +88,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
 )
-
-# 后添加的中间件位于外层，确保所有响应（含 CORS 预检）都带 request id 与耗时日志。
-app.add_middleware(RequestLoggingMiddleware)
 
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)

@@ -34,6 +34,10 @@ shutil.rmtree(TEST_UPLOADS, ignore_errors=True)
 os.environ.setdefault("MEDITOUR_UPLOAD_DIR", str(TEST_UPLOADS))
 # 测试断言相对路径，不依赖外部域名配置。
 os.environ["MEDITOUR_MEDIA_BASE_URL"] = ""
+# 缩小两个体积上限，让全局请求体限制与上传限制都能用小载荷验证；
+# 全局上限仍大于上传上限，保持“先过中间件、再由上传接口拒绝”的顺序。
+os.environ["MEDITOUR_UPLOAD_MAX_BYTES"] = str(512 * 1024)
+os.environ["MEDITOUR_MAX_REQUEST_BYTES"] = str(1024 * 1024)
 
 import pytest
 from fastapi.testclient import TestClient

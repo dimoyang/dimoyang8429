@@ -84,6 +84,11 @@ class Settings:
     UPLOAD_MAX_BYTES: int = int(
         os.getenv("MEDITOUR_UPLOAD_MAX_BYTES", str(5 * 1024 * 1024))
     )
+    # 全局请求体上限（字节）。必须大于上传接口的单文件上限，
+    # 否则图片还没进入上传校验就会被中间件拒绝。
+    MAX_REQUEST_BYTES: int = int(
+        os.getenv("MEDITOUR_MAX_REQUEST_BYTES", str(10 * 1024 * 1024))
+    )
     # 对外 URL 前缀（挂载点）。修改后需要同步调整 main.py 的 StaticFiles 挂载。
     MEDIA_URL_PATH: str = "/media/uploads"
     # 媒体资源的对外域名/CDN。留空时返回站内相对路径；配置后返回绝对 URL。
