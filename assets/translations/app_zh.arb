@@ -281,5 +281,7 @@
   "medicalLoadFailed": "加载失败",
   "medicalEmptyTitle": "暂无可预约服务",
   "medicalEmptyBody": "当前没有可展示的医疗服务，请稍后重试。",
-  "retry": "重试"
+  "retry": "重试",
+  "errorScreenTitle": "页面暂时无法显示",
+  "errorScreenBody": "出了点问题，请稍后重试。"
 }

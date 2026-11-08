@@ -288,5 +288,7 @@
   "medicalLoadFailed": "Failed to load",
   "medicalEmptyTitle": "No services yet",
   "medicalEmptyBody": "No medical services are available right now. Please try again later.",
-  "retry": "Retry"
+  "retry": "Retry",
+  "errorScreenTitle": "This page couldn't load",
+  "errorScreenBody": "Something went wrong. Please try again in a moment."
 }

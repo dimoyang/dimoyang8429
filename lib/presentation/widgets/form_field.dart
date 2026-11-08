@@ -11,6 +11,12 @@ class AppFormField extends StatelessWidget {
   final bool obscureText;
   final TextInputType? keyboardType;
 
+  /// 键盘回车键语义：`next` 跳到下一项，`done` 通常用于提交。
+  final TextInputAction? textInputAction;
+
+  /// 键盘提交回调；配合 `TextInputAction.done` 实现回车提交。
+  final ValueChanged<String>? onFieldSubmitted;
+
   const AppFormField({
     super.key,
     required this.label,
@@ -20,6 +26,8 @@ class AppFormField extends StatelessWidget {
     this.maxLines = 1,
     this.obscureText = false,
     this.keyboardType,
+    this.textInputAction,
+    this.onFieldSubmitted,
   });
 
   @override
@@ -39,6 +47,8 @@ class AppFormField extends StatelessWidget {
             maxLines: maxLines,
             obscureText: obscureText,
             keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            onFieldSubmitted: onFieldSubmitted,
             decoration: InputDecoration(
               hintText: hint,
               filled: true,

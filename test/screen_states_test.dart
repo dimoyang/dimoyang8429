@@ -14,7 +14,9 @@ import 'package:meditour_app/core/network/token_store.dart';
 import 'package:meditour_app/data/respositories/service_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/screens/bookings_screen.dart';
+import 'package:meditour_app/presentation/screens/booking_screen.dart';
 import 'package:meditour_app/presentation/screens/medical_list_screen.dart';
+import 'package:meditour_app/presentation/screens/service_detail_screen.dart';
 import 'package:meditour_app/presentation/widgets/service_card.dart';
 import 'package:meditour_app/presentation/widgets/skeleton.dart';
 import 'package:provider/provider.dart';
@@ -452,6 +454,48 @@ void main() {
     await tester.pump();
     expect(_visibleServiceNames(tester), ['膝关节置换手术', '微创种植牙']);
   });
+
+  testWidgets('预约表单的键盘动作按顺序连贯', (tester) async {
+    _installFakeApi(_medicalRoutes());
+    _useTallScreen(tester);
+    await tester.pumpWidget(_app(home: const BookingScreen(serviceId: '1')));
+    await _pumpFrames(tester);
+
+    final actions = tester
+        .widgetList<TextField>(find.byType(TextField))
+        .map((field) => field.textInputAction)
+        .toList();
+    expect(actions, [
+      TextInputAction.next,
+      TextInputAction.next,
+      TextInputAction.next,
+      TextInputAction.done,
+    ]);
+  });
+
+  testWidgets('服务详情横屏：主内容可见且底部操作条避开手势区', (tester) async {
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.physicalSize = const Size(800, 400);
+    addTearDown(tester.view.reset);
+    _installFakeApi(_medicalRoutes());
+
+    await tester.pumpWidget(
+      _app(
+        home: const ServiceDetailScreen(serviceId: '1'),
+        padding: const EdgeInsets.only(bottom: 24),
+      ),
+    );
+    await _pumpFrames(tester);
+
+    // 底部条高度 = 14 + 52 + 14 + 24 安全区；横屏 400 高时从 296 开始。
+    final button = tester.getRect(find.byType(FilledButton).last);
+    expect(button.bottom, lessThanOrEqualTo(400 - 24));
+
+    // hero 高度被限制为屏高的 55%（220），标题仍在首屏且不被操作条覆盖。
+    final title = tester.getRect(find.text('膝关节置换手术'));
+    expect(title.top, lessThan(296));
+    expect(tester.takeException(), isNull);
+  });
 }
 
 /// 健康之旅列表的两条样例数据。
@@ -533,6 +577,7 @@ Widget _app({
   required Widget home,
   AuthProvider? auth,
   double textScale = 1.0,
+  EdgeInsets padding = EdgeInsets.zero,
 }) {
   final app = MaterialApp(
     locale: const Locale('zh'),
@@ -546,6 +591,7 @@ Widget _app({
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(context).copyWith(
         textScaler: TextScaler.linear(textScale),
+        padding: padding,
       ),
       child: child!,
     ),

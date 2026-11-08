@@ -281,5 +281,7 @@
   "medicalLoadFailed": "Laden fehlgeschlagen",
   "medicalEmptyTitle": "Noch keine Leistungen",
   "medicalEmptyBody": "Derzeit sind keine medizinischen Leistungen verfügbar. Bitte später erneut versuchen.",
-  "retry": "Erneut versuchen"
+  "retry": "Erneut versuchen",
+  "errorScreenTitle": "Diese Seite konnte nicht geladen werden",
+  "errorScreenBody": "Etwas ist schiefgelaufen. Bitte versuchen Sie es gleich noch einmal."
 }

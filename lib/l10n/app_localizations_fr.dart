@@ -849,4 +849,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get retry => 'Réessayer';
+
+  @override
+  String get errorScreenTitle => 'Cette page n\'a pas pu se charger';
+
+  @override
+  String get errorScreenBody =>
+      'Un problème est survenu. Veuillez réessayer dans un instant.';
 }

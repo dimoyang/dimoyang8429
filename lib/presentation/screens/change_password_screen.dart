@@ -49,67 +49,78 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     return Scaffold(
       backgroundColor: AppColors.pageBg,
       appBar: AppBar(title: Text(l10n.changePasswordTitle)),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          children: [
-            AppFormField(
-              label: l10n.changePasswordCurrentLabel,
-              controller: _currentController,
-              obscureText: true,
-              validator: (v) =>
-                  (v == null || v.isEmpty) ? l10n.passwordError : null,
-            ),
-            const SizedBox(height: 14),
-            AppFormField(
-              label: l10n.newPasswordLabel,
-              controller: _passwordController,
-              obscureText: true,
-              validator: (v) =>
-                  (v == null || v.length < 6) ? l10n.passwordError : null,
-            ),
-            const SizedBox(height: 14),
-            AppFormField(
-              label: l10n.passwordConfirmLabel,
-              controller: _confirmController,
-              obscureText: true,
-              validator: (v) => (v == null || v != _passwordController.text)
-                  ? l10n.passwordMismatch
-                  : null,
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
+      body: SafeArea(
+        top: false,
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            children: [
+              AppFormField(
+                label: l10n.changePasswordCurrentLabel,
+                controller: _currentController,
+                obscureText: true,
+                textInputAction: TextInputAction.next,
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? l10n.passwordError : null,
               ),
-              onPressed: _submitting ? null : _submit,
-              child: _submitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+              const SizedBox(height: 14),
+              AppFormField(
+                label: l10n.newPasswordLabel,
+                controller: _passwordController,
+                obscureText: true,
+                textInputAction: TextInputAction.next,
+                validator: (v) =>
+                    (v == null || v.length < 6) ? l10n.passwordError : null,
+              ),
+              const SizedBox(height: 14),
+              AppFormField(
+                label: l10n.passwordConfirmLabel,
+                controller: _confirmController,
+                obscureText: true,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
+                validator: (v) => (v == null || v != _passwordController.text)
+                    ? l10n.passwordMismatch
+                    : null,
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                onPressed: _submitting ? null : _submit,
+                child: _submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        l10n.changePasswordButton,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700),
                       ),
-                    )
-                  : Text(
-                      l10n.changePasswordButton,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Future<void> _submit() async {
+    if (_submitting) {
+      return;
+    }
     final l10n = AppLocalizations.of(context);
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) {
       return;
     }

@@ -48,7 +48,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Scaffold(
       backgroundColor: AppColors.pageBg,
       appBar: AppBar(title: Text(l10n.forgotPasswordTitle)),
-      body: _sent ? _buildSent(l10n) : _buildForm(l10n),
+      body: SafeArea(
+        top: false,
+        child: _sent ? _buildSent(l10n) : _buildForm(l10n),
+      ),
     );
   }
 
@@ -71,6 +74,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             label: l10n.emailLabel,
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            onFieldSubmitted: (_) => _submit(),
             validator: (v) =>
                 Validators.isValidEmail(v) ? null : l10n.emailError,
           ),
@@ -183,7 +188,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) {
+      return;
+    }
     final l10n = AppLocalizations.of(context);
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) {
       return;
     }

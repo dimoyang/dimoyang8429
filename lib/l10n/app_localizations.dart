@@ -1667,6 +1667,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry'**
   String get retry;
+
+  /// No description provided for @errorScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This page couldn\'t load'**
+  String get errorScreenTitle;
+
+  /// No description provided for @errorScreenBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again in a moment.'**
+  String get errorScreenBody;
 }
 
 class _AppLocalizationsDelegate

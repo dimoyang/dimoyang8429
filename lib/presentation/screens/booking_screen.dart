@@ -145,95 +145,105 @@ class _BookingScreenState extends State<BookingScreen> {
       appBar: AppBar(
         title: Text(service.getName(langCode)),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-          children: [
-            _buildServiceSummary(service, langCode),
-            const SizedBox(height: 18),
-            AppFormField(
-              label: l10n.formName,
-              controller: _nameController,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? l10n.formNameError : null,
-            ),
-            const SizedBox(height: 14),
-            AppFormField(
-              label: l10n.formPhone,
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              validator: (v) =>
-                  Validators.isValidPhone(v) ? null : l10n.formPhoneError,
-            ),
-            const SizedBox(height: 14),
-            AppFormField(
-              label: l10n.formEmail,
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) =>
-                  Validators.isValidEmail(v) ? null : l10n.formEmailError,
-            ),
-            const SizedBox(height: 14),
-            _buildDateField(context, l10n),
-            const SizedBox(height: 18),
-            Text(
-              l10n.extrasTitle,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-            _buildExtraCheckbox(
-              value: _needTranslator,
-              label: l10n.needTranslator,
-              onChanged: (v) => setState(() => _needTranslator = v ?? false),
-            ),
-            _buildExtraCheckbox(
-              value: _needAccommodation,
-              label: l10n.needAccommodation,
-              onChanged: (v) => setState(() => _needAccommodation = v ?? false),
-            ),
-            _buildExtraCheckbox(
-              value: _needPickup,
-              label: l10n.needPickup,
-              onChanged: (v) => setState(() => _needPickup = v ?? false),
-            ),
-            const SizedBox(height: 8),
-            AppFormField(
-              label: l10n.formNote,
-              controller: _noteController,
-              hint: l10n.formNoteHint,
-              maxLines: 3,
-            ),
-            const SizedBox(height: 22),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
+      body: SafeArea(
+        top: false,
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+            children: [
+              _buildServiceSummary(service, langCode),
+              const SizedBox(height: 18),
+              AppFormField(
+                label: l10n.formName,
+                controller: _nameController,
+                textInputAction: TextInputAction.next,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? l10n.formNameError : null,
               ),
-              onPressed: _submitting ? null : _submit,
-              child: _submitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+              const SizedBox(height: 14),
+              AppFormField(
+                label: l10n.formPhone,
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                validator: (v) =>
+                    Validators.isValidPhone(v) ? null : l10n.formPhoneError,
+              ),
+              const SizedBox(height: 14),
+              AppFormField(
+                label: l10n.formEmail,
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                validator: (v) =>
+                    Validators.isValidEmail(v) ? null : l10n.formEmailError,
+              ),
+              const SizedBox(height: 14),
+              _buildDateField(context, l10n),
+              const SizedBox(height: 18),
+              Text(
+                l10n.extrasTitle,
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              _buildExtraCheckbox(
+                value: _needTranslator,
+                label: l10n.needTranslator,
+                onChanged: (v) => setState(() => _needTranslator = v ?? false),
+              ),
+              _buildExtraCheckbox(
+                value: _needAccommodation,
+                label: l10n.needAccommodation,
+                onChanged: (v) =>
+                    setState(() => _needAccommodation = v ?? false),
+              ),
+              _buildExtraCheckbox(
+                value: _needPickup,
+                label: l10n.needPickup,
+                onChanged: (v) => setState(() => _needPickup = v ?? false),
+              ),
+              const SizedBox(height: 8),
+              AppFormField(
+                label: l10n.formNote,
+                controller: _noteController,
+                hint: l10n.formNoteHint,
+                maxLines: 3,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
+              ),
+              const SizedBox(height: 22),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                onPressed: _submitting ? null : _submit,
+                child: _submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        l10n.btnSubmit,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700),
                       ),
-                    )
-                  : Text(
-                      l10n.btnSubmit,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              l10n.bookingNote,
-              style: const TextStyle(
-                  fontSize: 11.5, color: AppColors.ink3, height: 1.6),
-            ),
-          ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                l10n.bookingNote,
+                style: const TextStyle(
+                    fontSize: 11.5, color: AppColors.ink3, height: 1.6),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -388,7 +398,12 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) {
+      return;
+    }
     final l10n = AppLocalizations.of(context);
+    // 收起键盘，保证校验错误与提交结果不被遮挡。
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) {
       return;
     }

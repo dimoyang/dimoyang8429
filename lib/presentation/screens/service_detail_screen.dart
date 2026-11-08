@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meditour_app/core/constants/colors.dart';
@@ -159,7 +161,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       _buildSection(l10n.sectionProcess),
                       ...service.process.map(_buildProcessStepItem),
                     ],
-                    const SizedBox(height: 96),
+                    SizedBox(
+                      height: 96 + MediaQuery.paddingOf(context).bottom,
+                    ),
                   ],
                 ),
               ),
@@ -184,10 +188,13 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
 
   Widget _buildHero(
       BuildContext context, MedicalService service, String langCode) {
+    // 横屏时限制 hero 高度，避免首屏只剩图片、看不到主内容。
+    final screen = MediaQuery.sizeOf(context);
+    final heroHeight = math.min(screen.width * 3 / 4, screen.height * 0.55);
     return Stack(
       children: [
-        AspectRatio(
-          aspectRatio: 4 / 3,
+        SizedBox(
+          height: heroHeight,
           child: RemoteImage(
             url: service.imageUrl,
             alt: service.getName(langCode),
@@ -196,7 +203,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         ),
         Positioned(
           top: MediaQuery.of(context).padding.top + 8,
-          left: 16,
+          left: MediaQuery.of(context).padding.left + 16,
           child: AppBackButton(onPressed: () => Navigator.of(context).pop()),
         ),
       ],

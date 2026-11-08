@@ -803,4 +803,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get retry => '重试';
+
+  @override
+  String get errorScreenTitle => '页面暂时无法显示';
+
+  @override
+  String get errorScreenBody => '出了点问题，请稍后重试。';
 }

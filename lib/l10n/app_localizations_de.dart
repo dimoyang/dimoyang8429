@@ -850,4 +850,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get retry => 'Erneut versuchen';
+
+  @override
+  String get errorScreenTitle => 'Diese Seite konnte nicht geladen werden';
+
+  @override
+  String get errorScreenBody =>
+      'Etwas ist schiefgelaufen. Bitte versuchen Sie es gleich noch einmal.';
 }

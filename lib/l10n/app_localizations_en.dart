@@ -841,4 +841,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retry => 'Retry';
+
+  @override
+  String get errorScreenTitle => 'This page couldn\'t load';
+
+  @override
+  String get errorScreenBody =>
+      'Something went wrong. Please try again in a moment.';
 }

@@ -39,88 +39,99 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: AppColors.pageBg,
       appBar: AppBar(title: Text(l10n.loginTitle)),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          children: [
-            AppFormField(
-              label: l10n.emailLabel,
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) =>
-                  Validators.isValidEmail(v) ? null : l10n.emailError,
-            ),
-            const SizedBox(height: 14),
-            AppFormField(
-              label: l10n.passwordLabel,
-              controller: _passwordController,
-              obscureText: true,
-              validator: (v) =>
-                  (v == null || v.length < 6) ? l10n.passwordError : null,
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
+      body: SafeArea(
+        top: false,
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            children: [
+              AppFormField(
+                label: l10n.emailLabel,
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                validator: (v) =>
+                    Validators.isValidEmail(v) ? null : l10n.emailError,
               ),
-              onPressed: _submitting ? null : _submit,
-              child: _submitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+              const SizedBox(height: 14),
+              AppFormField(
+                label: l10n.passwordLabel,
+                controller: _passwordController,
+                obscureText: true,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
+                validator: (v) =>
+                    (v == null || v.length < 6) ? l10n.passwordError : null,
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                onPressed: _submitting ? null : _submit,
+                child: _submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        l10n.loginButton,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700),
                       ),
-                    )
-                  : Text(
-                      l10n.loginButton,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _submitting ? null : _openForgotPassword,
+                  child: Text(
+                    l10n.loginForgotPassword,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      color: AppColors.primaryDark,
+                      fontWeight: FontWeight.w600,
                     ),
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _submitting ? null : _openForgotPassword,
-                child: Text(
-                  l10n.loginForgotPassword,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 14),
-            Center(
-              child: TextButton(
-                onPressed:
-                    _submitting ? null : () => context.pushNamed('register'),
-                child: Text(
-                  l10n.loginSwitchToRegister,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w600,
+              const SizedBox(height: 14),
+              Center(
+                child: TextButton(
+                  onPressed:
+                      _submitting ? null : () => context.pushNamed('register'),
+                  child: Text(
+                    l10n.loginSwitchToRegister,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      color: AppColors.primaryDark,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Future<void> _submit() async {
+    if (_submitting) {
+      return;
+    }
     final l10n = AppLocalizations.of(context);
+    // 收起键盘，避免提交后按钮/错误提示被遮住。
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) {
       return;
     }

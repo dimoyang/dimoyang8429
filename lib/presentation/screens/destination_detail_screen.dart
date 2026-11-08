@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/data/models/destination.dart';
@@ -7,6 +9,8 @@ import 'package:meditour_app/presentation/widgets/add_to_itinerary_sheet.dart';
 import 'package:meditour_app/presentation/widgets/back_button.dart';
 import 'package:meditour_app/presentation/widgets/destination_favorite_button.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
+import 'package:meditour_app/presentation/widgets/stat_tile.dart';
+import 'package:meditour_app/presentation/widgets/detail_bottom_bar.dart';
 
 /// 目的地详情页
 class DestinationDetailScreen extends StatelessWidget {
@@ -68,7 +72,9 @@ class DestinationDetailScreen extends StatelessWidget {
                               .map((e) => _buildExperience(e)),
                           _buildSection(l10n.sectionTravelTips),
                           ...destination.tips.map(_buildTip),
-                          const SizedBox(height: 96),
+                          SizedBox(
+                            height: 96 + MediaQuery.paddingOf(context).bottom,
+                          ),
                         ],
                       ),
                     ),
@@ -96,10 +102,13 @@ class DestinationDetailScreen extends StatelessWidget {
 
   Widget _buildHero(
       BuildContext context, Destination destination, String langCode) {
+    // 横屏时限制 hero 高度，避免首屏只剩图片、看不到主内容。
+    final screen = MediaQuery.sizeOf(context);
+    final heroHeight = math.min(screen.width * 3 / 4, screen.height * 0.55);
     return Stack(
       children: [
-        AspectRatio(
-          aspectRatio: 4 / 3,
+        SizedBox(
+          height: heroHeight,
           child: RemoteImage(
             url: destination.imageUrl,
             alt: destination.getName(langCode),
@@ -108,12 +117,12 @@ class DestinationDetailScreen extends StatelessWidget {
         ),
         Positioned(
           top: MediaQuery.of(context).padding.top + 8,
-          left: 16,
+          left: MediaQuery.of(context).padding.left + 16,
           child: AppBackButton(onPressed: () => Navigator.of(context).pop()),
         ),
         Positioned(
           top: MediaQuery.of(context).padding.top + 8,
-          right: 16,
+          right: MediaQuery.of(context).padding.right + 16,
           child: DestinationFavoriteButton(destinationId: destination.id),
         ),
       ],

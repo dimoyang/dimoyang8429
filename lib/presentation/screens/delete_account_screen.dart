@@ -34,83 +34,92 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
     return Scaffold(
       backgroundColor: AppColors.pageBg,
       appBar: AppBar(title: Text(l10n.deleteAccountTitle)),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.danger.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppColors.danger.withValues(alpha: 0.4),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.warning_amber_rounded,
-                    color: AppColors.danger,
-                    size: 20,
+      body: SafeArea(
+        top: false,
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppColors.danger.withValues(alpha: 0.4),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      l10n.deleteAccountConsequences,
-                      style: const TextStyle(
-                        color: AppColors.danger,
-                        fontSize: 13,
-                        height: 1.5,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      color: AppColors.danger,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        l10n.deleteAccountConsequences,
+                        style: const TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            AppFormField(
-              label: l10n.passwordLabel,
-              controller: _passwordController,
-              obscureText: true,
-              validator: (v) =>
-                  (v == null || v.isEmpty) ? l10n.passwordError : null,
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.danger,
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
+                  ],
                 ),
               ),
-              onPressed: _submitting ? null : _submit,
-              child: _submitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+              const SizedBox(height: 18),
+              AppFormField(
+                label: l10n.passwordLabel,
+                controller: _passwordController,
+                obscureText: true,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? l10n.passwordError : null,
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                onPressed: _submitting ? null : _submit,
+                child: _submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        l10n.deleteAccountButton,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700),
                       ),
-                    )
-                  : Text(
-                      l10n.deleteAccountButton,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Future<void> _submit() async {
+    if (_submitting) {
+      return;
+    }
     final l10n = AppLocalizations.of(context);
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) {
       return;
     }
