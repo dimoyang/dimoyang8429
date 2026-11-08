@@ -17,8 +17,9 @@ os.environ.setdefault(
 )
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{TEST_DB.as_posix()}")
 os.environ.setdefault("MEDITOUR_TESTING", "1")
-# 固定关闭演示账号，避免开发者本地 .env 开启开关后影响断言。
+# 固定关闭演示账号与演示目录数据，避免开发者本地 .env 开启开关后影响断言。
 os.environ["MEDITOUR_SEED_DEMO_USER"] = "0"
+os.environ["MEDITOUR_SEED_DEMO_DATA"] = "0"
 
 # 邮件固定走 file 后端，写进测试专用 outbox，避免污染本地开发目录。
 TEST_OUTBOX = BACKEND_DIR / "test_mail_outbox.log"

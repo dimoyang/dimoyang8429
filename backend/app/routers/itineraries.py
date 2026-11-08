@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.deps import get_current_user
@@ -55,6 +55,8 @@ def list_itineraries(
     return list(
         db.scalars(
             select(Itinerary)
+            # 序列化会访问 days；提前批量加载，避免每条行程一次查询（N+1）。
+            .options(selectinload(Itinerary.days))
             .where(Itinerary.user_id == current_user.id)
             .order_by(Itinerary.start_date, Itinerary.id)
         ).all()

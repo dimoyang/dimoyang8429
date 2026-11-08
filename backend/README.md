@@ -32,6 +32,7 @@ uvicorn app.main:app --reload --port 8000
 | `MEDITOUR_CURRENCY` | 否 | `EUR` | 种子套餐与订单金额使用的币种 |
 | `MEDITOUR_CORS_ORIGINS` | 否 | `http://localhost:8123,http://127.0.0.1:8123` | 允许的浏览器来源，逗号分隔 |
 | `MEDITOUR_SEED_DEMO_USER` | 否 | 关闭 | 设为 `1` 时创建演示账号 `demo@meditour.com / Demo123456`；生产环境不要开启，关闭开关不会删除已有账号 |
+| `MEDITOUR_SEED_DEMO_DATA` | 否 | 关闭 | 设为 `1` 时增量写入联调演示目录（+6 医院 / +20 套餐 / +10 目的地 / 40 条 de·fr 译文）；只插入不修改，生产环境不要开启 |
 | `MEDITOUR_STAFF_EMAILS` | 否 | 空 | 员工邮箱白名单，逗号分隔；命中名单的账号登录时自动授予 `staff`，不会自动建号 |
 | `MEDITOUR_ACCESS_TOKEN_EXPIRE_DAYS` | 否 | `7` | access token 有效期（天） |
 | `MEDITOUR_REFRESH_TOKEN_EXPIRE_DAYS` | 否 | `30` | refresh token 有效期（天） |
@@ -177,6 +178,25 @@ uvicorn app.main:app --reload --port 8000
 同时清理重复索引：`ix_bookings_user_id`、`ix_itineraries_user_id`（复合索引前缀已覆盖）
 与 `ix_content_translations_lookup`（与唯一约束前缀重复）。`order_no`、`token_hash`、
 `jti` 等唯一索引保留，用于等值查找。
+
+### 列表接口查询次数（N+1）
+
+`tests/test_query_counts.py` 用 SQLAlchemy 的 `before_cursor_execute` 统计单次请求的
+SELECT 数，确认列表接口是常数查询而不是随条数增长。当前结果（`pytest -s` 可见）：
+
+| 接口 | 数据量 A | 数据量 B | 结论 |
+| --- | --- | --- | --- |
+| `GET /bookings/` | 2 条 → 4 次 | 8 条 → 4 次 | 常数 |
+| `GET /itineraries` | 2 条 → 5 次 | 8 条 → 5 次 | 常数（已修复 N+1） |
+| `GET /medical/packages` | page_size=1 → 2 次 | page_size=100 → 2 次 | 常数 |
+| `GET /medical/hospitals` | — | 1 次 | 单查询 |
+| `GET /destinations` | — | 1 次 | 单查询 |
+| `GET /staff/bookings` | page_size=2 → 5 次 | page_size=20 → 5 次 | 常数 |
+
+认证链路固定消耗 3 次查询（吊销表、会话表、用户），因此用户侧列表的基线是 3 + 列表查询。
+`GET /itineraries` 修复前是 `2 条 → 6 次、8 条 → 12 次`（每条行程懒加载一次 `days`）；
+加上 `selectinload(Itinerary.days)` 后固定为 5 次（3 次认证 + 1 次行程 + 1 次批量加载每日安排）。
+行程详情/创建/更新仍是单条记录，不会触发该问题。
 
 ## 认证与令牌
 
@@ -599,6 +619,35 @@ python scripts/cleanup_data.py --no-dry-run --yes
 
 清理任务不在应用启动时自动执行，需要由运维按需手动运行或接入 cron。脚本只读取 `MEDITOUR_*` 配置与 `DATABASE_URL`，不访问网络。
 
+## 联调演示数据
+
+默认种子只有 2 家医院、2 个套餐、4 个目的地，列表/筛选/分页看不出问题。设置
+`MEDITOUR_SEED_DEMO_DATA=1` 后，启动时会**增量**写入：
+
+| 类别 | 原有 | 新增 | 合计 |
+| --- | --- | --- | --- |
+| 医院 | 2 | 6 | 8 |
+| 套餐 | 2 | 20 | 22 |
+| 目的地 | 4 | 10 | 14 |
+| de/fr 译文 | 3 条（仅德语） | 40 条（套餐 32 + 医院 8） | 43 |
+
+- 套餐覆盖 12 个分类（骨科、口腔、心血管、肿瘤、眼科、康养、生殖、整形、神经、
+  消化、皮肤、儿科），价格 300–45000，疗程 3–30 天，便于验证价格区间筛选与排序。
+- 目的地合计 14 个，超过前端一页的展示量，可验证「加载更多」与搜索。
+- 已存在同名（`name_en`）或同 id 的条目会跳过；重复启动不会产生重复行。
+- 关闭开关**只停止写入，不会删除**已经写入的数据。生产环境不要开启。
+- 目的地接口当前只返回 `name` / `name_en`，没有 de/fr 字段（`destinations.py`
+  不在本批改动范围内），所以演示译文集中在套餐与医院；这是接口现状，不是数据缺失。
+
+```bash
+# 本地：写入演示目录后启动
+$env:MEDITOUR_SEED_DEMO_DATA="1"
+uvicorn app.main:app --reload
+```
+
+`tests/test_demo_seed.py` 在独立的内存库里验证：默认关闭时数量不变、开启后数量正确、
+重复执行幂等、关闭开关不删除数据。
+
 ## 测试
 
 ```bash
@@ -607,7 +656,7 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（110 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、强制验证开关（未验证下单 403、确认后 201）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出/关闭开关/来源白名单、数据保留清理（dry-run 不写入、只删过期数据、软删除账号保留用户行与订单、邮件与上传临时文件清理）。
+当前覆盖（114 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、强制验证开关（未验证下单 403、确认后 201）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出/关闭开关/来源白名单、数据保留清理（dry-run 不写入、只删过期数据、软删除账号保留用户行与订单、邮件与上传临时文件清理）、前后端契约核对（11 个端点的字段名/类型/可空性）、联调演示种子（默认关闭、数量与分类/价格覆盖、重复执行幂等）、列表接口查询次数为常数（订单/行程/套餐/医院/目的地/员工订单）。
 
 ## 接口验证脚本
 
@@ -657,6 +706,29 @@ python scripts/smoke_journey.py --base-url http://127.0.0.1:8000/api/v1 \
 - 需要后端使用 `file` 邮件后端才能从 outbox 读取验证令牌；`smtp` 后端会在第 2 步明确失败，不会伪造通过。
 - 每次运行使用随机账号（`smoke-<时间戳>-<随机串>@meditour.com`），最后一步注销，可重复执行。
 - 本机实测：15/15 通过，耗时 2.50s。
+
+## 前后端契约核对
+
+`tests/test_contract.py` 逐个调用前端实际消费的端点，把响应里的字段名、JSON 类型、
+可空性与前端模型逐项对照：
+
+| 端点 | 对照的前端模型 |
+| --- | --- |
+| `POST /auth/register`、`GET /auth/me` | `UserProfile`（`lib/data/models/user_profile.dart`） |
+| `POST /auth/login` | `AuthTokens`（`api_service.dart`，`access_token` 必须是 String） |
+| `GET /medical/packages` | `MedicalService.fromPackage`（id/price/duration_days 等） |
+| `GET /medical/hospitals` | `HospitalInfo`（`id` 必须是 int） |
+| `GET /destinations` | `Destination`（`id` 必须是 String） |
+| `POST /bookings/`、`GET /bookings/`、取消 | `BookingOrder` / `BookingResult`（`id` 必须是 int、`total_price` 必须是数值） |
+| `GET /auth/export` | 导出页的账户/订单/行程字段 |
+
+只校验前端**确实读取**的字段；后端额外字段允许存在。可空字段（如 `full_name`、`phone`）
+允许 `null`。运行 `pytest tests/test_contract.py -s` 会打印逐端点字段数与差异清单；
+有任何差异测试即失败，并列出「字段路径、期望类型、实际值」。
+
+当前结果：**0 处差异**。前端未消费的 `/auth/sessions`、`/metrics`、`/staff/*`
+不在核对范围内（脚本会打印提示）。如果未来前端新增解析字段，应先把需求补进
+`test_contract.py` 的 SPEC，再改后端。
 
 ## 并发探测
 
@@ -713,6 +785,42 @@ cleanup: DELETE /auth/account -> 200
   恢复原价成功；没有 5xx 或半写状态。
 - 该脚本不测吞吐量、不构造慢查询；SQLite 的写并发受全局写锁限制，结果不能直接外推到
   PostgreSQL。限流计数仍是进程内状态，多 worker 部署前需要换成共享存储。
+
+### 100 并发实测
+
+```bash
+python scripts/concurrency_probe.py --threads 100 --timeout 40 \
+  --staff-email probe-staff@meditour.com --staff-password ProbeStaff123456
+```
+
+本机（SQLite，单 uvicorn worker，默认连接池 `pool_size=5 + max_overflow=10`）：
+
+```text
+[login-rate-limit] requests=100 | 401: 5, 429: 95 | errors=0 (0%) | p50=56ms p95=1490ms max=1490ms
+[booking-create] requests=100 | 201: 1, 409: 99 | errors=0 (0%) | p50=323ms p95=1867ms max=1867ms
+[booking-cancel] requests=100 | 200: 1, 409: 99 | errors=0 (0%) | p50=258ms p95=1754ms max=1754ms
+[bookings-list] requests=100 | 200: 100 | errors=0 (0%) | p50=156ms p95=3081ms max=3081ms
+[refresh-token] requests=100 | 200: 1, 401: 99 | errors=0 (0%) | p50=516ms p95=2954ms max=2954ms
+[upload] requests=100 | 201: 100 | errors=0 (0%) | p50=1299ms p95=10959ms max=10959ms
+  upload success=100 unique_paths=100
+[staff-price-update] requests=100 | 200: 64, 500: 33, network: 3 | errors=36 (36%) | p50=30502ms p95=30753ms max=30753ms
+  final GET failed: status=0 ...
+```
+
+结论与异常说明：
+
+- 用户侧关键路径（下单、订单列表、刷新令牌）100 并发下**没有 5xx**：下单仍只有 1 个
+  201、其余 409；刷新令牌仍只有 1 个 200、其余 401；列表 100 个全部 200。
+- `staff-price-update` 出现 33 个 500 + 3 个客户端超时。服务端日志确认异常为
+  `QueuePool limit of size 5 overflow 10 reached, connection timed out, timeout 30.00`：
+  默认连接池最多 15 条连接，而 uvicorn 线程池可同时跑 40 个同步请求，100 个并发写请求
+  在连接池排队超过 30 秒后失败（成功的 64 个也多花了约 30 秒）。
+- 这是**连接池耗尽**，不是业务逻辑错误；SQLite 本身也只允许单写者，单纯调大连接池
+  会让锁竞争更严重。生产部署到 PostgreSQL 时应按 worker 数调整
+  `pool_size` / `max_overflow` / `pool_timeout`（当前未做成配置项，默认值见
+  `app/database.py`），并把同步 worker 数与数据库连接预算对齐。
+- 复现时用 `--timeout 40` 才能看到真实的 500（默认 15 秒会先被客户端超时截断）。
+  连接池状态可随时从 `/metrics` 的 `meditour_db_pool_*` 读取。
 
 ## 健康检查
 

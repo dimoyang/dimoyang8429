@@ -39,6 +39,10 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8000/api/v1"
+DEFAULT_TIMEOUT = 15.0
+# 由 --timeout 覆盖；http_call 的默认参数在运行时读取它。
+HTTP_TIMEOUT = DEFAULT_TIMEOUT
+
 
 # 1x1 透明 PNG；上传接口只校验文件头，但用真实图片更接近实际请求。
 PNG_BYTES = base64.b64decode(
@@ -52,12 +56,13 @@ def http_call(
     url: str,
     payload: dict | None = None,
     headers: dict[str, str] | None = None,
-    timeout: float = 15.0,
+    timeout: float | None = None,
     form: dict[str, str] | None = None,
     raw: bytes | None = None,
     content_type: str | None = None,
 ) -> tuple[int, bytes, float]:
     """返回 (status, body, 毫秒)。网络异常用 status=0 表示。"""
+    timeout = HTTP_TIMEOUT if timeout is None else timeout
     body = None
     final_headers = dict(headers or {})
     if raw is not None:
@@ -149,7 +154,12 @@ def summarize(name: str, results: list[tuple[int, bytes, float]]) -> None:
 
 
 def _json_body(result: tuple[int, bytes, float]) -> dict:
-    return json.loads(result[1])
+    if result[0] != 200 and result[0] != 201:
+        return {}
+    try:
+        return json.loads(result[1])
+    except json.JSONDecodeError:
+        return {}
 
 
 def main() -> int:
@@ -159,6 +169,12 @@ def main() -> int:
         "--threads", type=int, default=12, help="每个场景的并发线程数"
     )
     parser.add_argument(
+        "--timeout",
+        type=float,
+        default=DEFAULT_TIMEOUT,
+        help="单请求超时秒数；观察连接池排队时可调大（默认 15）",
+    )
+    parser.add_argument(
         "--password", default="ProbePass123456", help="临时用户密码"
     )
     parser.add_argument(
@@ -166,6 +182,9 @@ def main() -> int:
     )
     parser.add_argument("--staff-password", default=None, help="员工账号密码")
     args = parser.parse_args()
+
+    global HTTP_TIMEOUT
+    HTTP_TIMEOUT = args.timeout
 
     base = args.base_url.rstrip("/")
     count = max(2, args.threads)
@@ -355,18 +374,23 @@ def main() -> int:
                 ),
             )
             summarize("staff-price-update", price_results)
-            final = _json_body(
-                http_call(
-                    "GET",
-                    f"{base}/staff/packages/{package_id}",
-                    None,
-                    staff_auth,
-                )
-            )["price"]
-            print(
-                f"  original={original_price} final={final} "
-                f"in_submitted={final in prices}"
+            final_result = http_call(
+                "GET",
+                f"{base}/staff/packages/{package_id}",
+                None,
+                staff_auth,
             )
+            final_body = _json_body(final_result)
+            if "price" in final_body:
+                print(
+                    f"  original={original_price} final={final_body['price']} "
+                    f"in_submitted={final_body['price'] in prices}"
+                )
+            else:
+                print(
+                    "  final GET failed: "
+                    f"status={final_result[0]} body={final_result[1][:120]!r}"
+                )
             restored = http_call(
                 "PATCH",
                 f"{base}/staff/packages/{package_id}",
