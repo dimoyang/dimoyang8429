@@ -7,8 +7,10 @@ import 'package:meditour_app/data/models/medical_service.dart'
 import 'package:meditour_app/data/respositories/service_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/back_button.dart';
+import 'package:meditour_app/presentation/widgets/detail_bottom_bar.dart';
 import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
+import 'package:meditour_app/presentation/widgets/stat_tile.dart';
 
 /// 服务详情页
 class ServiceDetailScreen extends StatefulWidget {
@@ -54,14 +56,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           final message = error is ApiException
               ? error.toLocalizedMessage(l10n)
               : l10n.errorUnknown;
-          return Scaffold(
-            backgroundColor: AppColors.pageBg,
-            appBar: AppBar(title: Text(l10n.medicalLoadFailed)),
-            body: ErrorState(
-              title: l10n.medicalLoadFailed,
-              message: message,
-              onRetry: _reload,
-            ),
+          return ErrorScaffold(
+            appBarTitle: l10n.medicalLoadFailed,
+            title: l10n.medicalLoadFailed,
+            message: message,
+            onRetry: _reload,
           );
         }
         final service = snapshot.data;
@@ -123,32 +122,12 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.92),
-                border: const Border(top: BorderSide(color: AppColors.line)),
-              ),
-              child: SafeArea(
-                top: false,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  onPressed: () {
-                    context.pushNamed('booking',
-                        pathParameters: {'serviceId': service.id});
-                  },
-                  child: Text(
-                    l10n.btnBookConsult,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
+            child: DetailBottomBar(
+              label: l10n.btnBookConsult,
+              onPressed: () {
+                context.pushNamed('booking',
+                    pathParameters: {'serviceId': service.id});
+              },
             ),
           ),
         ],
@@ -196,13 +175,13 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     return Row(
       children: [
         Expanded(
-          child: _StatItem(
+          child: StatTile(
               label: l10n.statDuration,
               value: l10n.daysTreatment(service.durationDays)),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: _StatItem(
+          child: StatTile(
             label: l10n.statBasePrice,
             value: l10n.startingFrom(service.priceFrom),
           ),
@@ -294,47 +273,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       fontSize: 13.5, height: 1.6, color: AppColors.ink2),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _StatItem({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F0F172A),
-            blurRadius: 12,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: const TextStyle(fontSize: 11, color: AppColors.ink3)),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primaryDark,
             ),
           ),
         ],

@@ -2,6 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 
+/// 整页加载失败：带标题的 AppBar + 可重试的错误态。
+class ErrorScaffold extends StatelessWidget {
+  final String appBarTitle;
+  final String title;
+  final String message;
+  final VoidCallback onRetry;
+
+  const ErrorScaffold({
+    super.key,
+    required this.appBarTitle,
+    required this.title,
+    required this.message,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.pageBg,
+      appBar: AppBar(title: Text(appBarTitle)),
+      body: ErrorState(title: title, message: message, onRetry: onRetry),
+    );
+  }
+}
+
 /// 可复用的加载失败态：图标 + 标题 + 说明 + 重试按钮。
 class ErrorState extends StatelessWidget {
   final IconData icon;

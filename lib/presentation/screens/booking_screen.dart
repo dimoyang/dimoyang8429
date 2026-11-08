@@ -78,14 +78,11 @@ class _BookingScreenState extends State<BookingScreen> {
           final message = error is ApiException
               ? error.toLocalizedMessage(l10n)
               : l10n.errorUnknown;
-          return Scaffold(
-            backgroundColor: AppColors.pageBg,
-            appBar: AppBar(title: Text(l10n.btnBookConsult)),
-            body: ErrorState(
-              title: l10n.medicalLoadFailed,
-              message: message,
-              onRetry: _reloadService,
-            ),
+          return ErrorScaffold(
+            appBarTitle: l10n.btnBookConsult,
+            title: l10n.medicalLoadFailed,
+            message: message,
+            onRetry: _reloadService,
           );
         }
         final service = snapshot.data;

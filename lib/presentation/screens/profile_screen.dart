@@ -5,6 +5,7 @@ import 'package:meditour_app/business/providers/language_provider.dart';
 import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/language_picker_sheet.dart';
+import 'package:meditour_app/presentation/widgets/section_label.dart';
 import 'package:provider/provider.dart';
 
 /// 偏好设置与非核心协助入口。
@@ -29,7 +30,7 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
         children: [
-          _SectionLabel(l10n.profileAccount),
+          SectionLabel(l10n.profileAccount),
           const SizedBox(height: 8),
           Consumer<AuthProvider>(
             builder: (context, auth, _) {
@@ -119,7 +120,7 @@ class ProfileScreen extends StatelessWidget {
             onTap: () => context.pushNamed('bookings'),
           ),
           const SizedBox(height: 24),
-          _SectionLabel(l10n.profilePreferences),
+          SectionLabel(l10n.profilePreferences),
           const SizedBox(height: 8),
           _SettingsTile(
             icon: Icons.translate,
@@ -128,7 +129,7 @@ class ProfileScreen extends StatelessWidget {
             onTap: () => showLanguagePickerSheet(context),
           ),
           const SizedBox(height: 24),
-          _SectionLabel(l10n.profileMoreAssistance),
+          SectionLabel(l10n.profileMoreAssistance),
           const SizedBox(height: 8),
           _SettingsTile(
             icon: Icons.health_and_safety_outlined,
@@ -137,7 +138,7 @@ class ProfileScreen extends StatelessWidget {
             onTap: () => context.pushNamed('medical'),
           ),
           const SizedBox(height: 24),
-          _SectionLabel(l10n.profileAbout),
+          SectionLabel(l10n.profileAbout),
           const SizedBox(height: 8),
           _SettingsTile(
             icon: Icons.info_outline,
@@ -155,24 +156,6 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  final String text;
-
-  const _SectionLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: AppColors.ink2,
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
       ),
     );
   }

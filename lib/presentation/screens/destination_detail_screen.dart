@@ -81,31 +81,11 @@ class DestinationDetailScreen extends StatelessWidget {
             left: 0,
             right: 0,
             bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.92),
-                border: const Border(top: BorderSide(color: AppColors.line)),
-              ),
-              child: SafeArea(
-                top: false,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  onPressed: () => showAddToItinerarySheet(
-                    context,
-                    destination: destination,
-                  ),
-                  child: Text(
-                    l10n.btnItinerary,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ),
+            child: DetailBottomBar(
+              label: l10n.btnItinerary,
+              onPressed: () => showAddToItinerarySheet(
+                context,
+                destination: destination,
               ),
             ),
           ),
@@ -172,12 +152,12 @@ class DestinationDetailScreen extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _StatChip(
+          child: StatTile(
               label: l10n.statBestSeason, value: destination.bestSeason),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: _StatChip(
+          child: StatTile(
               label: l10n.statSuggestDays, value: destination.suggestDays),
         ),
       ],
@@ -293,47 +273,6 @@ class DestinationDetailScreen extends StatelessWidget {
                 color: AppColors.ink2,
                 height: 1.6,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _StatChip({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F0F172A),
-            blurRadius: 12,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: const TextStyle(fontSize: 11, color: AppColors.ink3)),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primaryDark,
             ),
           ),
         ],
