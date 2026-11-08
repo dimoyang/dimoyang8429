@@ -64,9 +64,16 @@ PID 写入 `backend/var/dev_server.pid`；重复 `start` 不会启动第二个�
 | `MEDITOUR_EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES` | 否 | `60` | 邮箱验证令牌有效期（分钟） |
 | `MEDITOUR_REQUIRE_EMAIL_VERIFICATION` | 否 | `false` | 是否把“邮箱已验证”作为创建预约的前置条件；默认关闭，开启后未验证用户登录仍可用，但下单返回 403 |
 | `MEDITOUR_PUBLIC_BASE_URL` | 否 | `http://localhost:8123` | 邮件里链接的站点地址（重置密码、验证邮箱） |
-| `MEDITOUR_ENV` | 否 | `development` | 运行环境；设为 `production` 时 `/metrics` 默认关闭 |
+| `MEDITOUR_ENV` | 否 | `development` | 运行环境；设为 `production` 时 `/metrics` 与交互式文档默认关闭 |
+| `MEDITOUR_DOCS_ENABLED` | 否 | 开发 `true` / 生产 `false` | `/docs`、`/redoc`、`/openapi.json` 是否开放；显式设置优先于环境默认值 |
 | `MEDITOUR_METRICS_ENABLED` | 否 | 开发 `true` / 生产 `false` | 是否开放 `/metrics`；显式设置优先于环境默认值 |
 | `MEDITOUR_METRICS_ALLOWED_IPS` | 否 | 空 | `/metrics` 来源白名单，精确 IP、逗号分隔；空表示不限来源（风险见「运行指标」） |
+| `MEDITOUR_REGISTER_LIMIT_PER_IP` | 否 | `30` | 注册限流：同一来源 IP 在窗口内最多注册次数 |
+| `MEDITOUR_REGISTER_LIMIT_WINDOW_SECONDS` | 否 | `3600` | 注册限流窗口（秒） |
+| `MEDITOUR_RESET_LIMIT_PER_EMAIL` | 否 | `3` | 找回密码邮件：同一邮箱在窗口内最多触发次数 |
+| `MEDITOUR_RESET_LIMIT_PER_IP` | 否 | `30` | 找回密码请求：同一来源 IP 在窗口内最多请求次数 |
+| `MEDITOUR_RESET_LIMIT_WINDOW_SECONDS` | 否 | `3600` | 找回密码限流窗口（秒） |
+| `MEDITOUR_VERIFICATION_RESEND_COOLDOWN_SECONDS` | 否 | `60` | 验证邮件重发冷却（秒），按用户维度 |
 | `MEDITOUR_TOKEN_RETENTION_DAYS` | 否 | `30` | 过期/已使用令牌与已失效会话的保留天数 |
 | `MEDITOUR_AUDIT_LOG_RETENTION_DAYS` | 否 | `365` | 审计日志保留天数 |
 | `MEDITOUR_SOFT_DELETED_ACCOUNT_RETENTION_DAYS` | 否 | `30` | 软删除账号的关联数据（行程、会话、令牌）保留天数；用户行与订单不删 |
@@ -497,13 +504,72 @@ python scripts/import_translations.py var/translations.csv
 - 接口不接受任何用户 id 参数，只按令牌里的 `user_id` 查询，避免越权导出他人数据；响应不包含密码哈希、令牌或其他凭据。
 - 顶层字段：`exported_at`、`format_version`（当前为 `1`）、`account`、`bookings`、`itineraries`、`favorites`。
 
-## 登录限流
+## 认证接口限流
 
-同一 IP + 账号在 300 秒内失败 5 次后，登录返回 429 并带 `Retry-After`；成功登录会清零计数。
-「检查阈值 + 预占失败名额」在同一个进程锁内完成，因此并发失败时最多只有 5 个请求
-进入密码校验并返回 401，其余直接 429，不会出现多个请求同时穿过阈值的情况。
-限流状态是**进程内**的：多 worker / 多实例部署时各进程独立计数，重启后清零，也无法防止攻击者用大量账号轮换撞库。生产多进程部署应换成 Redis 等共享存储，并配合网关层限流。
-副作用是攻击者可能故意失败 5 次导致某个账号短暂无法登录；当前窗口只有 5 分钟，如需更强防护可加验证码或按 IP 维度限流。
+限流状态都在**进程内**（`app/rate_limit.py`）：多 worker / 多实例时各进程独立计数，
+重启清零，也无法防止攻击者用大量账号轮换撞库。单 worker + 单实例部署可用，
+扩展前必须换成 Redis 等共享存储，并在网关层再做一层限流。
+
+| 动作 | 粒度 | 默认阈值 | 超限响应 |
+| --- | --- | --- | --- |
+| 登录失败 | IP + 账号 | 300 秒内 5 次 | 401 之后返回 429 + `Retry-After` |
+| 注册 | 来源 IP | 1 小时 30 次 | 429 + `Retry-After`，且不写库 |
+| 找回密码（邮箱维度） | 邮箱 | 1 小时 3 封 | 静默返回同样的 200，不发信 |
+| 找回密码（IP 维度） | 来源 IP | 1 小时 30 次 | 429 + `Retry-After` |
+| 重发验证邮件 | 用户 | 60 秒冷却 | 同样的 200，不签发新令牌、不发信 |
+
+登录限流的“检查阈值 + 预占失败名额”在同一个进程锁内完成，因此并发失败时最多只有
+5 个请求进入密码校验并返回 401，其余直接 429。成功登录会清零该 IP + 账号的计数。
+
+**为什么注册按 IP、而不是按邮箱**：注册前没有可信的账号标识，邮箱本身可以随便填，
+按邮箱限流挡不住批量注册；IP 是注册前唯一可用的粗粒度信号。代价是同一办公室/NAT
+共用出口 IP 时额度也共享——所以默认给到 1 小时 30 次（远高于正常团队注册量），
+并允许用 `MEDITOUR_REGISTER_LIMIT_PER_IP` 调整。如果办公网出口 IP 被大量无关用户
+共用，仍可能误伤，此时应在网关层按更细的维度限流或加验证码，而不是继续放大阈值。
+
+**为什么找回密码要同时按邮箱和 IP**：只按 IP 挡不住“用一个 IP 轰炸同一个邮箱”，
+只按邮箱挡不住“用大量邮箱扫描接口”。邮箱维度超限时选择**静默不发信**而不是 429，
+因为 429 会泄露“这个邮箱已注册”（未注册邮箱不计数、也不触发限制）；IP 维度超限
+则对所有邮箱一视同仁地返回 429，不会泄露账号信息。代价有两层：攻击者可以故意耗尽
+某个邮箱的重置额度，让真正的主人暂时收不到重置邮件；也可以耗尽某个出口 IP 的额度，
+让同 IP 的正常用户一小时内无法找回密码。窗口只有 1 小时，阈值留了正常使用余量，
+必要时应在网关层封禁异常 IP，而不是继续放大阈值。
+
+**验证邮件重发冷却**按用户维度，冷却内返回与成功时完全一致的 200，不会因为响应差异
+暴露验证状态；代价是用户点急了需要等 60 秒才能收到下一封。
+
+## 上线前配置自检
+
+`scripts/prod_check.py` 读取当前进程加载的配置（含 `backend/.env` 与环境变量），
+逐项输出 PASS / WARN / FAIL 与修复建议，不连接数据库、不修改状态：
+
+```powershell
+# 只报告，退出码恒为 0
+python scripts\prod_check.py
+
+# 按生产标准断言：存在 FAIL 时退出码 1，可直接作为发布流水线的关口
+python scripts\prod_check.py --production
+```
+
+覆盖项与判定：
+
+| 检查 | PASS 条件 | 生产断言下的处理 |
+| --- | --- | --- |
+| JWT 签名密钥 | 非空、≥ 32 字节、非示例值、字符种类足够 | 始终 FAIL |
+| 调试/文档端点 | `/docs`、`/redoc`、`/openapi.json` 关闭 | 开启则 FAIL |
+| CORS 来源 | 非空、无 `*`、无本地地址、均为 HTTPS | 不满足则 FAIL |
+| `/metrics` | 关闭，或开放但配置了来源 IP 白名单 | 开放且无白名单则 FAIL |
+| 演示账号/演示数据 | `SEED_DEMO_USER` 与 `SEED_DEMO_DATA` 均关闭 | 任一开启则 FAIL |
+| 强制邮箱验证 | `REQUIRE_EMAIL_VERIFICATION=true` | 关闭则 FAIL |
+| 数据库 | 非 SQLite | SQLite 则 FAIL |
+| 限流后端 | 进程内（当前实现） | **WARN**：单实例可用，扩多 worker 前必须换共享存储 |
+| 对外访问协议 | `PUBLIC_BASE_URL` 是 HTTPS | 否则 FAIL |
+| 邮件后端 | `smtp` | `file` 则 FAIL |
+| 上传存储 | 非 `local` | `local` 仅 WARN（单实例可用） |
+| 运行环境标记 | `ENVIRONMENT=production` | 不一致仅 WARN |
+
+当前开发配置的结果是 2 通过 / 10 警告 / 0 失败；按 `--production` 断言会得到
+1 通过 / 3 警告 / 8 失败并返回退出码 1——这正是“还没配好生产环境”时应有的表现。
 
 ## 日志
 
@@ -666,6 +732,7 @@ docker compose down -v       # 连数据一起删
 
 ### 在 PostgreSQL 上需要重新验证的检查清单
 
+- [ ] `python scripts/prod_check.py --production` 无 FAIL（进程内限流与本地上传为预期 WARN）
 - [ ] `alembic upgrade head` 从空库一次成功；`alembic check` 无 diff
 - [ ] 种子数据（医院、套餐、目的地）正常写入，无布尔/JSON 类型错误
 - [ ] `pytest` 全绿（测试库需改为 PostgreSQL，`create_all` 路径也要验证一次）
@@ -701,28 +768,62 @@ python scripts/restore_db.py --backup var/backups/meditour-20261108-095413.db --
 
 - 备份使用 SQLite 在线备份 API，先写临时文件，校验行数与订单指标一致后再原子替换，
   不会复制出写入中途的半截文件。
+- 备份文件会执行 `wal_checkpoint(TRUNCATE)` 并切回 `journal_mode=DELETE`，因此备份目录
+  不会残留 `-wal`/`-shm`：单独拷走一个 `.db` 就能恢复全部数据。旧版本遗留的边车文件会
+  在保留策略删除主文件时一并清理。
 - 保留策略只处理 `meditour-YYYYMMDD-HHMMSS.db`，其它文件（含 `.tmp`、手动命名备份）
   一律不动；**最新的一份永远保留**，即使它已超出保留窗口。最近 N 天每天保留最新一份，
   更早的每个 ISO 周保留最新一份、最多 M 周。
 - 恢复的安全阀：目标库已有业务表且未加 `--force` 时拒绝执行；加 `--force` 时也会
-  先保留 `<库名>.pre-restore-<时间戳>.db.bak`，再覆盖。
+  先对目标库做 WAL checkpoint、再保留 `<库名>.pre-restore-<时间戳>.db.bak`，随后覆盖；
+  覆盖后会删除目标库遗留的 `-wal`/`-shm`，避免旧日志页叠加到恢复后的数据上。
 - 恢复完成后会重新统计表行数、订单状态分布与订单金额合计，与备份不一致则以非零
   状态退出。恢复后请用当前代码再执行一次 `python -m alembic upgrade head`。
 
 ### 定时执行
 
-备份脚本没有常驻进程，交给系统计划任务即可：
+备份脚本没有常驻进程，交给系统计划任务即可。Windows 用
+`scripts/run_backup_task.ps1` 作为入口：它按顺序带上保留参数、把 stdout/stderr
+追加到 `var/logs/backup.log`，并把 `backup_db.py` 的退出码原样透传，计划任务里
+能直接看到失败状态。
 
 ```powershell
-# Windows：每天 02:00 备份（路径按实际环境替换）
-schtasks /Create /SC DAILY /ST 02:00 /TN "MediTour Backup" ^
-  /TR "I:\meditour_app\backend\.venv\Scripts\python.exe I:\meditour_app\backend\scripts\backup_db.py"
+# Windows：每天 02:00 备份，按天留 7 份、按周留 4 份
+schtasks /Create /SC DAILY /ST 02:00 /TN "MediTour Backup" /F ^
+  /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File I:\meditour_app\backend\scripts\run_backup_task.ps1 -OutputDir I:\meditour_app\backend\var\backups -DailyKeep 7 -WeeklyKeep 4"
+
+# 立即触发一次（不用等到 02:00），验证任务确实在跑
+schtasks /Run /TN "MediTour Backup"
+
+# 查看任务状态与最近结果
+schtasks /Query /TN "MediTour Backup" /V /FO LIST
+
+# 不再需要时删除
+schtasks /Delete /TN "MediTour Backup" /F
 ```
 
+- 任务默认以创建者账户运行，不要求该账户保持登录，但必须对 `-OutputDir` 有写权限；
+  如果使用服务账户，请用 `/RU`、`/RP` 显式指定。
+- 参数默认值就是 `-DailyKeep 7 -WeeklyKeep 4`；不传 `-OutputDir` 时备份落在
+  `backend/var/backups/`（已被 `.gitignore` 忽略）。
+- 每次运行的完整输出在 `backend/var/logs/backup.log`，包含备份文件名、行数指纹、
+  保留/删除数量；退出码非零表示备份或清理失败，可在任务计划程序“上次运行结果”里看到。
+- `schtasks` 的 `/TR` 不支持换行，命令必须写成一行；路径含空格时整体用双引号包住
+  `powershell.exe ...` 这一段即可。
+
 ```cron
-# Linux/macOS：每天 02:00，日志写到 var/backup.log
-0 2 * * * cd /srv/meditour/backend && .venv/bin/python scripts/backup_db.py >> var/backup.log 2>&1
+# Linux/macOS：每天 02:00，日志写到 var/logs/backup.log
+0 2 * * * cd /srv/meditour/backend && .venv/bin/python scripts/backup_db.py --daily-keep 7 --weekly-keep 4 >> var/logs/backup.log 2>&1
 ```
+
+**定时触发演练（2026-11-08，Windows 计划任务）**：用上面的命令创建任务后执行
+`schtasks /Run`，任务在 1 秒内完成（12:10:56 启动、12:10:57 退出），产出
+`meditour-20261108-121057.db`（278,528 bytes，sha256 校验通过），日志末尾为
+`backup exit=0`。演练前预先放入 5 份 2024 年旧备份，运行后按周策略删除了
+`meditour-20240101-020000.db`、保留 5 份（当天最新 + 4 个周份），证明
+“计划任务触发 → 产出备份 → 保留策略生效”整条链路可用，且最新一份未被误删。
+演练产生的文件在 `backend/var/drill/scheduled/`、日志在 `backend/var/logs/backup.log`
+（均在 gitignore 范围内，仅作本机证据）。
 
 ### 恢复演练与 RTO（2026-11-08）
 
@@ -888,11 +989,11 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（124 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联（含会话吊销）、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、强制验证开关（未验证下单 403、确认后 201）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出/关闭开关/来源白名单、数据保留清理（dry-run 不写入、只删过期数据、软删除账号保留用户行与订单、邮件与上传临时文件清理）、前后端契约核对（11 个端点的字段名/类型/可空性）、联调演示种子（默认关闭、数量与分类/价格覆盖、重复执行幂等）、列表接口查询次数为常数（订单/行程/套餐/医院/目的地/员工订单）、连接池容量与配置一致、SQLite WAL/busy_timeout/synchronous 实际生效、订单状态机终态锁死与时间戳（用户不能取消已确认、员工可取消、completed 不能退回 pending）、审计覆盖（取消/流转/改价/删除/导出）与查询过滤（操作类型/时间范围/权限）。
+当前覆盖（153 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联（含会话吊销）、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、强制验证开关（未验证下单 403、确认后 201）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出/关闭开关/来源白名单、数据保留清理（dry-run 不写入、只删过期数据、软删除账号保留用户行与订单、邮件与上传临时文件清理）、前后端契约核对（11 个端点含目的地多语言响应的字段名/类型/可空性）、联调演示种子（默认关闭、数量与分类/价格覆盖、重复执行幂等）、列表接口查询次数为常数（订单/行程/套餐/医院/目的地/员工订单）、连接池容量与配置一致、SQLite WAL/busy_timeout/synchronous 实际生效、订单状态机终态锁死与时间戳（用户不能取消已确认、员工可取消、completed 不能退回 pending）、审计覆盖（取消/流转/改价/删除/导出）与查询过滤（操作类型/时间范围/权限）、注册按 IP 限流、找回密码邮箱/IP 双维度限流、验证邮件重发冷却、上线自检脚本的生产断言（密钥/文档/CORS/metrics/演示开关/SQLite/HTTPS 等）、备份文件 WAL 合并与恢复后边车清理。
 
 ## 接口验证脚本
 
-`scripts/verify_api.py` 只用 Python 标准库，覆盖注册、登录（含限流）、鉴权、健康检查、套餐、医院、订单创建/校验/列表/取消、令牌刷新与登出、CORS、request id、错误体形状、账号闭环、多语言回退、数据导出、分页边界与员工订单操作（默认 108 项断言；提供 `--staff-email/--staff-password` 时额外验证员工接口，共 126 项）。本批新增的员工内容运营与图片上传端点由 pytest 覆盖，尚未加入该脚本。
+`scripts/verify_api.py` 只用 Python 标准库，覆盖注册、登录（含限流）、鉴权、健康检查、套餐、医院、订单创建/校验/列表/取消、令牌刷新与登出、CORS、request id、错误体形状、账号闭环、多语言回落（套餐/医院/目的地）、数据导出、分页边界、`/metrics` 与员工订单/统计操作；提供 `--staff-email/--staff-password` 时共 135 项断言。本批新增的员工内容运营与图片上传端点由 pytest 覆盖，尚未加入该脚本。
 
 登出会吊销整个设备会话，因此脚本在验证「登出后 access/refresh 被拒绝」之后会重新登录，
 后续段落使用新会话的令牌；这不是放宽校验，而是避免复用已登出的令牌。
@@ -1136,6 +1237,51 @@ WAL + `busy_timeout=15000`）：
 - 这是**单进程 + SQLite** 的数字，不能外推到多 worker：多 worker 下 SQLite 的写锁
   竞争会更严重，而 PostgreSQL 会好很多。上线前应在目标数据库上重跑本脚本。
 - 未测量项：长连接/流式响应、超大图片、慢查询、磁盘 IO 抖动；这些都会改变上述阈值。
+
+## 上线容量与限制总览
+
+这一节只汇总已经实测过的数字，细节分别见「并发与竞态探测」「连接池与单机容量」
+「备份与恢复」「员工统计」。没有实测过的项会明确写“未测”，不做估算。
+
+### 结论先行
+
+- **单实例 + 文件型 SQLite 可以上线试用**：100 并发内写路径 p95 < 0.7s、无 5xx；
+  只适合单 worker。**不适合多实例、也不适合高写并发**。
+- **备份可定时执行，RTO ≈ 1.3s（演示库）**；但 **RPO 最坏 24 小时**（默认每天备份、
+  无 WAL 归档/时间点恢复），医疗与订单数据能否接受 24 小时丢失窗口，需要业务方确认。
+- **限流是进程内的**：单 worker 可用，扩到多 worker/多实例前必须换共享存储。
+- 生产配置自检当前会报 8 项 FAIL（SQLite、本地 CORS、文档开放、file 邮件等），
+  这是“还没切生产配置”的真实状态，不是脚本误报。
+
+### 容量与延迟（本机实测，单 uvicorn worker，SQLite + WAL，连接池 20 + 20）
+
+| 项目 | 实测结果 | 来源 |
+| --- | --- | --- |
+| 100 并发 | 0 错误 / 0 5xx；下单 p95 552ms、列表 577ms、改价 644ms、上传 708ms | 并发探测 |
+| 150 并发 | 0 错误 / 0 5xx；下单 p95 806ms、列表 749ms、改价 1049ms、上传 1202ms | 并发探测 |
+| 300 并发 | 0 错误 / 0 5xx；下单 p95 1583ms、列表 1457ms、改价 2024ms、上传 2369ms | 并发探测 |
+| 统计接口（40 单演示库） | 6.4–8.2 ms | 员工概览统计 |
+| 统计接口（20 万单合成库，14 天） | 中位 82 ms | 员工概览统计 |
+| 统计接口（20 万单合成库，90 天） | 中位 133 ms | 员工概览统计 |
+| 备份（225 KB / 40 单） | 298 ms | 备份与恢复 |
+| 恢复（含覆盖前副本） | 270 ms | 备份与恢复 |
+| 空跑 `alembic upgrade head` | 1031 ms | 备份与恢复 |
+| **RTO** | **≈ 1.3 s（演示库）** | 备份与恢复 |
+| **RPO** | **默认 ≤ 24 h；无 PITR** | 保留策略为每天 02:00 一次 |
+
+### 明确的上限与未测项
+
+- **SQLite 单写者**：任何时刻只有一个写事务；WAL 只让读写并行、写冲突排队，
+  不提供写并发。300 并发下延迟上升主要是写路径排队。要真正的写并发应切 PostgreSQL。
+- **单进程容量**：`pool_size + max_overflow = 40` 对应 anyio 同步线程池默认 40 线程；
+  多 worker 时每进程各有独立连接池（`workers × 40`），SQLite 文件锁会让多 worker
+  更早出现写竞争，因此当前不建议直接加 worker。
+- **磁盘**：容量取决于备份保留量（默认 7 天 + 4 周）与上传图片；未做磁盘 IO 压测，
+  也未测超大图片、慢查询、流式响应。
+- **网络/反代**：限流只认直连 IP，不信任 `X-Forwarded-For`；部署在反代后需要先让
+  反代覆盖该头，否则所有请求会被当成同一个来源 IP。
+- **多实例**：本地上传存储、进程内限流、SQLite 都不支持多实例；这是当前与“水平扩展”
+  之间的硬边界。
 
 ## 健康检查
 

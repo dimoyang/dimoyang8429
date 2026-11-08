@@ -226,6 +226,9 @@ def prune_backups(
     for path in deleted:
         try:
             path.unlink()
+            # 旧版本备份可能残留 WAL 边车文件；删主文件时一并清理。
+            for suffix in ("-wal", "-shm"):
+                path.with_name(path.name + suffix).unlink(missing_ok=True)
         except OSError as exc:
             raise BackupError(
                 f"Failed to delete old backup {path}: {exc}"
@@ -273,6 +276,10 @@ def backup_database(
             sqlite3.connect(temporary)
         ) as dst:
             src.backup(dst)
+            # 源库可能是 WAL 模式，备份文件会继承该设置；如果不切回 DELETE，
+            # 备份目录里会残留 -wal/-shm，单独拷走 .db 时可能丢掉 WAL 中的页。
+            dst.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            dst.execute("PRAGMA journal_mode=DELETE")
         os.replace(temporary, target)
     except sqlite3.Error as exc:
         temporary.unlink(missing_ok=True)
@@ -350,6 +357,15 @@ def restore_database(
         safety_copy = target.with_name(
             f"{target.stem}.pre-restore-{stamp}{target.suffix}.bak"
         )
+        try:
+            # 覆盖前先把目标库的 WAL 合并回主文件，否则 .bak 可能只是半份数据。
+            with closing(_connect(target, readonly=False)) as connection:
+                connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        except sqlite3.Error as exc:
+            raise BackupError(
+                f"Cannot checkpoint target before restore: {exc}. "
+                "Stop the backend and try again."
+            ) from exc
         shutil.copy2(target, safety_copy)
 
     try:
@@ -358,6 +374,10 @@ def restore_database(
         ) as dst:
             src.backup(dst)
         os.replace(temporary, target)
+        # 目标库若原本是 WAL 模式，旧 -wal/-shm 不能被新库沿用，
+        # 否则下次打开可能把旧日志页叠加到恢复后的数据上。
+        for suffix in ("-wal", "-shm"):
+            target.with_name(target.name + suffix).unlink(missing_ok=True)
     except sqlite3.Error as exc:
         temporary.unlink(missing_ok=True)
         raise BackupError(

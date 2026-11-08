@@ -35,6 +35,13 @@ TEST_MAIL_PREVIEW = BACKEND_DIR / "var" / "test_mail_preview"
 shutil.rmtree(TEST_MAIL_PREVIEW, ignore_errors=True)
 os.environ["MEDITOUR_MAIL_PREVIEW_DIR"] = str(TEST_MAIL_PREVIEW)
 os.environ.setdefault("MEDITOUR_RESET_TOKEN_EXPIRE_MINUTES", "30")
+# 测试会从同一个 TestClient 来源注册/找回大量账号，默认生产限流会误伤；
+# 限流行为本身在 test_rate_limits.py 里通过 monkeypatch 调小阈值验证。
+os.environ["MEDITOUR_REGISTER_LIMIT_PER_IP"] = "1000"
+os.environ["MEDITOUR_RESET_LIMIT_PER_EMAIL"] = "1000"
+os.environ["MEDITOUR_RESET_LIMIT_PER_IP"] = "1000"
+# 重发冷却默认 60 秒，会让“重发作废旧令牌”的用例失败；冷却行为单独测试。
+os.environ["MEDITOUR_VERIFICATION_RESEND_COOLDOWN_SECONDS"] = "0"
 
 # 上传目录固定到 var/ 下的测试目录（var/ 已被 gitignore），避免污染开发目录。
 TEST_UPLOADS = BACKEND_DIR / "var" / "test_uploads"

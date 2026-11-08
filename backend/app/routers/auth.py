@@ -83,6 +83,16 @@ def _invalid_token(detail: str) -> HTTPException:
     )
 
 
+def _client_ip(request: Request) -> str:
+    """限流用的来源 IP。
+
+    只信任直连 IP，不读取 `X-Forwarded-For`：后者可被客户端伪造，
+    除非反代已明确覆盖该头。若部署在反代后且需要按真实客户端限流，
+    应在反代上覆盖 `X-Forwarded-For` 后再改成信任它。
+    """
+    return request.client.host if request.client else "unknown"
+
+
 @router.post(
     "/login",
     response_model=TokenResponse,
@@ -104,7 +114,7 @@ def login(
     db: Session = Depends(get_db),
 ) -> TokenResponse:
     email = form_data.username.strip().lower()
-    client_ip = request.client.host if request.client else None
+    client_ip = _client_ip(request)
 
     # 检查与计数在同一个锁内完成：并发请求不会都先通过检查再一起记录失败。
     wait = rate_limit.begin_attempt(client_ip, email)
@@ -288,9 +298,29 @@ def logout(
     responses={
         409: {"description": "邮箱已注册"},
         422: {"description": "邮箱、密码或语言字段格式不合法"},
+        429: {"description": "同一来源 IP 注册过于频繁"},
     },
 )
-def register(payload: UserCreate, db: Session = Depends(get_db)) -> User:
+def register(
+    payload: UserCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> User:
+    # 注册前没有可信的账号标识，只能按来源 IP 限流。阈值取得较宽，
+    # 避免同一办公室/NAT 的正常注册被误伤；代价是共享出口 IP 时
+    # 额度也共享（见 README「认证接口限流」）。
+    wait = rate_limit.hit(
+        f"register:ip:{_client_ip(request)}",
+        settings.REGISTER_LIMIT_PER_IP,
+        settings.REGISTER_LIMIT_WINDOW_SECONDS,
+    )
+    if wait is not None:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many registration attempts",
+            headers={"Retry-After": str(wait)},
+        )
+
     email = payload.email.strip().lower()
     if db.scalar(select(User).where(User.email == email)) is not None:
         raise HTTPException(
@@ -362,8 +392,18 @@ def request_email_verification(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    """重发验证邮件；已通过验证的账号不再发信，但响应保持一致。"""
-    if current_user.email_verified_at is None:
+    """重发验证邮件；已通过验证的账号不再发信，但响应保持一致。
+
+    同一用户的两次重发之间有冷却（默认 60 秒），冷却内返回同样的 200
+    但不签发新令牌、不发信，避免被当作邮件轰炸入口。
+    """
+    if current_user.email_verified_at is None and (
+        rate_limit.begin_cooldown(
+            f"verify:user:{current_user.id}",
+            settings.VERIFICATION_RESEND_COOLDOWN_SECONDS,
+        )
+        is None
+    ):
         try:
             raw_token = _issue_verification_token(db, current_user)
             send_email_verification(
@@ -450,21 +490,47 @@ def confirm_email_verification(
     ),
     responses={
         422: {"description": "邮箱格式不合法"},
+        429: {"description": "同一来源 IP 请求过于频繁"},
     },
 )
 def request_password_reset(
     payload: PasswordResetRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     """请求重置令牌。
 
     无论邮箱是否存在都返回同一响应；令牌只存 SHA-256 摘要，短时效且一次性。
     同一用户再次请求时，之前未使用的令牌立即作废。
+
+    IP 维度超限直接 429（不区分邮箱，不泄露账号是否存在）；邮箱维度超限
+    则静默返回同样的 200 且不发信——若返回 429，攻击者就能借“是否被限”
+    判断邮箱是否注册。
     """
+    ip_wait = rate_limit.hit(
+        f"reset:ip:{_client_ip(request)}",
+        settings.RESET_LIMIT_PER_IP,
+        settings.RESET_LIMIT_WINDOW_SECONDS,
+    )
+    if ip_wait is not None:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many password reset requests",
+            headers={"Retry-After": str(ip_wait)},
+        )
+
     email = payload.email.strip().lower()
     user = db.scalar(select(User).where(User.email == email))
 
     if user is not None and user.deleted_at is None:
+        email_wait = rate_limit.hit(
+            f"reset:email:{email}",
+            settings.RESET_LIMIT_PER_EMAIL,
+            settings.RESET_LIMIT_WINDOW_SECONDS,
+        )
+        if email_wait is not None:
+            return _RESET_REQUEST_RESPONSE
+
         now = utcnow()
         db.execute(
             update(PasswordResetToken)

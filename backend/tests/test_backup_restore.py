@@ -1,6 +1,7 @@
 """备份与恢复：真实 SQLite 演练（备份 → 删库 → 恢复 → 数据一致）。"""
 
 import sqlite3
+from contextlib import closing
 from datetime import datetime
 from pathlib import Path
 
@@ -85,6 +86,10 @@ def _build_database(
 def test_backup_then_restore_roundtrip(tmp_path: Path) -> None:
     live = tmp_path / "live.db"
     _build_database(live)
+    # 演示库实际跑在 WAL 模式；备份必须把 WAL 页合并回主文件，
+    # 否则单拷 .db 恢复会丢数据。
+    with closing(sqlite3.connect(live)) as connection:
+        assert connection.execute("PRAGMA journal_mode=WAL").fetchone()[0] == "wal"
     before = fingerprint(live)
     assert before.tables["users"] == 1
     assert before.bookings_by_status == {"pending": 1}
@@ -95,6 +100,11 @@ def test_backup_then_restore_roundtrip(tmp_path: Path) -> None:
     assert backup_path.exists()
     assert result.fingerprint.tables == before.tables
     assert result.fingerprint.business_summary() == before.business_summary()
+    # 备份文件独立可恢复：不带 -wal/-shm，且已从 WAL 切回 DELETE。
+    assert not backup_path.with_name(backup_path.name + "-wal").exists()
+    assert not backup_path.with_name(backup_path.name + "-shm").exists()
+    with closing(sqlite3.connect(backup_path)) as connection:
+        assert connection.execute("PRAGMA journal_mode").fetchone()[0] == "delete"
 
     # 演练删库：删掉原库后再用备份恢复。
     live.unlink()
@@ -103,6 +113,9 @@ def test_backup_then_restore_roundtrip(tmp_path: Path) -> None:
     assert restored.safety_copy is None
     assert restored.fingerprint.tables == before.tables
     assert restored.fingerprint.business_summary() == before.business_summary()
+    # 恢复会清掉目标库遗留的 WAL 边车文件。
+    assert not live.with_name(live.name + "-wal").exists()
+    assert not live.with_name(live.name + "-shm").exists()
 
     with sqlite3.connect(live) as connection:
         order = connection.execute(

@@ -72,6 +72,11 @@ app = FastAPI(
     lifespan=lifespan,
     description=API_DESCRIPTION,
     openapi_tags=TAGS_METADATA,
+    # 生产默认关闭交互式文档与 OpenAPI，避免把完整接口清单暴露给外部；
+    # 开发环境保持默认开启，便于联调。
+    docs_url="/docs" if settings.DOCS_ENABLED else None,
+    redoc_url="/redoc" if settings.DOCS_ENABLED else None,
+    openapi_url="/openapi.json" if settings.DOCS_ENABLED else None,
 )
 
 # 中间件按「后添加的在最外层」生效。从内到外的顺序是：

@@ -83,11 +83,42 @@ class Settings:
 
     # 运行环境：development / production。仅影响默认开关，不做硬编码限制。
     ENVIRONMENT = _ENVIRONMENT
+    # 交互式文档与 OpenAPI：开发默认开，生产默认关；显式设置时以环境变量为准。
+    DOCS_ENABLED: bool = os.getenv(
+        "MEDITOUR_DOCS_ENABLED",
+        "false" if _ENVIRONMENT == "production" else "true",
+    ).strip().lower() in {"1", "true", "yes", "on"}
     # /metrics 是否开放：开发默认开、生产默认关；显式设置时以环境变量为准。
     METRICS_ENABLED: bool = os.getenv(
         "MEDITOUR_METRICS_ENABLED",
         "false" if _ENVIRONMENT == "production" else "true",
     ).strip().lower() in {"1", "true", "yes", "on"}
+
+    # 注册限流：按来源 IP 计数，防止批量注册与借此批量发验证邮件。
+    # 粒度只能是 IP：注册前没有可信的账号标识；代价是同一办公室/NAT
+    # 共用出口 IP 时会共享额度，因此阈值取得较宽（默认 1 小时 30 次）。
+    REGISTER_LIMIT_PER_IP: int = int(
+        os.getenv("MEDITOUR_REGISTER_LIMIT_PER_IP", "30")
+    )
+    REGISTER_LIMIT_WINDOW_SECONDS: int = int(
+        os.getenv("MEDITOUR_REGISTER_LIMIT_WINDOW_SECONDS", "3600")
+    )
+
+    # 找回密码邮件限流：邮箱维度防止把找回接口当成轰炸工具，
+    # IP 维度防止攻击者用大量邮箱扫描/刷接口。两者窗口各自独立。
+    RESET_LIMIT_PER_EMAIL: int = int(
+        os.getenv("MEDITOUR_RESET_LIMIT_PER_EMAIL", "3")
+    )
+    RESET_LIMIT_PER_IP: int = int(
+        os.getenv("MEDITOUR_RESET_LIMIT_PER_IP", "30")
+    )
+    RESET_LIMIT_WINDOW_SECONDS: int = int(
+        os.getenv("MEDITOUR_RESET_LIMIT_WINDOW_SECONDS", "3600")
+    )
+    # 已验证/已发送后的重发冷却（秒），按用户维度；冷却内返回同样的 200 但不发信。
+    VERIFICATION_RESEND_COOLDOWN_SECONDS: int = int(
+        os.getenv("MEDITOUR_VERIFICATION_RESEND_COOLDOWN_SECONDS", "60")
+    )
     # /metrics 来源白名单：精确 IP（逗号分隔），空表示不限来源。
     # 只做字符串相等比较，不支持 CIDR；需要网段时应在网关层限制。
     METRICS_ALLOWED_IPS: list[str] = [
