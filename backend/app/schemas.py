@@ -160,6 +160,16 @@ class HospitalPage(BaseModel):
     pages: int
 
 
+class UploadResponse(BaseModel):
+    """上传结果：url 可直接给前端展示，path 是站内相对路径。"""
+
+    url: str
+    path: str
+    filename: str
+    size: int
+    content_type: str
+
+
 _PHONE_SEPARATORS = re.compile(r"[\s\-().]")
 _PHONE_PATTERN = re.compile(r"^\+?\d{7,15}$")
 

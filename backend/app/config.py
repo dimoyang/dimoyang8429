@@ -74,6 +74,21 @@ class Settings:
         "MEDITOUR_PUBLIC_BASE_URL", "http://localhost:8123"
     )
 
+    # 上传存储：local（默认，落本机磁盘）或 s3（预留位，当前未实现）。
+    STORAGE_BACKEND: str = os.getenv(
+        "MEDITOUR_STORAGE_BACKEND", "local"
+    ).strip().lower()
+    UPLOAD_DIR: Path = Path(
+        os.getenv("MEDITOUR_UPLOAD_DIR", str(BASE_DIR / "var" / "uploads"))
+    )
+    UPLOAD_MAX_BYTES: int = int(
+        os.getenv("MEDITOUR_UPLOAD_MAX_BYTES", str(5 * 1024 * 1024))
+    )
+    # 对外 URL 前缀（挂载点）。修改后需要同步调整 main.py 的 StaticFiles 挂载。
+    MEDIA_URL_PATH: str = "/media/uploads"
+    # 媒体资源的对外域名/CDN。留空时返回站内相对路径；配置后返回绝对 URL。
+    MEDIA_BASE_URL: str = os.getenv("MEDITOUR_MEDIA_BASE_URL", "").rstrip("/")
+
     SMTP_HOST: str = os.getenv("MEDITOUR_SMTP_HOST", "")
     SMTP_PORT: int = int(os.getenv("MEDITOUR_SMTP_PORT", "587"))
     SMTP_USER: str = os.getenv("MEDITOUR_SMTP_USER", "")

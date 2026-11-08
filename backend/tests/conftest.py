@@ -1,6 +1,7 @@
 """pytest 配置：使用独立的测试数据库，避免污染本地开发数据。"""
 
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -26,6 +27,13 @@ if TEST_OUTBOX.exists():
 os.environ.setdefault("MEDITOUR_MAIL_BACKEND", "file")
 os.environ.setdefault("MEDITOUR_MAIL_OUTBOX", str(TEST_OUTBOX))
 os.environ.setdefault("MEDITOUR_RESET_TOKEN_EXPIRE_MINUTES", "30")
+
+# 上传目录固定到 var/ 下的测试目录（var/ 已被 gitignore），避免污染开发目录。
+TEST_UPLOADS = BACKEND_DIR / "var" / "test_uploads"
+shutil.rmtree(TEST_UPLOADS, ignore_errors=True)
+os.environ.setdefault("MEDITOUR_UPLOAD_DIR", str(TEST_UPLOADS))
+# 测试断言相对路径，不依赖外部域名配置。
+os.environ["MEDITOUR_MEDIA_BASE_URL"] = ""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -66,3 +74,9 @@ def auth_headers(client) -> dict[str, str]:
 def mail_outbox() -> Path:
     """开发环境 file 邮件后端的输出文件。"""
     return TEST_OUTBOX
+
+
+@pytest.fixture(scope="session")
+def upload_dir() -> Path:
+    """测试专用的本地上传目录。"""
+    return TEST_UPLOADS

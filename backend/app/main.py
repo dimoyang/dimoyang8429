@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import Base, SessionLocal, engine
@@ -19,6 +20,7 @@ from app.routers import (
     medical,
     staff,
     staff_content,
+    uploads,
 )
 from app.seed import seed_data
 
@@ -82,5 +84,15 @@ app.include_router(medical.router, prefix=settings.API_V1_PREFIX)
 app.include_router(bookings.router, prefix=settings.API_V1_PREFIX)
 app.include_router(staff.router, prefix=settings.API_V1_PREFIX)
 app.include_router(staff_content.router, prefix=settings.API_V1_PREFIX)
+app.include_router(uploads.router, prefix=settings.API_V1_PREFIX)
 app.include_router(destinations.router, prefix=settings.API_V1_PREFIX)
 app.include_router(itineraries.router, prefix=settings.API_V1_PREFIX)
+
+# 本地上传文件直接由后端静态服务提供。仅单机可用：
+# 多实例部署需要对象存储（见 app/storage.py）或把该目录挂到共享卷。
+settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+app.mount(
+    settings.MEDIA_URL_PATH,
+    StaticFiles(directory=str(settings.UPLOAD_DIR)),
+    name="uploads",
+)
