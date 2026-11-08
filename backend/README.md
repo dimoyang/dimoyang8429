@@ -43,6 +43,7 @@ uvicorn app.main:app --reload --port 8000
 | `MEDITOUR_STORAGE_BACKEND` | 否 | `local` | 上传存储后端；`local` 落本机磁盘，`s3` 为预留位（未实现时显式报错） |
 | `MEDITOUR_UPLOAD_DIR` | 否 | `backend/var/uploads` | 本地上传目录（已被 `.gitignore` 忽略） |
 | `MEDITOUR_UPLOAD_MAX_BYTES` | 否 | `5242880`（5 MiB） | 单张图片大小上限，超出返回 413 |
+| `MEDITOUR_MAX_REQUEST_BYTES` | 否 | `10485760`（10 MiB） | 全局请求体上限，超出由中间件返回 413；必须大于上传上限 |
 | `MEDITOUR_MEDIA_BASE_URL` | 否 | 空 | 媒体对外域名/CDN；留空时上传接口返回站内相对路径 |
 
 本地可把变量写进 `backend/.env`（已被 `.gitignore` 忽略）；生产环境请通过运行环境注入，不要提交 `.env`。
@@ -191,8 +192,14 @@ uvicorn app.main:app --reload --port 8000
 
 ## 邮件发送（开发 / 生产）
 
-- 开发默认 `MEDITOUR_MAIL_BACKEND=file`：邮件写入 `backend/var/mail_outbox.log`（路径可用 `MEDITOUR_MAIL_OUTBOX` 覆盖），一行一封，包含收件人、重置令牌与重置链接。该文件已被 `.gitignore` 忽略，不属于常规请求日志。
-- 常规请求日志只记录 `password_reset_email_written` 和文件路径，不记录收件人或令牌；日志脱敏规则同时覆盖邮箱与 `token` 键值。
+- 重置密码邮件是 HTML + 纯文本双版本（`app/mail_templates.py`），语言取用户 `preferred_language`，支持 `zh/en/de/fr`；`zh-CN`、`de_DE` 这类地区变体归一到主语言，不认识的语言回退英文。
+- 开发默认 `MEDITOUR_MAIL_BACKEND=file`：
+  - 完整邮件（含 HTML 与纯文本两个 part）写成 `.eml`，落在 `backend/var/mail_preview/`（可用 `MEDITOUR_MAIL_PREVIEW_DIR` 覆盖），可直接用邮件客户端打开看效果；
+  - `backend/var/mail_outbox.log` 只保留一行索引（收件人、主题、`token=`、`.eml` 文件名），**不再写入完整重置链接**，该文件已被 `.gitignore` 忽略。
+  - 本机实测（德语用户，经 `POST /auth/password-reset/request` 触发）生成的预览文件：
+    `backend/var/mail_preview/20261108T022655083971Z-53ceffd9.eml`，主题
+    `MediTour-Passwort zurücksetzen`，包含 `text/plain` 与 `text/html` 两个 part。
+- 常规请求日志只记录 `password_reset_email_written` 和预览文件路径，不记录收件人、令牌或完整链接；日志脱敏规则同时覆盖邮箱与 `token` 键值。
 - 生产设置 `MEDITOUR_MAIL_BACKEND=smtp` 并配置 `MEDITOUR_SMTP_*`；缺少 `MEDITOUR_SMTP_HOST` 时发信直接抛错，不会静默伪装成功。
 - 发信失败不会改变接口响应（仍返回统一的 `200`），失败原因写入日志，避免通过响应差异判断邮箱是否存在。当前环境如果仍是 `file` 后端，就是“写文件”而不是“已真实发信”。
 
@@ -297,6 +304,22 @@ python scripts/import_translations.py var/translations.csv
 - 脱敏规则集中在 [app/logging_config.py](app/logging_config.py)：JWT、邮箱、手机号以及 `password`/`token`/`notes`/`phone`/`email` 等键值统一替换为 `[REDACTED]`。
 - 请求日志不记录请求体与查询串；路由代码也不做敏感字段拼接。Docker 启动参数已加 `--no-access-log`，避免 uvicorn 另记一份未脱敏访问日志。
 
+## 安全中间件与错误体
+
+所有响应都会经过 [app/middleware.py](app/middleware.py)：
+
+- **请求体上限**：默认 10 MiB（`MEDITOUR_MAX_REQUEST_BYTES`），必须大于上传单文件上限。
+  有 `Content-Length` 时直接拒绝；分块传输（chunked）则在流式读取时计数并在超限处中止。
+  超限返回 `413` + `{"detail": "Request body too large"}`，不会进入路由与 JSON 解析。
+- **安全响应头**：`X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、
+  `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'`。
+  `/docs`、`/redoc`、`/openapi.json` 不加严格 CSP（Swagger UI 需要加载外部资源）。
+- **HSTS**：仅当请求是 HTTPS（直连 TLS，或反代传入 `X-Forwarded-Proto: https`）时下发
+  `Strict-Transport-Security: max-age=31536000; includeSubDomains`；本地 HTTP 不会下发。
+- **异常兜底**：未处理异常统一返回 `500` + `{"detail": "Internal server error"}`，
+  堆栈只进服务端日志（经脱敏），响应体不含异常类名、消息或 traceback。
+  错误体形状与现有的 400/401/403/404/409/422 保持一致，前端解析逻辑不需要改动。
+
 ## 错误码对照表
 
 下表按后端代码的实际行为逐条整理，方便前端按状态码分流。除健康检查的 503 外，错误响应体统一为
@@ -309,7 +332,7 @@ python scripts/import_translations.py var/translations.csv
 | 403 | 已认证但权限不足 | 非 `staff` 角色访问 `/staff/*` 端点，`detail="Staff privileges required"`。普通用户即使拥有该订单也不能借此修改状态 |
 | 404 | 资源不存在，或存在但不属于当前用户 | `POST /bookings/` 套餐不存在**或已下架**（下架套餐按不存在处理，不暴露其存在）；`POST /bookings/{id}/cancel`、`GET /staff/bookings/{id}`、`PATCH /staff/bookings/{id}/status` 订单不存在（用户侧与不存在/属于他人共用一个 404）；`GET/PUT/DELETE /itineraries/{id}` 行程不存在或属于他人；`GET /destinations/{id}` 目的地不存在；`/staff/packages|hospitals|destinations/{id}` 目标不存在 |
 | 409 | 与资源当前状态冲突 | `POST /auth/register` 邮箱已注册；`POST /bookings/` 同用户同套餐同预约时间已有 `pending` 订单；`POST /bookings/{id}/cancel` 当前状态不是 `pending`；`PATCH /staff/bookings/{id}/status` 跳过中间状态或对已结束订单再流转；员工删除套餐时仍有订单、删除医院时仍有套餐、删除目的地时仍被行程引用；创建目的地时 slug 已存在 |
-| 413 | 上传文件超过大小上限 | `POST /staff/uploads`：文件大于 `MEDITOUR_UPLOAD_MAX_BYTES`（默认 5 MiB），`detail` 为限制字节数 |
+| 413 | 请求体过大 | 任意端点：请求体超过 `MEDITOUR_MAX_REQUEST_BYTES`（默认 10 MiB），`detail="Request body too large"`；`POST /staff/uploads`：文件大于 `MEDITOUR_UPLOAD_MAX_BYTES`（默认 5 MiB），`detail` 为限制字节数 |
 | 415 | 上传文件类型不受支持 | `POST /staff/uploads`：声明类型不是 JPEG/PNG/WebP，或文件头与声明类型不符（防止把非图片改成 `.png` 后缀上传） |
 | 422 | 请求体或查询参数校验失败 | 字段缺失/类型错误、邮箱格式、密码长度（6–72）、`notes` 超过 2000 字、预约时间不在未来、`contact_phone` 非 7–15 位、行程日期/目的地/每日编号不合法；分页 `page < 1`、`page_size < 1` 或 `> 100`；员工列表 `status` 不在 `pending/confirmed/completed/cancelled`；员工改状态的目标值不是 `confirmed/completed`；员工创建/更新套餐时 `hospital_id` 指向不存在的医院、`price ≤ 0`、`duration_days < 1`；目的地 slug 不符合 `^[a-z0-9][a-z0-9-]*$`；上传空文件；`lang` 不在 `zh/en/de/fr`（`detail` 为字符串 `Unsupported lang; supported values: ...`，其余为字段错误数组） |
 | 429 | 触发登录限流 | 仅 `POST /auth/login`：同一 IP + 邮箱 300 秒内失败 5 次，响应带 `Retry-After` 秒数；成功登录会清零计数 |
@@ -338,6 +361,71 @@ python -m alembic stamp head
 
 `stamp` 只写入版本号，不改动表和数据；之后 `alembic upgrade head` 即可正常执行。
 测试环境（`MEDITOUR_TESTING=1`）仍使用 `create_all`，不依赖迁移执行顺序。
+
+## PostgreSQL 切换脚手架（未验证）
+
+> **重要：当前开发机没有 Docker，`docker-compose.yml` 从未构建或运行过，项目也从未在
+> PostgreSQL 上执行过迁移或接口测试。** 本节的 compose 文件与清单只是“切换路径”的
+> 草稿，不能据此认为项目“已支持 PostgreSQL”。启用前请按下面的检查清单逐项验证，
+> 并把验证结果补进本节。
+
+文件：[docker-compose.yml](docker-compose.yml)，包含 `db`（postgres:16-alpine，带
+`pg_isready` 健康检查）与 `api`（由本目录 Dockerfile 构建）。`api` 通过
+`depends_on: db: condition: service_healthy` 等待数据库真正可连接后再启动，并在启动
+命令里先执行 `alembic upgrade head` 再拉起 uvicorn。
+
+```bash
+# 在 backend 目录；先设置一个长随机密钥
+docker compose up --build
+docker compose down          # 保留 pgdata 卷
+docker compose down -v       # 连数据一起删
+```
+
+### 连接串与迁移顺序
+
+- 连接串：`postgresql+psycopg://<user>:<password>@<host>:5432/<db>`
+  （驱动 `psycopg` 已加入 `requirements.txt`；不要用默认的 psycopg2 方言）。
+- 迁移顺序：数据库就绪 → `alembic upgrade head` → `alembic check`（应无 diff）→
+  启动应用（应用启动时还会再校验一次 schema 版本并执行种子）。
+- 不要用 `Base.metadata.create_all()` 初始化 PostgreSQL；测试环境才走 `create_all`。
+- 如果从 SQLite 导数据，不要直接 `COPY` 出带主键的行：先导入业务数据，再用
+  `setval(pg_get_serial_sequence(...))` 或重新插入的方式修正自增序列，否则后续插入会撞主键。
+
+### SQLite 与 PostgreSQL 的差异点（切换前必须逐条确认）
+
+1. **金额**：`bookings.total_price` 与 `medical_packages.price` 目前是 `Float`。
+   SQLite 存 REAL、PostgreSQL 存 `double precision`，两者都有二进制浮点误差。
+   切库前建议改成 `Numeric(10, 2)` 并加迁移与取整策略；当前代码尚未改。
+2. **时间精度与类型**：应用统一写入 naive UTC（`app.models.utcnow`）。SQLite 以文本
+   保存，PostgreSQL 默认是 `timestamp without time zone`；比较逻辑依赖 naive 值，
+   切库后要复测预约时间校验、排序与 `created_at` 序列化（`Z` 后缀）。
+3. **布尔默认值**：迁移里 `is_active` 使用 `server_default="1"`。PostgreSQL 的布尔
+   字面量建议写 `'true'`；这一点必须在 PG 上实测，失败时改迁移而不是改应用。
+4. **JSON 列**：`sa.JSON` 在 SQLite 是文本、在 PostgreSQL 是 `json`（不是 `jsonb`）。
+   当前 `destination_ids`、`experiences`、`search_terms` 只在 Python 侧读写，没有做
+   JSON 字段查询；若以后要按 JSON 内部字段过滤，需要改用 `jsonb` + GIN 索引。
+5. **自增主键**：SQLite 的 `INTEGER PRIMARY KEY` 与 PostgreSQL 的序列语义不同；
+   迁移后确认每张表的 sequence 起点与现有最大 id 一致。
+6. **并发与连接池**：SQLite 同一时刻只有一个写者；PostgreSQL 真正并发。下单的唯一性
+   目前靠应用层查重 + 唯一约束（`order_no`），切库后要重跑并发探测（见“并发探测”）。
+7. **DDL 事务**：PostgreSQL 的 DDL 可回滚，SQLite（batch mode）行为不同；迁移失败时
+   的恢复步骤要按 PG 重新演练。
+8. **标识符大小写**：现有表名/列名全部小写，SQLAlchemy 不会加引号；新增迁移时保持
+   小写蛇形命名，避免 `"Users"` 与 `users` 两种对象并存。
+
+### 在 PostgreSQL 上需要重新验证的检查清单
+
+- [ ] `alembic upgrade head` 从空库一次成功；`alembic check` 无 diff
+- [ ] 种子数据（医院、套餐、目的地）正常写入，无布尔/JSON 类型错误
+- [ ] `pytest` 全绿（测试库需改为 PostgreSQL，`create_all` 路径也要验证一次）
+- [ ] `scripts/verify_api.py` 全部断言通过（含员工接口）
+- [ ] 注册/登录/限流/刷新/登出/注销闭环
+- [ ] 重置密码邮件：收件人语言、`.eml` 或 SMTP 实际送达
+- [ ] 下单并发：同用户同套餐同时间只产生一个 `pending`，其余 409，无 500
+- [ ] 员工订单列表分页与时间排序、审计写入
+- [ ] 套餐下架后公开列表隐藏、下单 404、改价不影响历史订单金额
+- [ ] 内容 CRUD 与删除保护（409）、上传 URL 在容器内可访问
+- [ ] 数据导出与备份策略（PG 用 `pg_dump`，本仓库 SQLite 备份脚本不适用）
 
 ## 备份与恢复
 
@@ -415,7 +503,7 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（77 项）：预约字段与校验分支、重复提交、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、日志脱敏与 request id。
+当前覆盖（87 项）：预约字段与校验分支、重复提交、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id。
 
 ## 接口验证脚本
 
@@ -426,7 +514,7 @@ python -m pytest -q
 python scripts/verify_api.py --base-url http://127.0.0.1:8000/api/v1
 
 # 开发环境 file 邮件后端：验证忘记密码需要从 outbox 读取令牌（默认路径）
-python scripts/verify_api.py --mail-outbox backend/var/mail_outbox.log
+python scripts/verify_api.py --mail-outbox var/mail_outbox.log
 
 # 员工接口验证：账号需先由 manage_staff.py 授予 staff
 python scripts/verify_api.py --staff-email staff@example.com --staff-password Staff123456
@@ -438,6 +526,40 @@ python scripts/verify_api.py --cleanup
 账号闭环部分依赖开发环境 `MEDITOUR_MAIL_BACKEND=file` 写出的 outbox 文件；使用 `smtp` 后端时该段会明确失败并提示，不会伪造通过。
 
 全部通过时退出码为 0，有失败为 1，连接失败为 2。Android 模拟器访问宿主机可用 `http://10.0.2.2:8000/api/v1`。
+
+## 并发探测
+
+`scripts/concurrency_probe.py` 只用标准库（`urllib` + `threading.Barrier`），对三条关键路径各打一轮并发，**只看状态码分布与错误率，不是性能基准**：
+
+- `login-rate-limit`：同一邮箱连续错误密码，观察 401 是否切换为 429；
+- `booking-create`：同一用户、同一套餐、同一预约时间并发下单，验证是否只产生一个 `pending`；
+- `bookings-list`：并发读取订单列表，观察锁竞争/连接问题导致的 5xx。
+
+```bash
+# 先启动后端；脚本会注册临时用户，结束时注销该账号（其 pending 订单会被取消）
+python scripts/concurrency_probe.py --threads 12
+python scripts/concurrency_probe.py --base-url http://10.0.2.2:8000/api/v1 --threads 20
+```
+
+本机（SQLite，12 线程）的真实输出：
+
+```text
+[login-rate-limit] requests=12 | 401: 5, 429: 7 | errors(5xx/network)=0 (0%) | p50=31ms p95=34ms max=34ms
+[booking-create] requests=12 | 201: 3, 409: 9 | errors(5xx/network)=0 (0%) | p50=104ms p95=135ms max=135ms
+[bookings-list] requests=12 | 200: 12 | errors(5xx/network)=0 (0%) | p50=56ms p95=57ms max=57ms
+cleanup: DELETE /auth/account -> 200
+```
+
+结果解读与已知缺陷：
+
+- 登录限流按预期工作：先返回 401，达到失败阈值后返回 429；没有 5xx。
+- 订单列表并发读取没有 5xx，本机未观察到连接池耗尽。
+- **`booking-create` 出现 3 个 201**：同一用户、同一套餐、同一预约时间本应只有一个成功，其余应为 409。根因是「先查是否存在 pending，再插入」属于应用层查重，两条语句之间没有原子性，`bookings` 表也没有对应唯一约束；并发请求在查重时都没看到 pending，于是一起插入成功。
+  建议修复（本次只暴露、未改动业务语义）：为 pending 订单加部分唯一索引
+  `(user_id, package_id, appointment_date) WHERE status = 'pending'`，插入时捕获
+  `IntegrityError` 并返回 409；或使用数据库级约束/行锁保证原子性。
+- 该脚本不测吞吐量、不构造慢查询；SQLite 的写并发受全局写锁限制，结果不能直接外推到
+  PostgreSQL。
 
 ## 健康检查
 
@@ -460,3 +582,6 @@ docker run --rm -p 8000:8000 \
 ```
 
 镜像以非 root 用户运行，SQLite 数据默认落在 `/data/meditour.db`，请挂载卷持久化。容器内置 `HEALTHCHECK`，请求 `/api/v1/health`。
+
+PostgreSQL + API 的 compose 脚手架（**未构建、未运行，不能视为已验证支持**）见上一节
+「PostgreSQL 切换脚手架（未验证）」。
