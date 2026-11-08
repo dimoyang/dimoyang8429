@@ -89,7 +89,8 @@ def login(
     email = form_data.username.strip().lower()
     client_ip = request.client.host if request.client else None
 
-    wait = rate_limit.retry_after(client_ip, email)
+    # 检查与计数在同一个锁内完成：并发请求不会都先通过检查再一起记录失败。
+    wait = rate_limit.begin_attempt(client_ip, email)
     if wait is not None:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -103,7 +104,7 @@ def login(
         or user.deleted_at is not None
         or not verify_password(form_data.password, user.password_hash)
     ):
-        rate_limit.record_failure(client_ip, email)
+        # 失败名额已在 begin_attempt 中预占，这里不再重复计数。
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",

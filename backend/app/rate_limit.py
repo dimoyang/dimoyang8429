@@ -37,14 +37,26 @@ def retry_after(client_ip: str | None, email: str) -> int | None:
         return max(1, int(WINDOW_SECONDS - (now - queue[0])) + 1)
 
 
-def record_failure(client_ip: str | None, email: str) -> None:
+def begin_attempt(client_ip: str | None, email: str) -> int | None:
+    """原子地「检查阈值 + 预占一次失败名额」。
+
+    返回 None 表示允许继续校验密码；返回秒数表示已达到上限，应直接 429。
+    预占的名额在登录成功后由 `clear` 释放，因此并发请求不会同时穿过阈值检查。
+    同一个 IP + 邮箱的并发登录尝试中，最多只有 `MAX_FAILURES` 个能进入密码校验。
+    """
     now = time.monotonic()
     key = _key(client_ip, email)
     with _lock:
-        queue = _failures[key]
+        queue = _failures.get(key)
+        if queue is None:
+            queue = deque()
+            _failures[key] = queue
         while queue and now - queue[0] > WINDOW_SECONDS:
             queue.popleft()
+        if len(queue) >= MAX_FAILURES:
+            return max(1, int(WINDOW_SECONDS - (now - queue[0])) + 1)
         queue.append(now)
+        return None
 
 
 def clear(client_ip: str | None, email: str) -> None:
