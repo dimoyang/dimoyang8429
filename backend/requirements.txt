@@ -7,3 +7,5 @@ PyJWT>=2.8,<3.0
 bcrypt>=4.1,<5.0
 python-dotenv>=1.0,<2.0
 alembic>=1.13,<2.0
+# PostgreSQL 驱动（仅切库时需要；SQLite 开发不依赖它）。
+psycopg[binary]>=3.2,<4.0

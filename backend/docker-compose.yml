@@ -1,0 +1,63 @@
+# PostgreSQL + API 切换脚手架。
+#
+# !! 重要 !!
+# 当前开发机没有 Docker，本文件从未 `docker compose build` 或 `up` 过，
+# 也没有用 PostgreSQL 实际跑过迁移与接口。它只是“如何切换”的可执行草稿，
+# 不代表项目已经支持 PostgreSQL。启用前请按 README「PostgreSQL 切换脚手架」
+# 一节的检查清单逐项验证。
+#
+# 用法（在 backend 目录）：
+#   $env:MEDITOUR_SECRET_KEY="<long-random-string>"
+#   docker compose up --build
+#   docker compose down            # 保留数据卷
+#   docker compose down -v         # 连数据一起删除
+
+name: meditour
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: meditour
+      POSTGRES_USER: meditour
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meditour-dev-only-password}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # API 必须等数据库真正可接受连接后再启动，否则迁移会失败。
+      test: ["CMD-SHELL", "pg_isready -U meditour -d meditour"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    ports:
+      # 仅本机调试用；生产不要暴露 5432。
+      - "127.0.0.1:5432:5432"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # 没有设置就立即失败，避免用空密钥起服务。
+      MEDITOUR_SECRET_KEY: ${MEDITOUR_SECRET_KEY:?请先设置 MEDITOUR_SECRET_KEY}
+      DATABASE_URL: postgresql+psycopg://meditour:${POSTGRES_PASSWORD:-meditour-dev-only-password}@db:5432/meditour
+      MEDITOUR_MAIL_BACKEND: ${MEDITOUR_MAIL_BACKEND:-file}
+      MEDITOUR_STORAGE_BACKEND: local
+      MEDITOUR_PUBLIC_BASE_URL: ${MEDITOUR_PUBLIC_BASE_URL:-http://localhost:8123}
+      MEDITOUR_CORS_ORIGINS: ${MEDITOUR_CORS_ORIGINS:-http://localhost:8123,http://127.0.0.1:8123}
+    # 先迁移再起服务；应用启动时还会再校验一次 schema 版本。
+    command:
+      - sh
+      - -c
+      - alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log
+    ports:
+      - "8000:8000"
+    # 上传文件与开发 outbox 写在容器内 /app/var，容器重建即丢失。
+    # 生产多实例请改用对象存储（见 app/storage.py 的 s3 预留位）。
+
+volumes:
+  pgdata:
