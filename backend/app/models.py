@@ -34,6 +34,11 @@ class User(Base):
     full_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     preferred_language: Mapped[str] = mapped_column(String(10), default="en")
+    # 角色：user（普通用户）/ staff（员工，可查看并流转订单）。
+    # 只能通过服务端白名单或管理脚本授予，注册接口不接受客户端指定。
+    role: Mapped[str] = mapped_column(
+        String(20), default="user", server_default="user"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     # 令牌版本：改密/重置/注销时自增，使已签发的 access/refresh 一并失效。
     token_version: Mapped[int] = mapped_column(Integer, default=0)

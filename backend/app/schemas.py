@@ -2,6 +2,7 @@
 
 import re
 from datetime import date, datetime, timezone
+from typing import Literal
 
 from pydantic import (
     BaseModel,
@@ -19,6 +20,8 @@ class TokenResponse(BaseModel):
     # 新增字段；现有前端会忽略它，保持向后兼容。
     refresh_token: str
     token_type: str = "bearer"
+    # 新增字段：客户端可据此决定是否展示员工入口；普通用户为 user。
+    role: str = "user"
 
 
 class RefreshRequest(BaseModel):
@@ -62,6 +65,7 @@ class UserResponse(BaseModel):
     full_name: str | None
     phone: str | None
     preferred_language: str
+    role: str
 
 
 class HospitalResponse(BaseModel):
@@ -170,6 +174,123 @@ class BookingResponse(BaseModel):
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
         return value.isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _serialize_local_datetime(value: datetime) -> str:
+    """预约时间按用户填写的 naive 墙钟时间返回。"""
+    return value.isoformat(timespec="seconds")
+
+
+def _serialize_utc_datetime(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def mask_phone(value: str) -> str:
+    """列表页只展示必要字符，完整号码需进入详情（并记录审计）。"""
+    phone = value.strip()
+    if not phone:
+        return ""
+    if len(phone) <= 4:
+        return "*" * len(phone)
+    keep = 3 if len(phone) >= 8 else 1
+    return f"{phone[:keep]}****{phone[-2:]}"
+
+
+def mask_email(value: str) -> str:
+    local, _, domain = value.strip().partition("@")
+    if not domain:
+        return "****"
+    return f"{local[:1]}****@{domain}"
+
+
+class StaffBookingListItem(BaseModel):
+    """员工订单列表项：不含备注，联系方式仅返回打码值。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    order_no: str
+    user_id: int
+    package_id: int
+    package_name: str
+    package_name_en: str
+    appointment_date: datetime
+    total_price: float
+    currency: str
+    status: str
+    created_at: datetime
+    contact_name: str
+    contact_phone: str
+    contact_email: str
+
+    @field_serializer("appointment_date")
+    def serialize_appointment_date(self, value: datetime) -> str:
+        return _serialize_local_datetime(value)
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return _serialize_utc_datetime(value)
+
+    @field_serializer("contact_phone")
+    def serialize_contact_phone(self, value: str) -> str:
+        return mask_phone(value)
+
+    @field_serializer("contact_email")
+    def serialize_contact_email(self, value: str) -> str:
+        return mask_email(value)
+
+
+class StaffBookingDetail(BaseModel):
+    """员工订单详情：含完整联系方式与备注，读取时会写入审计日志。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    order_no: str
+    user_id: int
+    package_id: int
+    package_name: str
+    package_name_en: str
+    appointment_date: datetime
+    total_price: float
+    currency: str
+    status: str
+    created_at: datetime
+    contact_name: str
+    contact_phone: str
+    contact_email: str
+    notes: str
+    need_translator: bool
+    need_accommodation: bool
+    need_pickup: bool
+
+    @field_serializer("appointment_date")
+    def serialize_appointment_date(self, value: datetime) -> str:
+        return _serialize_local_datetime(value)
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return _serialize_utc_datetime(value)
+
+
+class StaffBookingPage(BaseModel):
+    items: list[StaffBookingListItem]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
+class BookingStatusUpdate(BaseModel):
+    """员工可执行的订单状态变更目标。
+
+    只接受 confirmed / completed；具体是否允许由服务端按当前状态判断，
+    非法目标值属于请求格式错误（422），非法流转属于状态冲突（409）。
+    """
+
+    status: Literal["confirmed", "completed"]
 
 
 class DestinationExperience(BaseModel):

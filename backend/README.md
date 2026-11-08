@@ -32,6 +32,7 @@ uvicorn app.main:app --reload --port 8000
 | `MEDITOUR_CURRENCY` | 否 | `EUR` | 种子套餐与订单金额使用的币种 |
 | `MEDITOUR_CORS_ORIGINS` | 否 | `http://localhost:8123,http://127.0.0.1:8123` | 允许的浏览器来源，逗号分隔 |
 | `MEDITOUR_SEED_DEMO_USER` | 否 | 关闭 | 设为 `1` 时创建演示账号 `demo@meditour.com / Demo123456`；生产环境不要开启，关闭开关不会删除已有账号 |
+| `MEDITOUR_STAFF_EMAILS` | 否 | 空 | 员工邮箱白名单，逗号分隔；命中名单的账号登录时自动授予 `staff`，不会自动建号 |
 | `MEDITOUR_ACCESS_TOKEN_EXPIRE_DAYS` | 否 | `7` | access token 有效期（天） |
 | `MEDITOUR_REFRESH_TOKEN_EXPIRE_DAYS` | 否 | `30` | refresh token 有效期（天） |
 | `MEDITOUR_RESET_TOKEN_EXPIRE_MINUTES` | 否 | `30` | 忘记密码令牌有效期（分钟） |
@@ -51,6 +52,40 @@ uvicorn app.main:app --reload --port 8000
   - 不存在或属于他人：404（不暴露他人订单是否存在）。
   - 当前状态不是 `pending`：409。请求本身合法，但与资源当前状态冲突，因此用 409 而非 422；422 仅用于请求体校验失败。
   - 取消后 `status` 变为 `cancelled`，其余响应字段保持不变。
+
+## 订单运营与员工角色
+
+订单状态只允许两种前进路径：`pending → confirmed → completed`；取消仍由用户侧
+`POST /api/v1/bookings/{id}/cancel` 完成（`pending → cancelled`）。
+
+角色只有 `user` 与 `staff`，注册接口不接受客户端指定 `role`，因此普通用户无法
+自助提升。授予方式有两种，都需要服务端权限：
+
+1. `MEDITOUR_STAFF_EMAILS` 白名单：把已有账号邮箱写进环境变量，该账号下次登录时
+   自动变成 `staff`。白名单只引导已有账号，不会自动注册。
+2. `scripts/manage_staff.py`：显式授予/撤销，便于运维审计。
+   ```bash
+   python scripts/manage_staff.py --email staff@example.com            # 授予已有账号
+   python scripts/manage_staff.py --email staff@example.com --revoke   # 撤销
+   python scripts/manage_staff.py --email staff@example.com --password "Staff123456"  # 直接建员工账号
+   ```
+   撤销立即生效：每次请求都从数据库读取角色，旧令牌也会立刻失去员工权限。
+   白名单不会自动降级，移除名单后仍需执行一次 `--revoke`，避免误删环境变量导致
+   正在值班的员工突然失去权限。
+
+员工可以查看**全部**订单，而不是只看与自己无关的订单：当前系统没有派单/归属字段，
+客服需要能处理任意客户发起的订单。后续若引入归属，应在服务端加过滤条件，而不是靠
+前端隐藏。
+
+- `GET /api/v1/staff/bookings`：分页 `page` / `page_size`（上限 100）/ `status` 过滤；
+  列表项**不含 `notes`**，`contact_phone`、`contact_email` 返回打码值。
+- `GET /api/v1/staff/bookings/{id}`：详情返回完整联系方式与备注（敏感字段访问审计见后续更新）。
+- `PATCH /api/v1/staff/bookings/{id}/status`，请求体 `{"status": "confirmed"}` 或
+  `{"status": "completed"}`。
+  - 非 `staff`：403；未登录：401；订单不存在：404。
+  - 跳过中间状态或对已结束订单再流转：409。
+  - 目标值不是 `confirmed` / `completed`：422（请求体校验失败）。
+- 普通用户即使拥有订单本身，也不能调用以上员工接口修改状态（测试覆盖 403）。
 
 ## 认证与令牌
 
@@ -145,11 +180,11 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（41 项）：预约字段与校验分支、重复提交、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、日志脱敏与 request id。
+当前覆盖（47 项）：预约字段与校验分支、重复提交、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、日志脱敏与 request id。
 
 ## 接口验证脚本
 
-`scripts/verify_api.py` 只用 Python 标准库，覆盖注册、登录（含限流）、鉴权、健康检查、套餐、医院、订单创建/校验/列表/取消、令牌刷新与登出、CORS、request id、错误体形状、账号闭环、多语言回退与数据导出（当前 104 项断言）。
+`scripts/verify_api.py` 只用 Python 标准库，覆盖注册、登录（含限流）、鉴权、健康检查、套餐、医院、订单创建/校验/列表/取消、令牌刷新与登出、CORS、request id、错误体形状、账号闭环、多语言回退、数据导出与员工订单操作（默认 104 项断言；提供 `--staff-email/--staff-password` 时额外验证员工接口，共 121 项）。
 
 ```bash
 # 先启动后端，再执行
@@ -157,6 +192,9 @@ python scripts/verify_api.py --base-url http://127.0.0.1:8000/api/v1
 
 # 开发环境 file 邮件后端：验证忘记密码需要从 outbox 读取令牌（默认路径）
 python scripts/verify_api.py --mail-outbox backend/var/mail_outbox.log
+
+# 员工接口验证：账号需先由 manage_staff.py 授予 staff
+python scripts/verify_api.py --staff-email staff@example.com --staff-password Staff123456
 
 # 验证后清理本次测试账号与订单（仅针对本机默认 SQLite）
 python scripts/verify_api.py --cleanup

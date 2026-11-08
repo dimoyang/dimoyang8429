@@ -56,3 +56,15 @@ def get_current_user(
     if int(payload.get("ver", 0) or 0) != user.token_version:
         raise _unauthorized("Invalid or expired token")
     return user
+
+
+def require_staff(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """员工专用端点：已登录但不是 staff 一律 403。"""
+    if current_user.role != "staff":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Staff privileges required",
+        )
+    return current_user

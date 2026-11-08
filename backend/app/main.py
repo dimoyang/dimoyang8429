@@ -10,7 +10,15 @@ from app.config import settings
 from app.database import Base, SessionLocal, engine
 from app.db_migrate import ensure_database_schema
 from app.logging_config import RequestLoggingMiddleware, configure_logging
-from app.routers import auth, bookings, destinations, health, itineraries, medical
+from app.routers import (
+    auth,
+    bookings,
+    destinations,
+    health,
+    itineraries,
+    medical,
+    staff,
+)
 from app.seed import seed_data
 
 
@@ -45,5 +53,6 @@ app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(medical.router, prefix=settings.API_V1_PREFIX)
 app.include_router(bookings.router, prefix=settings.API_V1_PREFIX)
+app.include_router(staff.router, prefix=settings.API_V1_PREFIX)
 app.include_router(destinations.router, prefix=settings.API_V1_PREFIX)
 app.include_router(itineraries.router, prefix=settings.API_V1_PREFIX)

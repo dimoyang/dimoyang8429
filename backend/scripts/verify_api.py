@@ -2,7 +2,8 @@
 """MediTour 后端接口验证脚本（仅使用 Python 标准库）。
 
 逐条验证前端依赖的 /api/v1 契约：注册、登录、鉴权、套餐、医院、预约、
-CORS 预检、错误体形状、账号闭环（找回/修改密码、注销）、多语言与数据导出。
+CORS 预检、错误体形状、账号闭环（找回/修改密码、注销）、多语言、数据导出
+与员工订单操作。
 
 前置：先启动后端（在 i:\\meditour_app\\backend 下）
     $env:MEDITOUR_SECRET_KEY="<本地密钥>"
@@ -13,9 +14,12 @@ CORS 预检、错误体形状、账号闭环（找回/修改密码、注销）�
     python backend/scripts/verify_api.py --base-url http://10.0.2.2:8000/api/v1
     python backend/scripts/verify_api.py --mail-outbox backend/var/mail_outbox.log
     python backend/scripts/verify_api.py --cleanup
+    python backend/scripts/verify_api.py --staff-email staff@example.com --staff-password Staff123456
 
 账号闭环验证需要后端使用开发环境 file 邮件后端（默认），脚本从 outbox
 文件读取重置令牌；使用 smtp 后端时该部分会明确失败而不会伪造通过。
+员工接口验证需要先用 scripts/manage_staff.py 授予一个真实账号 staff 角色，
+并通过 --staff-email/--staff-password 传入；未提供时会跳过并打印提示。
 每次运行都会注册带时间戳和随机后缀的独立账号，不会改动演示账号。
 --cleanup 仅作用于本机默认的 backend/meditour.db；远程目标请手动清理。
 """
@@ -140,7 +144,7 @@ class Checker:
         print(f"  NOTE  {text}")
 
     def section(self, index: int, title: str) -> None:
-        print(f"\n[{index}/13] {title}")
+        print(f"\n[{index}/14] {title}")
 
 
 class ApiClient:
@@ -190,6 +194,20 @@ class ApiClient:
             headers["Authorization"] = f"Bearer {token}"
         return request(
             "DELETE",
+            self.url(path),
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            timeout=self.timeout,
+        )
+
+    def patch_json(
+        self, path: str, payload: object, token: str | None = None
+    ) -> Response:
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        return request(
+            "PATCH",
             self.url(path),
             data=json.dumps(payload).encode("utf-8"),
             headers=headers,
@@ -258,6 +276,14 @@ def main() -> int:
         "--mail-outbox",
         default=str(DEFAULT_MAIL_OUTBOX),
         help="开发环境 file 邮件后端的 outbox 路径，默认 backend/var/mail_outbox.log",
+    )
+    parser.add_argument(
+        "--staff-email",
+        help="已由 manage_staff.py 授予 staff 的账号邮箱；提供后验证员工订单接口",
+    )
+    parser.add_argument(
+        "--staff-password",
+        help="员工账号密码，需与 --staff-email 同时提供",
     )
     args = parser.parse_args()
 
@@ -1222,6 +1248,207 @@ def main() -> int:
         api.get("/auth/export").status == 401,
         "未登录访问导出接口返回 401",
     )
+
+    # 14. 员工订单操作
+    checker.section(14, "员工订单操作与角色边界")
+    if not (args.staff_email and args.staff_password):
+        checker.note(
+            "未提供 --staff-email / --staff-password，跳过员工接口验证。"
+        )
+        checker.note(
+            "创建员工账号：python backend/scripts/manage_staff.py "
+            "--email staff@example.com --password Staff123456"
+        )
+    else:
+        staff_login = api.post_form(
+            "/auth/login",
+            {"username": args.staff_email, "password": args.staff_password},
+        )
+        staff_login_body = (
+            staff_login.body if isinstance(staff_login.body, dict) else {}
+        )
+        staff_token = staff_login_body.get("access_token")
+        checker.check(
+            staff_login.status == 200 and staff_login_body.get("role") == "staff",
+            "员工账号登录成功且 role=staff",
+            f"实际 {staff_login.status} role={staff_login_body.get('role')}",
+        )
+
+        checker.check(
+            api.get("/staff/bookings", token=token).status == 403,
+            "普通用户访问员工订单列表返回 403",
+        )
+
+        staff_payload = {
+            **booking_payload,
+            "appointment_date": (
+                datetime.now() + timedelta(days=70)
+            )
+            .replace(hour=10, minute=0, second=0, microsecond=0)
+            .isoformat(),
+            "contact_phone": "+8613900001234",
+            "notes": "staff verification note",
+        }
+        staff_created = api.post_json(
+            "/bookings/", staff_payload, token=token
+        )
+        staff_booking = (
+            staff_created.body if isinstance(staff_created.body, dict) else {}
+        )
+        checker.check(
+            staff_created.status == 201 and is_int(staff_booking.get("id")),
+            "创建员工验证用订单",
+            f"实际 {staff_created.status} {fmt(staff_created.body)}",
+        )
+
+        staff_list = api.get(
+            "/staff/bookings?page=1&page_size=100&status=pending",
+            token=staff_token,
+        )
+        staff_list_body = (
+            staff_list.body if isinstance(staff_list.body, dict) else {}
+        )
+        staff_items = (
+            staff_list_body.get("items")
+            if isinstance(staff_list_body.get("items"), list)
+            else []
+        )
+        staff_item = next(
+            (
+                item
+                for item in staff_items
+                if isinstance(item, dict)
+                and item.get("id") == staff_booking.get("id")
+            ),
+            None,
+        )
+        checker.check(
+            staff_list.status == 200
+            and is_int(staff_list_body.get("total"))
+            and is_int(staff_list_body.get("page_size")),
+            "员工订单列表返回分页结构",
+            f"实际 {staff_list.status} {fmt(staff_list.body, 200)}",
+        )
+        checker.check(
+            staff_item is not None,
+            "员工能看到任意用户的订单",
+            f"订单 id={staff_booking.get('id')}",
+        )
+        if staff_item is not None:
+            checker.check(
+                "notes" not in staff_item,
+                "员工列表不返回备注",
+            )
+            checker.check(
+                staff_item.get("contact_phone") != "+8613900001234"
+                and "*" in str(staff_item.get("contact_phone")),
+                "员工列表手机号已打码",
+                fmt(staff_item.get("contact_phone")),
+            )
+            checker.check(
+                staff_item.get("contact_email") != email
+                and str(staff_item.get("contact_email")).endswith(
+                    "@meditour.com"
+                ),
+                "员工列表邮箱已打码",
+                fmt(staff_item.get("contact_email")),
+            )
+
+        staff_detail = api.get(
+            f"/staff/bookings/{staff_booking.get('id')}", token=staff_token
+        )
+        staff_detail_body = (
+            staff_detail.body if isinstance(staff_detail.body, dict) else {}
+        )
+        checker.check(
+            staff_detail.status == 200
+            and staff_detail_body.get("contact_phone") == "+8613900001234"
+            and staff_detail_body.get("notes") == "staff verification note",
+            "员工详情返回完整联系方式与备注",
+            f"实际 {staff_detail.status}",
+        )
+
+        checker.check(
+            api.patch_json(
+                f"/staff/bookings/{staff_booking.get('id')}/status",
+                {"status": "confirmed"},
+                token=token,
+            ).status
+            == 403,
+            "普通用户不能修改订单状态",
+        )
+
+        skip_transition = api.patch_json(
+            f"/staff/bookings/{staff_booking.get('id')}/status",
+            {"status": "completed"},
+            token=staff_token,
+        )
+        checker.check(
+            skip_transition.status == 409,
+            "跳过 confirmed 直接 completed 返回 409",
+            f"实际 {skip_transition.status} {fmt(skip_transition.body)}",
+        )
+
+        confirmed = api.patch_json(
+            f"/staff/bookings/{staff_booking.get('id')}/status",
+            {"status": "confirmed"},
+            token=staff_token,
+        )
+        confirmed_body = (
+            confirmed.body if isinstance(confirmed.body, dict) else {}
+        )
+        checker.check(
+            confirmed.status == 200 and confirmed_body.get("status") == "confirmed",
+            "员工可将 pending 流转为 confirmed",
+            f"实际 {confirmed.status} status={confirmed_body.get('status')}",
+        )
+
+        completed = api.patch_json(
+            f"/staff/bookings/{staff_booking.get('id')}/status",
+            {"status": "completed"},
+            token=staff_token,
+        )
+        completed_body = (
+            completed.body if isinstance(completed.body, dict) else {}
+        )
+        checker.check(
+            completed.status == 200
+            and completed_body.get("status") == "completed",
+            "员工可将 confirmed 流转为 completed",
+            f"实际 {completed.status} status={completed_body.get('status')}",
+        )
+
+        checker.check(
+            api.patch_json(
+                f"/staff/bookings/{staff_booking.get('id')}/status",
+                {"status": "confirmed"},
+                token=staff_token,
+            ).status
+            == 409,
+            "completed 订单不能再次流转",
+        )
+        checker.check(
+            api.patch_json(
+                "/staff/bookings/99999999/status",
+                {"status": "confirmed"},
+                token=staff_token,
+            ).status
+            == 404,
+            "员工操作不存在的订单返回 404",
+        )
+        checker.check(
+            api.patch_json(
+                f"/staff/bookings/{staff_booking.get('id')}/status",
+                {"status": "cancelled"},
+                token=staff_token,
+            ).status
+            == 422,
+            "员工提交非法目标状态返回 422",
+        )
+        checker.check(
+            api.get("/staff/bookings").status == 401,
+            "未登录访问员工接口返回 401",
+        )
 
     # 汇总
     print(f"\n汇总: 通过 {checker.passed} / 失败 {checker.failed}")

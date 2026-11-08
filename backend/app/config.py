@@ -49,6 +49,14 @@ class Settings:
         "MEDITOUR_SEED_DEMO_USER", ""
     ).strip().lower() in {"1", "true", "yes", "on"}
 
+    # 员工角色白名单（逗号分隔邮箱）。登录时命中名单会授予 staff，
+    # 但不会自动创建账号；撤销请用 scripts/manage_staff.py --revoke。
+    STAFF_EMAILS: list[str] = [
+        email.strip().lower()
+        for email in os.getenv("MEDITOUR_STAFF_EMAILS", "").split(",")
+        if email.strip()
+    ]
+
     # 忘记密码令牌有效期（分钟）。
     RESET_TOKEN_EXPIRE_MINUTES = int(
         os.getenv("MEDITOUR_RESET_TOKEN_EXPIRE_MINUTES", "30")

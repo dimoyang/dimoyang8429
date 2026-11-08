@@ -45,6 +45,7 @@ from app.security import (
     hash_reset_token,
     verify_password,
 )
+from app.staff import sync_role_on_login
 from app.token_service import is_revoked, purge_expired, revoke
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -96,8 +97,15 @@ def login(
         )
 
     rate_limit.clear(client_ip, email)
+    # 命中员工白名单则在登录时授予 staff；角色变更立即对新令牌生效。
+    if sync_role_on_login(db, user):
+        db.commit()
     access_token, refresh_token = create_token_pair(user.id, user.token_version)
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        role=user.role,
+    )
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -138,7 +146,11 @@ def refresh_tokens(
         raise _invalid_token("Refresh token has already been used")
 
     access_token, refresh_token = create_token_pair(user.id, user.token_version)
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        role=user.role,
+    )
 
 
 @router.post("/logout")
