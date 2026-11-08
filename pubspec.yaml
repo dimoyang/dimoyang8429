@@ -36,15 +36,11 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-  # 字体配置（暂时注释，等待字体文件准备就绪）
-  # fonts:
-  #   - family: Inter
-  #     fonts:
-  #       - asset: assets/fonts/Inter-Regular.ttf
-  #       - asset: assets/fonts/Inter-Medium.ttf
-  #         weight: 500
-  #       - asset: assets/fonts/Inter-SemiBold.ttf
-  #         weight: 600
+  # 字体：刻意不打包字体文件。
+  # 四语文案包含中日韩字符，完整 CJK 字体通常 5–10MB，Web 端会显著拖慢首屏；
+  # 只内置拉丁字体会让中文回退到系统字体，出现混排。因此统一使用各平台系统字体
+  # （iOS/macOS PingFang、Android Noto、Windows 微软雅黑、Web 按语言回退），
+  # assets/fonts/ 仅保留 .gitkeep 占位；后续如需品牌字体，应引入子集化字体再启用。
   
   # 多语言支持
   generate: true
