@@ -36,7 +36,10 @@ uvicorn app.main:app --reload --port 8000
 | `MEDITOUR_ACCESS_TOKEN_EXPIRE_DAYS` | 否 | `7` | access token 有效期（天） |
 | `MEDITOUR_REFRESH_TOKEN_EXPIRE_DAYS` | 否 | `30` | refresh token 有效期（天） |
 | `MEDITOUR_RESET_TOKEN_EXPIRE_MINUTES` | 否 | `30` | 忘记密码令牌有效期（分钟） |
-| `MEDITOUR_PUBLIC_BASE_URL` | 否 | `http://localhost:8123` | 重置邮件里链接的站点地址 |
+| `MEDITOUR_EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES` | 否 | `60` | 邮箱验证令牌有效期（分钟） |
+| `MEDITOUR_PUBLIC_BASE_URL` | 否 | `http://localhost:8123` | 邮件里链接的站点地址（重置密码、验证邮箱） |
+| `MEDITOUR_ENV` | 否 | `development` | 运行环境；设为 `production` 时 `/metrics` 默认关闭 |
+| `MEDITOUR_METRICS_ENABLED` | 否 | 开发 `true` / 生产 `false` | 是否开放 `/metrics`；显式设置优先于环境默认值 |
 | `MEDITOUR_MAIL_BACKEND` | 否 | `file` | 邮件实现：`file`（开发，写 outbox 文件）或 `smtp`（生产） |
 | `MEDITOUR_MAIL_OUTBOX` | 否 | `backend/var/mail_outbox.log` | `file` 后端的输出文件，已被 `.gitignore` 忽略 |
 | `MEDITOUR_SMTP_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_FROM` / `_STARTTLS` | 否 | 空 / `587` / 空 / 空 / `no-reply@meditour.local` / 开 | `smtp` 后端配置位 |
@@ -172,11 +175,34 @@ uvicorn app.main:app --reload --port 8000
 
 - `POST /api/v1/auth/login` 返回 `access_token` 与 `refresh_token`，原有字段含义不变。
 - `POST /api/v1/auth/refresh` 用 refresh token 换新令牌；旧 refresh token 立即失效，重复使用返回 401。
-- `POST /api/v1/auth/logout` 吊销当前 access token，可选在请求体传入 `refresh_token` 一并吊销。
+- `POST /api/v1/auth/logout` 吊销当前设备会话：当前 access token、可选的 refresh token，以及同一会话里更早签发但尚未过期的 access token 一并失效。前端登出后应丢弃本地令牌并重新登录。
 - 吊销名单存放在数据库表 `token_revocations`（按 `jti`），服务和进程重启后仍然有效；过期记录在刷新/登出时顺带清理。
+- 登录签发的 access/refresh token 带 `sid`，绑定到 `auth_sessions` 里的一次登录会话；单独吊销该会话后，即使 access token 未过期也会立即被拒绝。上线前签发、没有 `sid` 的旧令牌不受会话吊销影响，只能等自然过期。
 - 旧版本签发、没有 `type`/`jti` 的 access token 仍可继续使用；这类令牌无法被登出吊销，会在过期后自然失效。
 - 令牌载荷带 `ver`（用户 `token_version`）；改密、重置密码、注销账号会自增该版本，使该用户所有已签发的 access/refresh 令牌立即失效。旧令牌缺少 `ver` 时按 `0` 处理，兼容上线前签发的令牌。
 - 所有 401 的错误体保持 `{"detail": "..."}` 字符串形状。
+
+## 邮箱验证
+
+- 注册成功后立即按 `preferred_language` 发送验证邮件（`zh/en/de/fr`，复用现有 HTML + 纯文本模板机制）；发送失败不回滚注册，也不改变响应。
+- `POST /api/v1/auth/email-verification/confirm`，请求体 `{"token": "..."}`：公开接口，令牌默认 60 分钟有效、只能成功使用一次；成功返回 `200`，无效/过期/已使用统一返回 `400`。
+- `POST /api/v1/auth/email-verification/request`：需要 Bearer 鉴权，重发验证邮件。已验证的账号不再发信，但无论当前是否已验证、发信是否成功，都返回**同一个** `200` 响应；重发会使之前未使用的令牌作废。
+- 验证状态通过 `email_verified` 返回：`POST /auth/register`、`GET /auth/me`，以及登录/刷新响应（`TokenResponse`）都带该字段。
+- **当前不阻断登录**：未验证用户与已验证用户的登录、下单、导出等权限完全相同。这是为了不打断前端尚未做验证引导的现有流程。
+- **上线前是否强制验证需要产品决策**（例如未验证只能浏览、不能下单，或登录后限制部分功能）。后端目前没有硬编码拦截；产品确认后需要另行实现并同步前端。
+
+## 会话管理
+
+- `GET /api/v1/auth/sessions`：需要 Bearer，列出当前用户未吊销且未过期的会话。每项只包含：
+  - `id`：随机会话标识（不是令牌）；
+  - `created_at`、`last_used_at`；
+  - `user_agent`：截断到 200 字符；
+  - `ip`：IPv4 打码最后一段、IPv6 只保留前两段；
+  - `current`：是否当前请求所用会话。
+  **不返回 access/refresh token、jti 或完整 IP。**
+- `DELETE /api/v1/auth/sessions/{id}`：吊销自己的单个会话；不存在、属于他人或已吊销统一返回 `404`。吊销后该会话的 access/refresh 令牌立即失效。
+- `POST /api/v1/auth/sessions/revoke-all`：吊销全部会话并自增 `token_version`，已经签发的令牌（包括当前令牌）立即失效。
+- 选型：`token_revocations` 只记录已吊销的 jti，缺少设备元信息，也无法表达“会话仍有效但某个 access token 已单独登出”；因此新增正向表 `auth_sessions`，每次登录一行，refresh 轮换沿用同一行，只更新 jti 与最后使用时间。两张表职责不同，不合并。
 
 ## 账号闭环
 
@@ -196,7 +222,10 @@ uvicorn app.main:app --reload --port 8000
 
 ## 邮件发送（开发 / 生产）
 
-- 重置密码邮件是 HTML + 纯文本双版本（`app/mail_templates.py`），语言取用户 `preferred_language`，支持 `zh/en/de/fr`；`zh-CN`、`de_DE` 这类地区变体归一到主语言，不认识的语言回退英文。
+- 重置密码、邮箱验证邮件都是 HTML + 纯文本双版本（`app/mail_templates.py`），语言取用户 `preferred_language`，支持 `zh/en/de/fr`；`zh-CN`、`de_DE` 这类地区变体归一到主语言，不认识的语言回退英文。
+- 本批注册流程实际生成的验证邮件预览（中文用户）：
+  `backend/var/mail_preview/20261108T025150416034Z-6b0aaaa4.eml`，主题
+  `验证你的 MediTour 邮箱`，同样包含 `text/plain` 与 `text/html` 两个 part。验证邮件的 outbox 索引行额外带 `kind=email_verification`，便于脚本区分重置令牌与验证令牌。
 - 开发默认 `MEDITOUR_MAIL_BACKEND=file`：
   - 完整邮件（含 HTML 与纯文本两个 part）写成 `.eml`，落在 `backend/var/mail_preview/`（可用 `MEDITOUR_MAIL_PREVIEW_DIR` 覆盖），可直接用邮件客户端打开看效果；
   - `backend/var/mail_outbox.log` 只保留一行索引（收件人、主题、`token=`、`.eml` 文件名），**不再写入完整重置链接**，该文件已被 `.gitignore` 忽略。
@@ -326,6 +355,24 @@ python scripts/import_translations.py var/translations.csv
   堆栈只进服务端日志（经脱敏），响应体不含异常类名、消息或 traceback。
   错误体形状与现有的 400/401/403/404/409/422 保持一致，前端解析逻辑不需要改动。
 
+## 运行指标 `/metrics`
+
+`GET /metrics` 固定在根路径（不在 `/api/v1` 下），返回 `text/plain`：
+
+- `meditour_requests_total`、`meditour_requests_by_method{method="..."}`
+- 状态码分布 `meditour_responses_total{status="..."}`
+- 毫秒耗时直方图 `meditour_request_duration_ms_bucket{le="..."}`、`_sum`、`_count`
+- 数据库连接池 `meditour_db_pool_size` / `_checked_out` / `_overflow`（非池化后端输出 `meditour_db_pool_available 0`）
+- `meditour_uptime_seconds`
+
+不包含路径参数、查询串、请求体、令牌或用户信息；`/metrics` 自身不计入请求数。
+
+选型：输出是 Prometheus 文本格式的兼容子集，但**没有引入 `prometheus_client`**。当前指标数量固定，官方客户端带来的注册表生命周期与多进程聚合问题大于收益。计数保存在进程内，多 worker 各自独立、重启清零；需要聚合时由 Prometheus 抓取。
+
+开关：`MEDITOUR_ENV=production` 时默认关闭，`MEDITOUR_METRICS_ENABLED=true/false` 可显式覆盖；关闭时返回 `404`（而不是 `403`，避免暴露端点存在）。
+
+安全提示：端点无鉴权，开放后任何能访问服务的人都能看到流量与错误分布。生产环境若开启，应在网关/内网层限制来源，或后续增加管理员鉴权；这是运维/产品决策，当前未硬编码。
+
 ## 错误码对照表
 
 下表按后端代码的实际行为逐条整理，方便前端按状态码分流。除健康检查的 503 外，错误响应体统一为
@@ -333,19 +380,19 @@ python scripts/import_translations.py var/translations.csv
 
 | 状态码 | 含义 | 触发场景 |
 | --- | --- | --- |
-| 400 | 请求格式合法，但业务前置条件不满足 | `POST /auth/password-reset/confirm` 令牌不存在、已使用或已过期（统一 `Invalid or expired reset token`）；`POST /auth/change-password` 当前密码错误；`DELETE /auth/account` 密码错误 |
+| 400 | 请求格式合法，但业务前置条件不满足 | `POST /auth/password-reset/confirm` 令牌不存在、已使用或已过期（统一 `Invalid or expired reset token`）；`POST /auth/email-verification/confirm` 令牌不存在、已使用或已过期（统一 `Invalid or expired verification token`）；`POST /auth/change-password` 当前密码错误；`DELETE /auth/account` 密码错误 |
 | 401 | 未认证或凭据失效 | 任意需要 Bearer 的端点：缺少/为空/无效/过期/已吊销的 access token、`token_version` 不匹配、账号已注销（`Not authenticated` 或 `Invalid or expired token`，带 `WWW-Authenticate: Bearer`）；`POST /auth/login` 邮箱或密码错误（含已注销账号）；`POST /auth/refresh` refresh token 无效、过期、重复使用或所属用户失效；`POST /auth/logout` access/refresh token 无效，或 refresh token 不属于当前用户 |
 | 403 | 已认证但权限不足 | 非 `staff` 角色访问 `/staff/*` 端点，`detail="Staff privileges required"`。普通用户即使拥有该订单也不能借此修改状态 |
-| 404 | 资源不存在，或存在但不属于当前用户 | `POST /bookings/` 套餐不存在**或已下架**（下架套餐按不存在处理，不暴露其存在）；`POST /bookings/{id}/cancel`、`GET /staff/bookings/{id}`、`PATCH /staff/bookings/{id}/status` 订单不存在（用户侧与不存在/属于他人共用一个 404）；`GET/PUT/DELETE /itineraries/{id}` 行程不存在或属于他人；`GET /destinations/{id}` 目的地不存在；`/staff/packages|hospitals|destinations/{id}` 目标不存在 |
+| 404 | 资源不存在，或存在但不属于当前用户 | `POST /bookings/` 套餐不存在**或已下架**（下架套餐按不存在处理，不暴露其存在）；`POST /bookings/{id}/cancel`、`GET /staff/bookings/{id}`、`PATCH /staff/bookings/{id}/status` 订单不存在（用户侧与不存在/属于他人共用一个 404）；`GET/PUT/DELETE /itineraries/{id}` 行程不存在或属于他人；`GET /destinations/{id}` 目的地不存在；`/staff/packages|hospitals|destinations/{id}` 目标不存在；`DELETE /auth/sessions/{id}` 会话不存在、属于他人或已吊销；`GET /metrics` 指标端点关闭时 |
 | 409 | 与资源当前状态冲突 | `POST /auth/register` 邮箱已注册；`POST /bookings/` 同用户同套餐同预约时间已有 `pending` 订单；`POST /bookings/{id}/cancel` 当前状态不是 `pending`；`PATCH /staff/bookings/{id}/status` 跳过中间状态或对已结束订单再流转；员工删除套餐时仍有订单、删除医院时仍有套餐、删除目的地时仍被行程引用；创建目的地时 slug 已存在 |
 | 413 | 请求体过大 | 任意端点：请求体超过 `MEDITOUR_MAX_REQUEST_BYTES`（默认 10 MiB），`detail="Request body too large"`；`POST /staff/uploads`：文件大于 `MEDITOUR_UPLOAD_MAX_BYTES`（默认 5 MiB），`detail` 为限制字节数 |
 | 415 | 上传文件类型不受支持 | `POST /staff/uploads`：声明类型不是 JPEG/PNG/WebP，或文件头与声明类型不符（防止把非图片改成 `.png` 后缀上传） |
 | 422 | 请求体或查询参数校验失败 | 字段缺失/类型错误、邮箱格式、密码长度（6–72）、`notes` 超过 2000 字、预约时间不在未来、`contact_phone` 非 7–15 位、行程日期/目的地/每日编号不合法；分页 `page < 1`、`page_size < 1` 或 `> 100`；员工列表 `status` 不在 `pending/confirmed/completed/cancelled`；员工改状态的目标值不是 `confirmed/completed`；员工创建/更新套餐时 `hospital_id` 指向不存在的医院、`price ≤ 0`、`duration_days < 1`；目的地 slug 不符合 `^[a-z0-9][a-z0-9-]*$`；上传空文件；`lang` 不在 `zh/en/de/fr`（`detail` 为字符串 `Unsupported lang; supported values: ...`，其余为字段错误数组） |
 | 429 | 触发登录限流 | 仅 `POST /auth/login`：同一 IP + 邮箱 300 秒内失败 5 次，响应带 `Retry-After` 秒数；成功登录会清零计数 |
 | 503 | 依赖服务不可用 | 仅 `GET /health`：数据库 `SELECT 1` 失败，返回 `{"status":"error","database":"unavailable"}`（不是 `detail` 结构） |
-| 500 | 未预期的服务端异常 | 未做自定义处理，由 FastAPI/Starlette 默认返回；响应体不是 `{"detail": ...}`，前端应按未知错误处理并上报 |
+| 500 | 未预期的服务端异常 | 任意端点：由异常兜底中间件统一返回 `{"detail": "Internal server error"}`；堆栈只写服务端日志，不返回响应体 |
 
-成功状态码：`200` 常规读取/更新/登录/刷新/登出/改密/重置密码/导出；`201` 注册、创建订单、创建行程、创建套餐/医院/目的地、上传图片；`204` 删除行程、删除套餐/医院/目的地（无响应体）。
+成功状态码：`200` 常规读取/更新/登录/刷新/登出/改密/重置密码/验证邮箱/查询或吊销会话/导出；`201` 注册、创建订单、创建行程、创建套餐/医院/目的地、上传图片；`204` 删除行程、删除套餐/医院/目的地（无响应体）。
 
 ## 数据库迁移
 
@@ -372,6 +419,10 @@ python -m alembic stamp head
 留下的重复 pending 行：同一 `(user_id, package_id, appointment_date)` 保留 id 最小的一条，
 其余改为 `cancelled`（不删除订单，也不改动金额），然后创建索引。升级输出会打印处理条数；
 本机 `meditour.db` 上实测清理了 2 条，升级后重复组为 0。
+
+迁移 `d1a4b7c9e2f3` 新增 `users.email_verified_at`、`email_verification_tokens` 与
+`auth_sessions`，只创建结构和可空列，不改动已有行，可在现有数据上直接升级。
+当前 head 即 `d1a4b7c9e2f3`。
 
 ## PostgreSQL 切换脚手架（未验证）
 
@@ -515,11 +566,14 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（90 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id。
+当前覆盖（103 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出与关闭开关。
 
 ## 接口验证脚本
 
-`scripts/verify_api.py` 只用 Python 标准库，覆盖注册、登录（含限流）、鉴权、健康检查、套餐、医院、订单创建/校验/列表/取消、令牌刷新与登出、CORS、request id、错误体形状、账号闭环、多语言回退、数据导出、分页边界与员工订单操作（默认 107 项断言；提供 `--staff-email/--staff-password` 时额外验证员工接口，共 125 项）。本批新增的员工内容运营与图片上传端点由 pytest 覆盖，尚未加入该脚本。
+`scripts/verify_api.py` 只用 Python 标准库，覆盖注册、登录（含限流）、鉴权、健康检查、套餐、医院、订单创建/校验/列表/取消、令牌刷新与登出、CORS、request id、错误体形状、账号闭环、多语言回退、数据导出、分页边界与员工订单操作（默认 108 项断言；提供 `--staff-email/--staff-password` 时额外验证员工接口，共 126 项）。本批新增的员工内容运营与图片上传端点由 pytest 覆盖，尚未加入该脚本。
+
+登出会吊销整个设备会话，因此脚本在验证「登出后 access/refresh 被拒绝」之后会重新登录，
+后续段落使用新会话的令牌；这不是放宽校验，而是避免复用已登出的令牌。
 
 ```bash
 # 先启动后端，再执行

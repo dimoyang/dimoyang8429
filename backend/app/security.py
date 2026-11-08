@@ -33,7 +33,11 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def _create_token(
-    user_id: int, token_type: str, expires_days: int, token_version: int = 0
+    user_id: int,
+    token_type: str,
+    expires_days: int,
+    token_version: int = 0,
+    sid: str | None = None,
 ) -> str:
     now = datetime.now(timezone.utc)
     payload = {
@@ -44,25 +48,42 @@ def _create_token(
         "jti": uuid4().hex,
         "ver": token_version,
     }
+    # sid 把令牌绑定到某次登录会话；没有 sid 的是本次升级前签发的旧令牌。
+    if sid:
+        payload["sid"] = sid
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def create_access_token(user_id: int, token_version: int = 0) -> str:
+def create_access_token(
+    user_id: int, token_version: int = 0, sid: str | None = None
+) -> str:
     return _create_token(
-        user_id, "access", settings.ACCESS_TOKEN_EXPIRE_DAYS, token_version
+        user_id,
+        "access",
+        settings.ACCESS_TOKEN_EXPIRE_DAYS,
+        token_version,
+        sid,
     )
 
 
-def create_refresh_token(user_id: int, token_version: int = 0) -> str:
+def create_refresh_token(
+    user_id: int, token_version: int = 0, sid: str | None = None
+) -> str:
     return _create_token(
-        user_id, "refresh", settings.REFRESH_TOKEN_EXPIRE_DAYS, token_version
+        user_id,
+        "refresh",
+        settings.REFRESH_TOKEN_EXPIRE_DAYS,
+        token_version,
+        sid,
     )
 
 
-def create_token_pair(user_id: int, token_version: int = 0) -> tuple[str, str]:
+def create_token_pair(
+    user_id: int, token_version: int = 0, sid: str | None = None
+) -> tuple[str, str]:
     return (
-        create_access_token(user_id, token_version),
-        create_refresh_token(user_id, token_version),
+        create_access_token(user_id, token_version, sid),
+        create_refresh_token(user_id, token_version, sid),
     )
 
 

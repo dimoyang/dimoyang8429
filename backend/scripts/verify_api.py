@@ -867,6 +867,19 @@ def main() -> int:
         f"实际 {refresh_after_logout.status}",
     )
 
+    # 登出会吊销整个设备会话：同一会话里更早签发的 access token 也一起失效。
+    # 后续段落需要有效令牌，这里重新登录拿到一个全新会话。
+    relogin = api.post_form(
+        "/auth/login", {"username": email, "password": password}
+    )
+    relogin_body = relogin.body if isinstance(relogin.body, dict) else {}
+    token = relogin_body.get("access_token")
+    checker.check(
+        relogin.status == 200 and is_str(token),
+        "登出后可重新登录（后续段落使用新会话）",
+        f"实际 {relogin.status}",
+    )
+
     # 9. CORS 预检
     checker.section(9, "CORS 预检")
     origin = "http://localhost:8123"

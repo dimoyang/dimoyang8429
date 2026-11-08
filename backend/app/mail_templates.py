@@ -92,24 +92,94 @@ _TEMPLATES: dict[str, dict[str, str]] = {
 }
 
 
+_VERIFY_TEMPLATES: dict[str, dict[str, str]] = {
+    "en": {
+        "subject": "Verify your MediTour email",
+        "heading": "Verify your email",
+        "intro": (
+            "Thanks for creating a MediTour account. Confirm your email "
+            "address to finish setting up your account."
+        ),
+        "cta": "Verify email",
+        "expiry": (
+            "This link expires in {minutes} minutes and can only be "
+            "used once."
+        ),
+        "ignore": (
+            "If you did not create a MediTour account, you can safely "
+            "ignore this email."
+        ),
+        "footer": "MediTour will never ask you for your password by email.",
+    },
+    "zh": {
+        "subject": "验证你的 MediTour 邮箱",
+        "heading": "验证邮箱",
+        "intro": "感谢注册 MediTour。请确认你的邮箱地址，以完成账号设置。",
+        "cta": "验证邮箱",
+        "expiry": "该链接将在 {minutes} 分钟后失效，且只能使用一次。",
+        "ignore": "如果这不是你本人的操作，可以忽略这封邮件。",
+        "footer": "MediTour 不会通过邮件索取你的密码。",
+    },
+    "de": {
+        "subject": "Bestätige deine MediTour-E-Mail",
+        "heading": "E-Mail-Adresse bestätigen",
+        "intro": (
+            "Danke für deine Registrierung bei MediTour. Bitte bestätige "
+            "deine E-Mail-Adresse, um dein Konto abzuschließen."
+        ),
+        "cta": "E-Mail bestätigen",
+        "expiry": (
+            "Dieser Link ist {minutes} Minuten gültig und kann nur "
+            "einmal verwendet werden."
+        ),
+        "ignore": (
+            "Wenn du kein MediTour-Konto erstellt hast, kannst du diese "
+            "E-Mail ignorieren."
+        ),
+        "footer": (
+            "MediTour fragt dich niemals per E-Mail nach deinem Passwort."
+        ),
+    },
+    "fr": {
+        "subject": "Vérifiez votre adresse e-mail MediTour",
+        "heading": "Vérifiez votre adresse e-mail",
+        "intro": (
+            "Merci d'avoir créé un compte MediTour. Confirmez votre "
+            "adresse e-mail pour finaliser la création de votre compte."
+        ),
+        "cta": "Vérifier l'adresse e-mail",
+        "expiry": (
+            "Ce lien expire dans {minutes} minutes et ne peut être "
+            "utilisé qu'une seule fois."
+        ),
+        "ignore": (
+            "Si vous n'avez pas créé de compte MediTour, vous pouvez "
+            "ignorer cet e-mail."
+        ),
+        "footer": (
+            "MediTour ne vous demandera jamais votre mot de passe "
+            "par e-mail."
+        ),
+    },
+}
+
+
 def normalize_mail_language(language: str | None) -> str:
     """`zh-CN` / `de_DE` 归一到 `zh` / `de`；不认识的回退 `en`。"""
     candidate = (language or "").strip().lower().replace("_", "-").split("-")[0]
     return candidate if candidate in _TEMPLATES else "en"
 
 
-def render_password_reset(
-    language: str | None, reset_url: str, minutes: int
+def _render(
+    strings: dict[str, str], lang: str, url: str, minutes: int
 ) -> RenderedEmail:
-    lang = normalize_mail_language(language)
-    strings = _TEMPLATES[lang]
     expiry = strings["expiry"].format(minutes=minutes)
 
     text = "\n".join(
         [
             strings["intro"],
             "",
-            f"{strings['cta']}: {reset_url}",
+            f"{strings['cta']}: {url}",
             "",
             expiry,
             "",
@@ -120,7 +190,7 @@ def render_password_reset(
         ]
     )
 
-    safe_url = escape(reset_url, quote=True)
+    safe_url = escape(url, quote=True)
     html = f"""<!DOCTYPE html>
 <html lang="{lang}">
 <head>
@@ -146,3 +216,17 @@ def render_password_reset(
 </html>
 """
     return RenderedEmail(subject=strings["subject"], text=text, html=html)
+
+
+def render_password_reset(
+    language: str | None, reset_url: str, minutes: int
+) -> RenderedEmail:
+    lang = normalize_mail_language(language)
+    return _render(_TEMPLATES[lang], lang, reset_url, minutes)
+
+
+def render_email_verification(
+    language: str | None, verify_url: str, minutes: int
+) -> RenderedEmail:
+    lang = normalize_mail_language(language)
+    return _render(_VERIFY_TEMPLATES[lang], lang, verify_url, minutes)

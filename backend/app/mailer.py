@@ -16,7 +16,11 @@ from email.message import EmailMessage
 from pathlib import Path
 
 from app.config import settings
-from app.mail_templates import RenderedEmail, render_password_reset
+from app.mail_templates import (
+    RenderedEmail,
+    render_email_verification,
+    render_password_reset,
+)
 
 logger = logging.getLogger("app.mail")
 
@@ -42,6 +46,33 @@ def send_password_reset(
     )
 
 
+def send_email_verification(
+    to: str, token: str, language: str | None = None
+) -> Path | None:
+    """发送邮箱验证邮件；file 后端返回生成的 .eml 路径，smtp 返回 None。"""
+    verify_url = (
+        f"{settings.PUBLIC_BASE_URL.rstrip('/')}/verify-email?token={token}"
+    )
+    rendered = render_email_verification(
+        language,
+        verify_url,
+        settings.EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES,
+    )
+    message = _build_message(to, rendered)
+
+    if settings.MAIL_BACKEND == "smtp":
+        _send_smtp(message)
+        return None
+    if settings.MAIL_BACKEND == "file":
+        return _write_outbox(
+            to, rendered, message, token, kind="email_verification"
+        )
+    raise RuntimeError(
+        f"未知的 MEDITOUR_MAIL_BACKEND: {settings.MAIL_BACKEND!r}，"
+        "可选值为 file 或 smtp"
+    )
+
+
 def _build_message(to: str, rendered: RenderedEmail) -> EmailMessage:
     message = EmailMessage()
     message["Subject"] = rendered.subject
@@ -54,18 +85,28 @@ def _build_message(to: str, rendered: RenderedEmail) -> EmailMessage:
 
 
 def _write_outbox(
-    to: str, rendered: RenderedEmail, message: EmailMessage, token: str
+    to: str,
+    rendered: RenderedEmail,
+    message: EmailMessage,
+    token: str,
+    kind: str | None = None,
 ) -> Path:
     preview = _write_preview(message)
     settings.MAIL_OUTBOX.parent.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    # 索引行不写完整 reset_url：链接是敏感信息，只保留 token 供开发脚本使用。
+    suffix = f"\tkind={kind}" if kind else ""
+    # 索引行不写完整链接：链接是敏感信息，只保留 token 供开发脚本使用。
     with settings.MAIL_OUTBOX.open("a", encoding="utf-8") as handle:
         handle.write(
             f"{timestamp}\tto={to}\tsubject={rendered.subject}\t"
-            f"token={token}\tpreview={preview.name}\n"
+            f"token={token}\tpreview={preview.name}{suffix}\n"
         )
-    logger.info("password_reset_email_written", extra={"path": str(preview)})
+    event = (
+        "email_verification_email_written"
+        if kind == "email_verification"
+        else "password_reset_email_written"
+    )
+    logger.info(event, extra={"path": str(preview)})
     return preview
 
 

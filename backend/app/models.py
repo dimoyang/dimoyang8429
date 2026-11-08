@@ -45,8 +45,17 @@ class User(Base):
     token_version: Mapped[int] = mapped_column(Integer, default=0)
     # 软删除标记：保留用户行以维持订单外键，同时禁止登录。
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # 邮箱验证时间：为空表示未验证。当前不阻断登录，只作为状态返回给前端引导。
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
 
     bookings: Mapped[list["Booking"]] = relationship(back_populates="user")
+
+    @property
+    def email_verified(self) -> bool:
+        """供响应模型直接读取的派生字段。"""
+        return self.email_verified_at is not None
 
 
 class Hospital(Base):
@@ -218,6 +227,52 @@ class PasswordResetToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class EmailVerificationToken(Base):
+    """邮箱验证令牌：只存 SHA-256 摘要，短时效且一次性。"""
+
+    __tablename__ = "email_verification_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class AuthSession(Base):
+    """一次登录对应的设备会话；refresh token 轮换时沿用同一行。
+
+    与 TokenRevocation 的分工：
+    - `token_revocations` 是“已吊销令牌”的反向名单，只记录 jti，供 access/refresh
+      校验使用，不含设备信息；
+    - `auth_sessions` 是“有效会话”的正向登记，保存创建时间、最后使用时间和
+      粗略来源，用于会话列表与单设备吊销。
+    两者职责不同，不合并；否则列表查询要先扫吊销表，且无法表达“会话仍有效但
+    access token 已单独登出”。
+    """
+
+    __tablename__ = "auth_sessions"
+    __table_args__ = (
+        # 列表查询按用户过滤未吊销会话；前缀也覆盖仅按 user_id 的查询。
+        Index("ix_auth_sessions_user_active", "user_id", "revoked_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    # 对客户端暴露的会话标识（随机串），同时写入 access/refresh token 的 sid。
+    sid: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    # 当前有效的 refresh token jti；轮换后更新为新值。
+    refresh_jti: Mapped[str] = mapped_column(String(64))
+    # 粗略来源：只保留截断后的 User-Agent 与打码 IP，不存原始请求头。
+    user_agent: Mapped[str] = mapped_column(String(200), default="")
+    ip: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_used_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class AuditLog(Base):

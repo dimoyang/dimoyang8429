@@ -11,6 +11,7 @@ from app.config import settings
 from app.database import Base, SessionLocal, engine
 from app.db_migrate import ensure_database_schema
 from app.logging_config import RequestLoggingMiddleware, configure_logging
+from app.metrics import MetricsMiddleware
 from app.middleware import (
     ErrorFallbackMiddleware,
     RequestSizeLimitMiddleware,
@@ -27,6 +28,7 @@ from app.routers import (
     staff_content,
     uploads,
 )
+from app.routers import metrics as metrics_router
 from app.seed import seed_data
 
 
@@ -73,8 +75,9 @@ app = FastAPI(
 )
 
 # 中间件按「后添加的在最外层」生效。从内到外的顺序是：
-# 请求日志 → 请求体限流 → 500 兜底 → 安全头 → CORS。
-# 这样 413/500 也经过安全头与 CORS，异常兜底日志仍能拿到 request_id。
+# 请求日志 → 请求体限流 → 500 兜底 → 安全头 → CORS → 指标。
+# 这样 413/500 也经过安全头与 CORS，异常兜底日志仍能拿到 request_id；
+# 指标在最外层，能统计到中间件自身产生的 413/500。
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     RequestSizeLimitMiddleware, max_bytes=settings.MAX_REQUEST_BYTES
@@ -88,6 +91,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
 )
+app.add_middleware(MetricsMiddleware)
 
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
@@ -98,6 +102,8 @@ app.include_router(staff_content.router, prefix=settings.API_V1_PREFIX)
 app.include_router(uploads.router, prefix=settings.API_V1_PREFIX)
 app.include_router(destinations.router, prefix=settings.API_V1_PREFIX)
 app.include_router(itineraries.router, prefix=settings.API_V1_PREFIX)
+# 指标端点固定挂在根路径 /metrics（不放在 /api/v1 下），便于抓取配置。
+app.include_router(metrics_router.router)
 
 # 本地上传文件直接由后端静态服务提供。仅单机可用：
 # 多实例部署需要对象存储（见 app/storage.py）或把该目录挂到共享卷。

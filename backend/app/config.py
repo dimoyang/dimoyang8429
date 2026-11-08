@@ -10,6 +10,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 本地开发时允许用 backend/.env 提供值（该文件已被 .gitignore 忽略）。
 load_dotenv(BASE_DIR / ".env")
 
+# 只用于区分本机/生产默认值（例如指标端点是否默认开放），不参与业务逻辑。
+_ENVIRONMENT = os.getenv("MEDITOUR_ENV", "development").strip().lower()
+
 
 class Settings:
     """集中配置，币种只在这里定义一次。"""
@@ -61,6 +64,19 @@ class Settings:
     RESET_TOKEN_EXPIRE_MINUTES = int(
         os.getenv("MEDITOUR_RESET_TOKEN_EXPIRE_MINUTES", "30")
     )
+
+    # 邮箱验证令牌有效期（分钟）。短时效、一次性；当前不阻断未验证用户登录。
+    EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES = int(
+        os.getenv("MEDITOUR_EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES", "60")
+    )
+
+    # 运行环境：development / production。仅影响默认开关，不做硬编码限制。
+    ENVIRONMENT = _ENVIRONMENT
+    # /metrics 是否开放：开发默认开、生产默认关；显式设置时以环境变量为准。
+    METRICS_ENABLED: bool = os.getenv(
+        "MEDITOUR_METRICS_ENABLED",
+        "false" if _ENVIRONMENT == "production" else "true",
+    ).strip().lower() in {"1", "true", "yes", "on"}
 
     # 邮件实现：file（开发默认，写入 outbox 文件）/ smtp（生产配置位）。
     MAIL_BACKEND: str = os.getenv("MEDITOUR_MAIL_BACKEND", "file").strip().lower()

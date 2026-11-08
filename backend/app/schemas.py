@@ -24,6 +24,8 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     # 新增字段：客户端可据此决定是否展示员工入口；普通用户为 user。
     role: str = "user"
+    # 新增字段：邮箱验证状态。当前不阻断登录，客户端可据此展示引导。
+    email_verified: bool = False
 
 
 class RefreshRequest(BaseModel):
@@ -39,6 +41,23 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=6, max_length=72)
     full_name: str | None = None
     preferred_language: str = Field(default="en", max_length=10)
+
+
+class EmailVerificationConfirm(BaseModel):
+    token: str = Field(min_length=1, max_length=200)
+
+
+class SessionResponse(BaseModel):
+    """会话列表项：只暴露可识别设备的元信息，不返回任何令牌。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    created_at: datetime
+    last_used_at: datetime
+    user_agent: str
+    ip: str
+    current: bool = False
 
 
 class PasswordResetRequest(BaseModel):
@@ -68,6 +87,8 @@ class UserResponse(BaseModel):
     phone: str | None
     preferred_language: str
     role: str
+    # 派生字段：users.email_verified_at 是否已写入。当前不阻断登录。
+    email_verified: bool = False
 
 
 class HospitalResponse(BaseModel):

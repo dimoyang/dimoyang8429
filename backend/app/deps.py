@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
 from app.security import TokenError, decode_token
+from app.session_service import is_active_for_user
 from app.token_service import is_revoked
 
 # auto_error=False：缺失/格式错误的凭据也由我们统一返回 401（而非 403）。
@@ -36,6 +37,17 @@ def get_token_payload(
 
     if is_revoked(db, payload.get("jti")):
         raise _unauthorized("Invalid or expired token")
+
+    # 带 sid 的令牌绑定到一次登录会话；单独吊销该会话后立即失效。
+    # 没有 sid 的是升级前签发的旧令牌，只能等自然过期。
+    sid = payload.get("sid")
+    if sid:
+        try:
+            user_id = int(payload.get("sub", ""))
+        except (TypeError, ValueError):
+            raise _unauthorized("Invalid or expired token")
+        if not is_active_for_user(db, str(sid), user_id):
+            raise _unauthorized("Invalid or expired token")
     return payload
 
 
