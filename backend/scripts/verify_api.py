@@ -98,6 +98,16 @@ def is_str(value: object) -> bool:
     return type(value) is str
 
 
+def is_iso_datetime(value: object) -> bool:
+    if not is_str(value) or not value:
+        return False
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return True
+    except ValueError:
+        return False
+
+
 def fmt(value: object, limit: int = 260) -> str:
     if isinstance(value, (dict, list)):
         text = json.dumps(value, ensure_ascii=False)
@@ -468,6 +478,31 @@ def main() -> int:
     )
     checker.check(is_str(created_body.get("currency")), "currency 为 str")
     checker.check(is_str(created_body.get("status")), "status 为 str")
+    checker.check(
+        is_int(created_body.get("package_id"))
+        and created_body.get("package_id") == package_id,
+        "package_id 与请求一致",
+        f"实际 {fmt(created_body.get('package_id'))}",
+    )
+    checker.check(
+        is_str(created_body.get("package_name"))
+        and bool(created_body.get("package_name")),
+        "package_name 为非空 str",
+    )
+    checker.check(
+        is_str(created_body.get("package_name_en")),
+        "package_name_en 为 str",
+    )
+    checker.check(
+        is_iso_datetime(created_body.get("appointment_date")),
+        "appointment_date 为 ISO 8601",
+        fmt(created_body.get("appointment_date")),
+    )
+    checker.check(
+        is_iso_datetime(created_body.get("created_at")),
+        "created_at 为 ISO 8601",
+        fmt(created_body.get("created_at")),
+    )
     checker.note(
         "appointment_date 使用前端真实格式 2026-01-02T09:00:00.000，"
         f"服务端接受情况：{created.status}"
@@ -515,14 +550,45 @@ def main() -> int:
         "返回裸数组",
         f"实际 {bookings.status}，类型 {type(bookings.body).__name__}",
     )
-    checker.check(
-        any(
-            isinstance(item, dict) and item.get("id") == created_body.get("id")
+    created_item = next(
+        (
+            item
             for item in booking_list
+            if isinstance(item, dict) and item.get("id") == created_body.get("id")
         ),
+        None,
+    )
+    checker.check(
+        created_item is not None,
         "列表中能看到刚创建的订单",
         f"订单 id={created_body.get('id')}",
     )
+    if created_item is not None:
+        checker.check(
+            is_int(created_item.get("package_id"))
+            and created_item.get("package_id") == package_id,
+            "列表 package_id 与创建时一致",
+            f"实际 {fmt(created_item.get('package_id'))}",
+        )
+        checker.check(
+            is_str(created_item.get("package_name"))
+            and bool(created_item.get("package_name")),
+            "列表 package_name 为非空 str",
+        )
+        checker.check(
+            is_str(created_item.get("package_name_en")),
+            "列表 package_name_en 为 str",
+        )
+        checker.check(
+            is_iso_datetime(created_item.get("appointment_date")),
+            "列表 appointment_date 为 ISO 8601",
+            fmt(created_item.get("appointment_date")),
+        )
+        checker.check(
+            is_iso_datetime(created_item.get("created_at")),
+            "列表 created_at 为 ISO 8601",
+            fmt(created_item.get("created_at")),
+        )
 
     # 8. CORS 预检
     checker.section(8, "CORS 预检")

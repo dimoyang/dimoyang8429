@@ -5,7 +5,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
 from app.database import get_db
@@ -39,6 +39,7 @@ def create_booking(
         order_no=_generate_order_no(),
         user_id=current_user.id,
         package_id=package.id,
+        package=package,
         appointment_date=payload.appointment_date,
         contact_name=payload.contact_name,
         contact_phone=payload.contact_phone,
@@ -66,6 +67,7 @@ def list_my_bookings(
     return list(
         db.scalars(
             select(Booking)
+            .options(joinedload(Booking.package))
             .where(Booking.user_id == current_user.id)
             .order_by(Booking.id.desc())
         ).all()

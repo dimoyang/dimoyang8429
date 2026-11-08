@@ -82,6 +82,15 @@ class Booking(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped[User] = relationship(back_populates="bookings")
+    package: Mapped["MedicalPackage"] = relationship()
+
+    @property
+    def package_name(self) -> str:
+        return self.package.name if self.package is not None else ""
+
+    @property
+    def package_name_en(self) -> str:
+        return self.package.name_en if self.package is not None else ""
 
 
 class Destination(Base):

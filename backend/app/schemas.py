@@ -1,12 +1,13 @@
 """请求/响应模型：字段名与 Flutter 前端契约严格一致。"""
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     EmailStr,
     Field,
+    field_serializer,
     field_validator,
     model_validator,
 )
@@ -94,9 +95,26 @@ class BookingResponse(BaseModel):
 
     id: int
     order_no: str
+    package_id: int
+    package_name: str
+    package_name_en: str
+    appointment_date: datetime
     total_price: float
     currency: str
     status: str
+    created_at: datetime
+
+    @field_serializer("appointment_date")
+    def serialize_appointment_date(self, value: datetime) -> str:
+        """预约时间按前端传入的 naive 墙钟时间返回 ISO 8601。"""
+        return value.isoformat(timespec="seconds")
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        """创建时间按 UTC 返回，带 Z 后缀，避免客户端按本地时间解析。"""
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 class DestinationExperience(BaseModel):
