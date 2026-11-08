@@ -14,6 +14,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -91,6 +92,17 @@ class Booking(Base):
         Index("ix_bookings_status_created_at", "status", "created_at"),
         # 员工列表不筛选状态时的全局时间排序。
         Index("ix_bookings_created_at", "created_at"),
+        # 并发兜底：同一用户、套餐、预约时间只允许一个 pending 订单。
+        # 只约束 pending，因此取消后可以重新预约同一时段。
+        Index(
+            "uq_bookings_pending_slot",
+            "user_id",
+            "package_id",
+            "appointment_date",
+            unique=True,
+            sqlite_where=text("status = 'pending'"),
+            postgresql_where=text("status = 'pending'"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

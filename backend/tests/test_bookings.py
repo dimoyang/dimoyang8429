@@ -1,5 +1,7 @@
 """预约列表字段与请求校验测试。"""
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 
@@ -120,6 +122,59 @@ def test_duplicate_pending_booking_is_rejected(client, auth_headers) -> None:
         headers=auth_headers,
     )
     assert other_date.status_code == 201
+
+
+def test_concurrent_duplicate_booking_is_settled_by_unique_index(
+    client, auth_headers
+) -> None:
+    """并发下单只能有一个 201；其余由部分唯一索引兜底并转为 409。
+
+    串行重复提交走的是应用层预检查，覆盖不到“查重与插入之间被其他请求插入”
+    的竞态，所以这里用多线程同时发起请求。
+    """
+    appointment = future_iso(70)
+    attempts = 8
+    barrier = threading.Barrier(attempts)
+
+    def attempt() -> int:
+        barrier.wait(timeout=10)
+        response = client.post(
+            "/api/v1/bookings/",
+            json=booking_payload(appointment_date=appointment),
+            headers=auth_headers,
+        )
+        return response.status_code
+
+    with ThreadPoolExecutor(max_workers=attempts) as pool:
+        statuses = list(pool.map(lambda _: attempt(), range(attempts)))
+
+    assert statuses.count(201) == 1, statuses
+    assert statuses.count(409) == attempts - 1, statuses
+    assert set(statuses) <= {201, 409}
+
+    expected = datetime.fromisoformat(appointment).isoformat(timespec="seconds")
+    pending = [
+        item
+        for item in client.get("/api/v1/bookings/", headers=auth_headers).json()
+        if item["appointment_date"] == expected and item["status"] == "pending"
+    ]
+    assert len(pending) == 1
+
+    # 部分唯一索引只约束 pending：取消后同一时段可以重新预约。
+    booking_id = pending[0]["id"]
+    assert (
+        client.post(
+            f"/api/v1/bookings/{booking_id}/cancel", headers=auth_headers
+        ).status_code
+        == 200
+    )
+    rebooked = client.post(
+        "/api/v1/bookings/",
+        json=booking_payload(appointment_date=appointment),
+        headers=auth_headers,
+    )
+    assert rebooked.status_code == 201
+    assert rebooked.json()["status"] == "pending"
 
 
 def test_cancel_pending_booking_and_reject_second_cancel(

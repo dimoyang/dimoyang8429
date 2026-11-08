@@ -5,6 +5,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
@@ -14,6 +15,11 @@ from app.models import Booking, MedicalPackage, User
 from app.schemas import BookingCreate, BookingResponse
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
+
+
+DUPLICATE_PENDING_DETAIL = (
+    "A pending booking for this package and date already exists"
+)
 
 
 def _generate_order_no() -> str:
@@ -56,18 +62,16 @@ def create_booking(
 
     # 同一用户对同一套餐、同一预约时间只允许存在一个待处理订单。
     # 精确到秒级预约时间意味着不同日期的正常预约不受影响。
-    duplicate = db.scalar(
-        select(Booking).where(
-            Booking.user_id == current_user.id,
-            Booking.package_id == package.id,
-            Booking.appointment_date == payload.appointment_date,
-            Booking.status == "pending",
-        )
+    slot = (
+        Booking.user_id == current_user.id,
+        Booking.package_id == package.id,
+        Booking.appointment_date == payload.appointment_date,
+        Booking.status == "pending",
     )
-    if duplicate is not None:
+    if db.scalar(select(Booking).where(*slot)) is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="A pending booking for this package and date already exists",
+            detail=DUPLICATE_PENDING_DETAIL,
         )
 
     booking = Booking(
@@ -89,7 +93,18 @@ def create_booking(
         status="pending",
     )
     db.add(booking)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # 并发兜底：查重与插入不是原子操作，部分唯一索引
+        # uq_bookings_pending_slot 只允许一个请求成功，其余在这里转成 409。
+        db.rollback()
+        if db.scalar(select(Booking).where(*slot)) is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=DUPLICATE_PENDING_DETAIL,
+            )
+        raise
     db.refresh(booking)
     return booking
 
