@@ -50,7 +50,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                   controller: _searchController,
                   autofocus: true,
                   textInputAction: TextInputAction.search,
-                  onChanged: (_) => setState(() {}),
+                  onChanged: _onQueryChanged,
                   decoration: InputDecoration(
                     hintText: l10n.searchHint,
                     prefixIcon: const Icon(Icons.search),
@@ -59,6 +59,8 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                         : IconButton(
                             tooltip: l10n.clearSearch,
                             onPressed: () {
+                              _queryRevision++;
+                              _appliedQuery = '';
                               _searchController.clear();
                               setState(() {});
                             },
@@ -164,6 +166,24 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
       ].join(' ').toLowerCase();
       return searchableText.contains(query);
     }).toList();
+  }
+
+  String _appliedQuery = '';
+  int _queryRevision = 0;
+
+  /// 输入防抖：停止输入约 280ms 后才触发一次列表重建。
+  void _onQueryChanged(String value) {
+    final revision = ++_queryRevision;
+    Future<void>.delayed(const Duration(milliseconds: 280), () {
+      if (!mounted || revision != _queryRevision) {
+        return;
+      }
+      if (value == _appliedQuery) {
+        return;
+      }
+      _appliedQuery = value;
+      setState(() {});
+    });
   }
 }
 

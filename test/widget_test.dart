@@ -102,12 +102,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(TextField), findsOneWidget);
 
+    // 搜索输入有 280ms 防抖，等待防抖窗口过去再断言筛选结果。
     await tester.enterText(find.byType(TextField), 'Great Wall');
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(DestinationCard), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), '上海');
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(DestinationCard), findsOneWidget);
 
     await tester.tap(find.byTooltip('收藏目的地'));
