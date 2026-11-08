@@ -29,7 +29,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8000/api/v1"
@@ -439,9 +439,12 @@ def main() -> int:
     # 6. /bookings/ 创建
     checker.section(6, "/bookings/ 创建订单")
     package_id = items[0].get("id") if items and isinstance(items[0], dict) else None
+    appointment_date = (
+        datetime.now() + timedelta(days=60)
+    ).replace(hour=9, minute=0, second=0, microsecond=0)
     booking_payload = {
         "package_id": package_id,
-        "appointment_date": "2026-01-02T09:00:00.000",
+        "appointment_date": appointment_date.isoformat(),
         "contact_name": "API Verifier",
         "contact_phone": "+8613800000000",
         "contact_email": email,
@@ -504,7 +507,7 @@ def main() -> int:
         fmt(created_body.get("created_at")),
     )
     checker.note(
-        "appointment_date 使用前端真实格式 2026-01-02T09:00:00.000，"
+        "appointment_date 使用运行时计算的未来时间发送，"
         f"服务端接受情况：{created.status}"
     )
 

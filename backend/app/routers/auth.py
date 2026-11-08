@@ -1,10 +1,11 @@
 """认证路由：登录、注册、当前用户。"""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import rate_limit
 from app.database import get_db
 from app.deps import get_current_user
 from app.models import User
@@ -16,17 +17,31 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/login", response_model=TokenResponse)
 def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ) -> TokenResponse:
     email = form_data.username.strip().lower()
+    client_ip = request.client.host if request.client else None
+
+    wait = rate_limit.retry_after(client_ip, email)
+    if wait is not None:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed login attempts. Try again later.",
+            headers={"Retry-After": str(wait)},
+        )
+
     user = db.scalar(select(User).where(User.email == email))
     if user is None or not verify_password(form_data.password, user.password_hash):
+        rate_limit.record_failure(client_ip, email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    rate_limit.clear(client_ip, email)
     return TokenResponse(access_token=create_access_token(user.id))
 
 

@@ -35,6 +35,22 @@ def create_booking(
             detail="Medical package not found",
         )
 
+    # 同一用户对同一套餐、同一预约时间只允许存在一个待处理订单。
+    # 精确到秒级预约时间意味着不同日期的正常预约不受影响。
+    duplicate = db.scalar(
+        select(Booking).where(
+            Booking.user_id == current_user.id,
+            Booking.package_id == package.id,
+            Booking.appointment_date == payload.appointment_date,
+            Booking.status == "pending",
+        )
+    )
+    if duplicate is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A pending booking for this package and date already exists",
+        )
+
     booking = Booking(
         order_no=_generate_order_no(),
         user_id=current_user.id,

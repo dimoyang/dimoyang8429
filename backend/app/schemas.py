@@ -1,5 +1,6 @@
 """请求/响应模型：字段名与 Flutter 前端契约严格一致。"""
 
+import re
 from datetime import date, datetime, timezone
 
 from pydantic import (
@@ -68,26 +69,52 @@ class PackagePage(BaseModel):
     pages: int
 
 
+_PHONE_SEPARATORS = re.compile(r"[\s\-().]")
+_PHONE_PATTERN = re.compile(r"^\+?\d{7,15}$")
+
+
 class BookingCreate(BaseModel):
     package_id: int
     appointment_date: datetime
-    contact_name: str
-    contact_phone: str
-    contact_email: str
-    notes: str = ""
+    contact_name: str = Field(min_length=1, max_length=120)
+    contact_phone: str = Field(max_length=32)
+    contact_email: EmailStr
+    # notes 可能包含健康信息，限制长度以降低泄露与滥用风险。
+    notes: str = Field(default="", max_length=2000)
     need_translator: bool = False
     need_accommodation: bool = False
     need_pickup: bool = False
 
     @field_validator("appointment_date")
     @classmethod
-    def drop_timezone(cls, value: datetime) -> datetime:
-        """前端按 naive ISO 发送；若带时区则统一换算为 UTC 后去除时区。"""
+    def require_future_datetime(cls, value: datetime) -> datetime:
+        """前端按 naive ISO 发送；带时区时先换算为 UTC，再要求必须是未来时间。"""
         if value.tzinfo is not None:
-            from datetime import timezone
-
             value = value.astimezone(timezone.utc).replace(tzinfo=None)
+        if value <= datetime.now(timezone.utc).replace(tzinfo=None):
+            raise ValueError("appointment_date must be in the future")
         return value
+
+    @field_validator("contact_name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("contact_name must not be blank")
+        return value
+
+    @field_validator("contact_phone")
+    @classmethod
+    def normalize_phone(cls, value: str) -> str:
+        normalized = _PHONE_SEPARATORS.sub("", value.strip())
+        if not _PHONE_PATTERN.fullmatch(normalized):
+            raise ValueError("contact_phone must be 7-15 digits with an optional leading +")
+        return normalized
+
+    @field_validator("contact_email")
+    @classmethod
+    def normalize_contact_email(cls, value: str) -> str:
+        return value.strip().lower()
 
 
 class BookingResponse(BaseModel):

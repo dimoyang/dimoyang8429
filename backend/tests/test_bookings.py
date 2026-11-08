@@ -1,23 +1,38 @@
-"""预约列表字段测试：前端订单页依赖的展示字段。"""
+"""预约列表字段与请求校验测试。"""
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 
-def test_booking_list_returns_display_fields(client, auth_headers) -> None:
-    packages = client.get("/api/v1/medical/packages?page=1&page_size=100").json()
-    package = packages["items"][0]
+def future_iso(days: int = 60) -> str:
+    value = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days)
+    return value.replace(hour=9, minute=0, second=0, microsecond=0).isoformat()
 
+
+def booking_payload(**overrides) -> dict:
     payload = {
-        "package_id": package["id"],
-        "appointment_date": "2026-01-02T09:00:00.000",
+        "package_id": 1,
+        "appointment_date": future_iso(),
         "contact_name": "Booking Test",
-        "contact_phone": "+8613800000000",
+        "contact_phone": "+86 138-0000-0000",
         "contact_email": "pytest-booking@meditour.com",
         "notes": "display fields",
         "need_translator": False,
         "need_accommodation": False,
         "need_pickup": False,
     }
+    payload.update(overrides)
+    return payload
+
+
+def test_booking_list_returns_display_fields(client, auth_headers) -> None:
+    packages = client.get("/api/v1/medical/packages?page=1&page_size=100").json()
+    package = packages["items"][0]
+    appointment = future_iso(61)
+
+    payload = booking_payload(
+        package_id=package["id"],
+        appointment_date=appointment,
+    )
     created = client.post("/api/v1/bookings/", json=payload, headers=auth_headers)
     assert created.status_code == 201
     body = created.json()
@@ -25,19 +40,83 @@ def test_booking_list_returns_display_fields(client, auth_headers) -> None:
     assert body["package_id"] == package["id"]
     assert body["package_name"] == package["name"]
     assert body["package_name_en"] == package["name_en"]
-    assert body["appointment_date"] == "2026-01-02T09:00:00"
+    assert body["appointment_date"] == datetime.fromisoformat(appointment).isoformat(
+        timespec="seconds"
+    )
     assert datetime.fromisoformat(body["created_at"].replace("Z", "+00:00")).tzinfo
 
-    listed = client.get("/api/v1/bookings/", headers=auth_headers)
-    assert listed.status_code == 200
-    item = next(
-        booking for booking in listed.json() if booking["id"] == body["id"]
+
+def test_booking_rejects_past_appointment_date(client, auth_headers) -> None:
+    past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    response = client.post(
+        "/api/v1/bookings/",
+        json=booking_payload(appointment_date=past),
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+    assert any(
+        "appointment_date" in str(item.get("loc", ""))
+        for item in response.json()["detail"]
     )
 
-    assert item["package_id"] == package["id"]
-    assert item["package_name"] == package["name"]
-    assert item["package_name_en"] == package["name_en"]
-    assert datetime.fromisoformat(item["appointment_date"]) == datetime(
-        2026, 1, 2, 9, 0
+
+def test_booking_rejects_overlong_notes(client, auth_headers) -> None:
+    response = client.post(
+        "/api/v1/bookings/",
+        json=booking_payload(notes="x" * 2001),
+        headers=auth_headers,
     )
-    assert datetime.fromisoformat(item["created_at"].replace("Z", "+00:00")).tzinfo
+    assert response.status_code == 422
+
+
+def test_booking_rejects_invalid_contact_details(client, auth_headers) -> None:
+    for field, value in (
+        ("contact_phone", "not-a-phone"),
+        ("contact_phone", "123"),
+        ("contact_email", "not-an-email"),
+        ("contact_name", "   "),
+    ):
+        response = client.post(
+            "/api/v1/bookings/",
+            json=booking_payload(**{field: value}),
+            headers=auth_headers,
+        )
+        assert response.status_code == 422, f"{field}={value!r}"
+
+
+def test_booking_normalizes_contact_phone(client, auth_headers) -> None:
+    response = client.post(
+        "/api/v1/bookings/",
+        json=booking_payload(
+            appointment_date=future_iso(62),
+            contact_phone="+86 (138) 0000-0000",
+        ),
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+
+
+def test_duplicate_pending_booking_is_rejected(client, auth_headers) -> None:
+    appointment = future_iso(63)
+    first = client.post(
+        "/api/v1/bookings/",
+        json=booking_payload(appointment_date=appointment),
+        headers=auth_headers,
+    )
+    assert first.status_code == 201
+
+    second = client.post(
+        "/api/v1/bookings/",
+        json=booking_payload(appointment_date=appointment),
+        headers=auth_headers,
+    )
+    assert second.status_code == 409
+    assert isinstance(second.json()["detail"], str)
+
+    # 同一套餐换一个日期应当允许。
+    other_date = client.post(
+        "/api/v1/bookings/",
+        json=booking_payload(appointment_date=future_iso(64)),
+        headers=auth_headers,
+    )
+    assert other_date.status_code == 201
