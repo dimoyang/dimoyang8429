@@ -21,7 +21,19 @@ def _localized(translated: str | None, chinese: str, english: str, lang: str) ->
     return pick(translated, english, chinese)
 
 
-@router.get("/packages", response_model=PackagePage)
+@router.get(
+    "/packages",
+    response_model=PackagePage,
+    summary="套餐分页列表",
+    description=(
+        "公开接口。分页参数 `page`（≥1）与 `page_size`（默认 20，上限 100）。"
+        "可选 `lang=zh|en|de|fr`；不传 `lang` 时响应与旧版本完全一致"
+        "（`name` 为中文、`name_en` 为英文）。"
+    ),
+    responses={
+        422: {"description": "分页参数越界或 lang 不是支持的语言"},
+    },
+)
 def list_packages(
     paging: PageParams = Depends(pagination),
     lang: str | None = Query(
@@ -71,7 +83,18 @@ def list_packages(
     )
 
 
-@router.get("/hospitals", response_model=list[HospitalResponse])
+@router.get(
+    "/hospitals",
+    response_model=list[HospitalResponse],
+    summary="医院列表（裸数组）",
+    description=(
+        "公开接口。为保持 Flutter 契约必须返回裸数组，而不是 `{items: ...}`。"
+        "可选 `lang=zh|en|de|fr`；不传时响应与旧版本完全一致。"
+    ),
+    responses={
+        422: {"description": "lang 不是支持的语言"},
+    },
+)
 def list_hospitals(
     lang: str | None = Query(
         None, description="可选语言：zh / en / de / fr；不传时响应与旧版本完全一致"

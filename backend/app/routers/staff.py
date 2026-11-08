@@ -41,7 +41,21 @@ def _get_booking(db: Session, booking_id: int) -> Booking:
     return booking
 
 
-@router.get("/bookings", response_model=StaffBookingPage)
+@router.get(
+    "/bookings",
+    response_model=StaffBookingPage,
+    summary="员工订单列表（分页）",
+    description=(
+        "需要 `staff` 角色（否则 403）。分页 `page`（≥1）与 `page_size`"
+        "（默认 20，上限 100），可按 `status` 过滤。联系方式返回打码值，"
+        "且不返回备注；需要完整信息请进入详情接口。"
+    ),
+    responses={
+        401: {"description": "未登录或令牌无效"},
+        403: {"description": "已登录但不是 staff"},
+        422: {"description": "分页参数越界或 status 不在允许集合内"},
+    },
+)
 def list_bookings(
     paging: PageParams = Depends(pagination),
     status_filter: Literal["pending", "confirmed", "completed", "cancelled"] | None = Query(
@@ -75,7 +89,20 @@ def list_bookings(
     )
 
 
-@router.get("/bookings/{booking_id}", response_model=StaffBookingDetail)
+@router.get(
+    "/bookings/{booking_id}",
+    response_model=StaffBookingDetail,
+    summary="员工订单详情（记录审计）",
+    description=(
+        "需要 `staff` 角色。返回完整联系方式与备注，并向 `audit_logs` 写入"
+        "操作者、时间、动作与订单 id；列表访问不写审计。"
+    ),
+    responses={
+        401: {"description": "未登录或令牌无效"},
+        403: {"description": "已登录但不是 staff"},
+        404: {"description": "订单不存在"},
+    },
+)
 def get_booking(
     booking_id: int,
     db: Session = Depends(get_db),
@@ -99,7 +126,21 @@ def get_booking(
 
 
 @router.patch(
-    "/bookings/{booking_id}/status", response_model=StaffBookingDetail
+    "/bookings/{booking_id}/status",
+    response_model=StaffBookingDetail,
+    summary="员工推进订单状态",
+    description=(
+        "需要 `staff` 角色。只允许 `pending -> confirmed`、"
+        "`confirmed -> completed`；请求体 `status` 仅接受 confirmed/completed。"
+        "跳过中间状态或对已结束订单再流转返回 409。"
+    ),
+    responses={
+        401: {"description": "未登录或令牌无效"},
+        403: {"description": "已登录但不是 staff"},
+        404: {"description": "订单不存在"},
+        409: {"description": "当前状态不允许该流转（含已完成/已取消订单）"},
+        422: {"description": "status 不是 confirmed/completed"},
+    },
 )
 def update_booking_status(
     booking_id: int,

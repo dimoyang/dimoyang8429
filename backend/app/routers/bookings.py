@@ -21,7 +21,20 @@ def _generate_order_no() -> str:
 
 
 @router.post(
-    "/", response_model=BookingResponse, status_code=status.HTTP_201_CREATED
+    "/",
+    response_model=BookingResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="创建预约订单",
+    description=(
+        "需要 Bearer access token。金额只由服务端按套餐计算，客户端传入的价格会被忽略。"
+        "同一用户对同一套餐、同一预约时间只允许一个 pending 订单。"
+    ),
+    responses={
+        401: {"description": "未登录或令牌无效"},
+        404: {"description": "套餐不存在"},
+        409: {"description": "同一套餐与预约时间已存在待处理订单"},
+        422: {"description": "预约时间、联系方式或需要项校验失败"},
+    },
 )
 def create_booking(
     payload: BookingCreate,
@@ -75,7 +88,18 @@ def create_booking(
     return booking
 
 
-@router.get("/", response_model=list[BookingResponse])
+@router.get(
+    "/",
+    response_model=list[BookingResponse],
+    summary="我的订单列表（裸数组）",
+    description=(
+        "需要 Bearer access token。只返回当前用户自己的订单，按 id 倒序。"
+        "为兼容 Flutter 现有契约保持裸数组，不套 `{items: ...}` 分页外层。"
+    ),
+    responses={
+        401: {"description": "未登录或令牌无效"},
+    },
+)
 def list_my_bookings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -90,7 +114,20 @@ def list_my_bookings(
     )
 
 
-@router.post("/{booking_id}/cancel", response_model=BookingResponse)
+@router.post(
+    "/{booking_id}/cancel",
+    response_model=BookingResponse,
+    summary="取消自己的待处理订单",
+    description=(
+        "需要 Bearer access token。仅允许 `pending -> cancelled`；"
+        "订单不存在或属于他人统一按 404 处理，避免泄露他人订单是否存在。"
+    ),
+    responses={
+        401: {"description": "未登录或令牌无效"},
+        404: {"description": "订单不存在或不属于当前用户"},
+        409: {"description": "订单当前状态不是 pending"},
+    },
+)
 def cancel_booking(
     booking_id: int,
     db: Session = Depends(get_db),

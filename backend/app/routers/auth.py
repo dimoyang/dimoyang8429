@@ -66,7 +66,21 @@ def _invalid_token(detail: str) -> HTTPException:
     )
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary="登录并签发 access/refresh 令牌",
+    description=(
+        "公开接口，使用 form-urlencoded 的 `username`（邮箱）与 `password`。"
+        "成功后返回 access token、refresh token 与角色 `role`。"
+        "同一 IP + 邮箱连续失败会触发限流。"
+    ),
+    responses={
+        401: {"description": "邮箱或密码错误（含已注销账号）"},
+        422: {"description": "表单字段缺失或格式错误"},
+        429: {"description": "失败次数过多；按 Retry-After 秒数后重试"},
+    },
+)
 def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -108,7 +122,19 @@ def login(
     )
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    summary="用 refresh token 换取新令牌",
+    description=(
+        "公开接口。refresh token 一次性使用：成功后旧 refresh token 立即吊销，"
+        "重复使用、过期或已吊销均返回 401。"
+    ),
+    responses={
+        401: {"description": "refresh token 无效、过期、已使用或账号已失效"},
+        422: {"description": "缺少 refresh_token 字段"},
+    },
+)
 def refresh_tokens(
     payload_in: RefreshRequest,
     db: Session = Depends(get_db),
@@ -153,7 +179,18 @@ def refresh_tokens(
     )
 
 
-@router.post("/logout")
+@router.post(
+    "/logout",
+    summary="登出并吊销令牌",
+    description=(
+        "需要 Bearer access token。当前 access token 会被吊销；可选在请求体传入"
+        " `refresh_token` 一并吊销，但该 refresh token 必须属于当前用户。"
+    ),
+    responses={
+        401: {"description": "access token 无效，或 refresh token 无效/不属于当前用户"},
+        422: {"description": "请求体格式错误"},
+    },
+)
 def logout(
     body: LogoutRequest | None = None,
     payload: dict = Depends(get_token_payload),
@@ -183,7 +220,18 @@ def logout(
 
 
 @router.post(
-    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+    "/register",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="注册普通用户",
+    description=(
+        "公开接口。注册成功固定为 `role=user`；请求体中的 `role` 会被忽略，"
+        "员工角色只能由服务端白名单或管理脚本授予。"
+    ),
+    responses={
+        409: {"description": "邮箱已注册"},
+        422: {"description": "邮箱、密码或语言字段格式不合法"},
+    },
 )
 def register(payload: UserCreate, db: Session = Depends(get_db)) -> User:
     email = payload.email.strip().lower()
@@ -205,7 +253,17 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> User:
     return user
 
 
-@router.post("/password-reset/request")
+@router.post(
+    "/password-reset/request",
+    summary="请求密码重置邮件",
+    description=(
+        "公开接口。无论邮箱是否注册都返回同一个 200 响应，防止账号枚举；"
+        "已注册账号会收到短时效、一次性的重置令牌（开发环境写入 outbox 文件）。"
+    ),
+    responses={
+        422: {"description": "邮箱格式不合法"},
+    },
+)
 def request_password_reset(
     payload: PasswordResetRequest,
     db: Session = Depends(get_db),
@@ -247,7 +305,18 @@ def request_password_reset(
     return _RESET_REQUEST_RESPONSE
 
 
-@router.post("/password-reset/confirm")
+@router.post(
+    "/password-reset/confirm",
+    summary="用一次性令牌重置密码",
+    description=(
+        "公开接口。令牌短时效且只能成功使用一次；成功后该用户已签发的所有"
+        " access/refresh 令牌立即失效。"
+    ),
+    responses={
+        400: {"description": "重置令牌无效、过期或已被使用"},
+        422: {"description": "令牌或新密码格式不合法"},
+    },
+)
 def confirm_password_reset(
     payload: PasswordResetConfirm,
     db: Session = Depends(get_db),
@@ -295,7 +364,19 @@ def confirm_password_reset(
     return {"detail": "Password has been reset"}
 
 
-@router.post("/change-password")
+@router.post(
+    "/change-password",
+    summary="修改当前账号密码",
+    description=(
+        "需要 Bearer access token，且必须提供当前密码。成功后 token_version 自增，"
+        "该用户所有旧 access/refresh 令牌立即失效。"
+    ),
+    responses={
+        400: {"description": "当前密码错误"},
+        401: {"description": "未登录或令牌无效"},
+        422: {"description": "密码长度等字段不合法"},
+    },
+)
 def change_password(
     payload: ChangePasswordRequest,
     current_user: User = Depends(get_current_user),
@@ -314,7 +395,19 @@ def change_password(
     return {"detail": "Password changed; please log in again"}
 
 
-@router.delete("/account")
+@router.delete(
+    "/account",
+    summary="注销账号（软删除 + 匿名化）",
+    description=(
+        "需要 Bearer access token 与当前密码。用户行保留以维持订单外键，"
+        "待处理订单改为 cancelled，联系人信息与备注清空，行程及每日安排删除。"
+    ),
+    responses={
+        400: {"description": "密码错误"},
+        401: {"description": "未登录或令牌无效"},
+        422: {"description": "缺少密码字段"},
+    },
+)
 def delete_account(
     body: DeleteAccountRequest,
     current_user: User = Depends(get_current_user),
@@ -402,7 +495,17 @@ def _booking_export(booking: Booking) -> dict:
     }
 
 
-@router.get("/export")
+@router.get(
+    "/export",
+    summary="导出本人数据（JSON 下载）",
+    description=(
+        "需要 Bearer access token。只按令牌对应的用户导出账号、订单、行程；"
+        "不接受任何用户 id 参数。响应带 attachment 下载头，favorites 目前固定为空。"
+    ),
+    responses={
+        401: {"description": "未登录或令牌无效"},
+    },
+)
 def export_my_data(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -454,6 +557,14 @@ def export_my_data(
     )
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    summary="获取当前登录用户",
+    description="需要 Bearer access token。返回账号资料与角色（user/staff）。",
+    responses={
+        401: {"description": "未登录、令牌无效或账号已失效"},
+    },
+)
 def me(current_user: User = Depends(get_current_user)) -> User:
     return current_user

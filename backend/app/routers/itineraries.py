@@ -36,7 +36,18 @@ def _build_days(payload: ItineraryWrite) -> list[ItineraryDay]:
     ]
 
 
-@router.get("", response_model=list[ItineraryResponse])
+@router.get(
+    "",
+    response_model=list[ItineraryResponse],
+    summary="我的行程列表（裸数组）",
+    description=(
+        "需要 Bearer access token。只返回当前用户的行程，按出发日期排序。"
+        "为兼容 Flutter 契约保持裸数组，不使用分页外层结构。"
+    ),
+    responses={
+        401: {"description": "未登录或令牌无效"},
+    },
+)
 def list_itineraries(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -50,7 +61,19 @@ def list_itineraries(
     )
 
 
-@router.get("/{itinerary_id}", response_model=ItineraryResponse)
+@router.get(
+    "/{itinerary_id}",
+    response_model=ItineraryResponse,
+    summary="行程详情",
+    description=(
+        "需要 Bearer access token。只允许访问当前用户自己的行程；"
+        "不存在或属于他人统一返回 404。"
+    ),
+    responses={
+        401: {"description": "未登录或令牌无效"},
+        404: {"description": "行程不存在或不属于当前用户"},
+    },
+)
 def get_itinerary(
     itinerary_id: int,
     db: Session = Depends(get_db),
@@ -60,7 +83,18 @@ def get_itinerary(
 
 
 @router.post(
-    "", response_model=ItineraryResponse, status_code=status.HTTP_201_CREATED
+    "",
+    response_model=ItineraryResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="创建行程",
+    description=(
+        "需要 Bearer access token。结束日期不得早于开始日期，目的地不能为空，"
+        "每天编号唯一且不得超过行程天数。"
+    ),
+    responses={
+        401: {"description": "未登录或令牌无效"},
+        422: {"description": "日期、目的地或每日安排校验失败"},
+    },
 )
 def create_itinerary(
     payload: ItineraryWrite,
@@ -82,7 +116,19 @@ def create_itinerary(
     return itinerary
 
 
-@router.put("/{itinerary_id}", response_model=ItineraryResponse)
+@router.put(
+    "/{itinerary_id}",
+    response_model=ItineraryResponse,
+    summary="全量更新行程",
+    description=(
+        "需要 Bearer access token。只允许更新自己的行程，每日安排会被整体替换。"
+    ),
+    responses={
+        401: {"description": "未登录或令牌无效"},
+        404: {"description": "行程不存在或不属于当前用户"},
+        422: {"description": "日期、目的地或每日安排校验失败"},
+    },
+)
 def update_itinerary(
     itinerary_id: int,
     payload: ItineraryWrite,
@@ -103,7 +149,14 @@ def update_itinerary(
 
 
 @router.delete(
-    "/{itinerary_id}", status_code=status.HTTP_204_NO_CONTENT
+    "/{itinerary_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="删除行程",
+    description="需要 Bearer access token。只允许删除自己的行程，每日安排级联删除。",
+    responses={
+        401: {"description": "未登录或令牌无效"},
+        404: {"description": "行程不存在或不属于当前用户"},
+    },
 )
 def delete_itinerary(
     itinerary_id: int,

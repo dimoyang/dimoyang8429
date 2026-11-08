@@ -36,7 +36,33 @@ async def lifespan(_: FastAPI):
 
 configure_logging()
 
-app = FastAPI(title=settings.APP_NAME, version="0.1.0", lifespan=lifespan)
+TAGS_METADATA = [
+    {"name": "health", "description": "进程与数据库健康检查（公开）"},
+    {"name": "auth", "description": "注册、登录、令牌刷新/登出、密码与账号生命周期"},
+    {"name": "medical", "description": "套餐与医院内容（公开，可选多语言）"},
+    {"name": "bookings", "description": "用户侧预约订单（需要 Bearer access token）"},
+    {"name": "staff", "description": "员工侧订单运营（需要 staff 角色）"},
+    {"name": "destinations", "description": "目的地内容（公开）"},
+    {"name": "itineraries", "description": "用户行程 CRUD（需要 Bearer access token）"},
+]
+
+API_DESCRIPTION = """
+MediTour 后端 API。
+
+- 除健康检查、医疗内容、目的地与注册/登录/找回密码外，端点均需要
+  `Authorization: Bearer <access_token>`。
+- 错误响应通常为 `{"detail": "..."}`；请求参数校验失败时 `detail`
+  为字段错误数组，并返回 422。
+- 完整错误码含义与各端点行为见 `backend/README.md` 的「错误码对照表」。
+"""
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    version="0.1.0",
+    lifespan=lifespan,
+    description=API_DESCRIPTION,
+    openapi_tags=TAGS_METADATA,
+)
 
 app.add_middleware(
     CORSMiddleware,

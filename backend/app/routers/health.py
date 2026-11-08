@@ -11,7 +11,17 @@ from app.database import get_db
 router = APIRouter(tags=["health"])
 
 
-@router.get("/health")
+@router.get(
+    "/health",
+    summary="健康检查",
+    description=(
+        "公开接口。返回进程存活与数据库可查询状态；数据库异常时返回 503，"
+        "响应体为 `{\"status\":\"error\",\"database\":\"unavailable\"}`。"
+    ),
+    responses={
+        503: {"description": "数据库不可用"},
+    },
+)
 def health(db: Session = Depends(get_db)):
     """进程存活 + 数据库可查询；数据库异常时返回 503。"""
     try:
