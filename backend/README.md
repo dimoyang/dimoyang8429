@@ -219,6 +219,74 @@ python -m alembic stamp head
 `stamp` 只写入版本号，不改动表和数据；之后 `alembic upgrade head` 即可正常执行。
 测试环境（`MEDITOUR_TESTING=1`）仍使用 `create_all`，不依赖迁移执行顺序。
 
+## 备份与恢复
+
+只支持本地 SQLite（当前部署形态）。PostgreSQL 请使用 `pg_dump` / `pg_restore`
+或云厂商的时间点恢复，本脚本遇到非 SQLite 连接串会直接报错，不会假装成功。
+
+```bash
+cd backend
+# 备份：默认读 DATABASE_URL，写到 var/backups/meditour-<时间戳>.db
+python scripts/backup_db.py
+python scripts/backup_db.py --output-dir D:\backups --database-url sqlite:///D:/data/meditour.db
+
+# 恢复：先停掉后端进程；目标非空时必须 --force
+python scripts/restore_db.py --backup var/backups/meditour-20261108-095413.db --force
+```
+
+- 备份使用 SQLite 在线备份 API，先写临时文件，校验行数与订单指标一致后再原子替换，
+  不会复制出写入中途的半截文件。
+- 恢复的安全阀：目标库已有业务表且未加 `--force` 时拒绝执行；加 `--force` 时也会
+  先保留 `<库名>.pre-restore-<时间戳>.db.bak`，再覆盖。
+- 恢复完成后会重新统计表行数、订单状态分布与订单金额合计，与备份不一致则以非零
+  状态退出。恢复后请用当前代码再执行一次 `python -m alembic upgrade head`。
+
+本机真实演练（演练库 `backend/var/drill/`，含 1 个订单，已从仓库忽略）：
+
+```text
+> python scripts\backup_db.py --output-dir var\drill\backups
+备份完成
+  源库: I:\meditour_app\backend\var\drill\meditour-drill.db
+  备份: I:\meditour_app\backend\var\drill\backups\meditour-20261108-095413.db
+  大小: 126976 bytes
+  sha256: 2b645a86326fe5e228df8fe5c986c3af7279f024910379e38a7a87aff9f0a6c5
+  表行数: {'alembic_version': 1, 'audit_logs': 0, 'bookings': 1, 'content_translations': 3, 'destinations': 4, 'hospitals': 2, 'itineraries': 0, 'itinerary_days': 0, 'medical_packages': 2, 'password_reset_tokens': 0, 'token_revocations': 0, 'users': 1}
+  订单状态: {'pending': 1}
+  订单总金额: 15000.0
+
+> Remove-Item var\drill\meditour-drill.db
+> python scripts\restore_db.py --backup var\drill\backups\meditour-20261108-095413.db
+恢复完成
+  备份: I:\meditour_app\backend\var\drill\backups\meditour-20261108-095413.db
+  目标: I:\meditour_app\backend\var\drill\meditour-drill.db
+  大小: 126976 bytes
+  表行数: {'alembic_version': 1, 'audit_logs': 0, 'bookings': 1, 'content_translations': 3, 'destinations': 4, 'hospitals': 2, 'itineraries': 0, 'itinerary_days': 0, 'medical_packages': 2, 'password_reset_tokens': 0, 'token_revocations': 0, 'users': 1}
+  订单状态: {'pending': 1}
+  订单总金额: 15000.0
+  校验: 与备份一致
+
+# 再执行一次（目标已有数据、未加 --force）
+恢复失败：Target database is not empty (12 tables: alembic_version, audit_logs,
+bookings, content_translations, destinations, hospitals, itineraries,
+itinerary_days, medical_packages, password_reset_tokens, token_revocations,
+users). Stop the backend before restoring, then re-run with --force to overwrite it.
+
+# 加 --force 后成功，并留下覆盖前副本
+覆盖前副本: I:\meditour_app\backend\var\drill\meditour-drill.pre-restore-20261108-095425.db.bak
+校验: 与备份一致
+```
+
+恢复后直接查库确认关键业务数据：
+
+```text
+[('MT-DRILL-0001', 'Drill Patient', 15000.0, 'pending', 'drill note')]
+[('package', 'de', 'name', 'Kniegelenkersatz (Knie-TEP)')]
+```
+
+局限：备份文件是**单机本地文件**。多实例部署时各实例的 SQLite 互不相通，
+必须改为共享数据库（如 PostgreSQL）并使用数据库自带的备份/时间点恢复；
+把备份文件放到对象存储只是异地保存，不能替代数据库级备份。
+
 ## 测试
 
 ```bash
