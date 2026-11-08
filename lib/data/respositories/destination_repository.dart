@@ -1,13 +1,20 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:meditour_app/core/network/api_exception.dart';
+import 'package:meditour_app/core/network/api_service.dart';
+import 'package:meditour_app/core/services/storage_service.dart';
 import 'package:meditour_app/data/models/destination.dart';
 
 /// 目的地仓库
 ///
-/// 当前阶段使用内置的示例数据；接入后端后替换为真实 API 调用。
+/// 远程优先：从后端 /api/v1/destinations 拉取并持久化到本地；
+/// 网络不可达时回退到持久缓存或内置示例数据，保证离线可用。
 class DestinationRepository {
   DestinationRepository._();
 
-  /// 热门目的地列表（内容来源：设计稿定稿的示例数据）
-  static const List<Destination> destinations = [
+  /// 内置示例数据（离线兜底，内容来源：设计稿定稿的示例数据）
+  static const List<Destination> sampleDestinations = [
     Destination(
       id: 'beijing',
       name: '北京',
@@ -224,9 +231,76 @@ class DestinationRepository {
   static const String heroImageUrl =
       'https://agent.qianwen.com/service/e2da4fa3-c27e-4f/832861465aa0afce641df2da4babbb2c';
 
+  static List<Destination> _cache = sampleDestinations;
+  static bool _lastLoadWasSample = false;
+
+  /// 最近一次远程拉取是否回退到了示例/缓存数据（用于 UI 离线提示）。
+  static bool get lastLoadWasSample => _lastLoadWasSample;
+
+  /// 当前可用目的地列表（同步读取，先由 [restoreCache]/[refresh] 填充）。
+  static List<Destination> get destinations => List.unmodifiable(_cache);
+
+  /// 仅测试用：重置缓存与回退标记。
+  @visibleForTesting
+  static void resetForTesting() {
+    _cache = sampleDestinations;
+    _lastLoadWasSample = false;
+  }
+
+  /// 启动时恢复上次成功拉取的持久缓存；无缓存或解析失败时保持示例数据。
+  static Future<void> restoreCache() async {
+    final raw = await StorageService.getCachedDestinations();
+    if (raw == null || raw.isEmpty) {
+      return;
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        final restored = decoded
+            .whereType<Map>()
+            .map(
+                (item) => Destination.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+        if (restored.isNotEmpty) {
+          _cache = restored;
+        }
+      }
+    } on FormatException {
+      // 缓存损坏时忽略，保持示例数据。
+    }
+  }
+
+  /// 远程拉取最新目的地列表。
+  ///
+  /// 成功：替换缓存并持久化；
+  /// 网络不可达/超时：保留现有缓存并置 [lastLoadWasSample]；
+  /// HTTP 4xx/5xx 抛 [ApiException]，解析失败抛 [ResponseParseException]，不回退。
+  static Future<List<Destination>> refresh({String? lang}) async {
+    try {
+      final data = await ApiService.instance.getDestinations(lang: lang);
+      final loaded = <Destination>[];
+      for (final item in data) {
+        try {
+          loaded.add(Destination.fromJson(item));
+        } on TypeError {
+          throw const ResponseParseException();
+        }
+      }
+      _cache = loaded;
+      _lastLoadWasSample = false;
+      await StorageService.setCachedDestinations(
+        jsonEncode(loaded.map((item) => item.toJson()).toList()),
+      );
+      return List.unmodifiable(_cache);
+    } on NetworkException {
+      _lastLoadWasSample = true;
+      return List.unmodifiable(_cache);
+    }
+  }
+
   /// 根据 id 查找目的地
   static Destination? findById(String id) {
-    for (final destination in destinations) {
+    for (final destination in _cache) {
       if (destination.id == id) {
         return destination;
       }

@@ -350,6 +350,32 @@ class ApiService {
     return _requestList(() => _dio.get<dynamic>('/medical/hospitals'));
   }
 
+  /// 目的地列表；lang 为偏好语言（en/zh/de/fr），后端按语言回落内容。
+  Future<List<Map<String, dynamic>>> getDestinations({
+    String? query,
+    String? lang,
+  }) {
+    return _requestList(
+      () => _dio.get<dynamic>(
+        '/destinations',
+        queryParameters: {
+          if (query != null && query.isNotEmpty) 'query': query,
+          if (lang != null) 'lang': lang,
+        },
+      ),
+    );
+  }
+
+  /// 单个目的地详情。
+  Future<Map<String, dynamic>> getDestination(String id, {String? lang}) {
+    return _request(
+      () => _dio.get<dynamic>(
+        '/destinations/$id',
+        queryParameters: {if (lang != null) 'lang': lang},
+      ),
+    );
+  }
+
   /// 创建预约订单。
   Future<Map<String, dynamic>> createBooking(Map<String, dynamic> request) {
     return _request(() => _dio.post<dynamic>('/bookings/', data: request));

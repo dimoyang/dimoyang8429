@@ -8,6 +8,7 @@ class StorageService {
   static const _keyAuthToken = 'auth_token';
   static const _keyRefreshToken = 'refresh_token';
   static const _keyCachedUser = 'cached_user';
+  static const _keyCachedDestinations = 'cached_destinations';
 
   static Future<String?> getLanguageCode() async {
     final prefs = await SharedPreferences.getInstance();
@@ -85,5 +86,16 @@ class StorageService {
   static Future<void> clearCachedUser() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyCachedUser);
+  }
+
+  /// 上次成功拉取的目的地列表（JSON 数组字符串）。
+  static Future<String?> getCachedDestinations() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyCachedDestinations);
+  }
+
+  static Future<void> setCachedDestinations(String json) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyCachedDestinations, json);
   }
 }
