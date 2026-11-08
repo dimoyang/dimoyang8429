@@ -5,7 +5,7 @@ FastAPI + SQLAlchemy + SQLite 的 MediTour API，路径前缀 `/api/v1`，契约
 
 ## 本地启动
 
-要求 Python 3.12。
+要求 Python 3.12。从零到浏览器里看到数据，只需要下面几步：
 
 ```bash
 cd backend
@@ -16,13 +16,43 @@ python -m venv .venv
 # source .venv/bin/activate
 
 pip install -r requirements.txt
-cp .env.example .env   # 填入 MEDITOUR_SECRET_KEY
+cp .env.example .env   # 本地模板；生产请把 MEDITOUR_SECRET_KEY 换成真实密钥
 uvicorn app.main:app --reload --port 8000
 ```
 
-启动时会自动执行数据库迁移并写入幂等种子数据（医院、套餐、目的地等）。
-演示账号仅在 `MEDITOUR_SEED_DEMO_USER=1` 时创建（`.env.example` 已为本地开启）；关闭开关只会停止创建，不会删除库里已有的账号。
-接口文档：`http://127.0.0.1:8000/docs`。
+首次启动会依次：建库/执行迁移 → 发现库为空 → 从 `backend/seed/` 读取 JSON 写入目录数据。
+不需要手工执行任何种子脚本。打开浏览器即可验证：
+
+- 套餐：<http://127.0.0.1:8000/api/v1/medical/packages>
+- 目的地：<http://127.0.0.1:8000/api/v1/destinations>
+- 接口文档：<http://127.0.0.1:8000/docs>
+
+开发环境默认写入 `seed/base` + `seed/demo`，因此能看到 8 家医院、22 个套餐、14 个目的地
+和 67 条 de/fr 译文；生产环境（`MEDITOUR_ENV=production`）默认两者都关闭，不会自动写入
+任何演示内容。演示账号仅在 `MEDITOUR_SEED_DEMO_USER=1` 时创建（`.env.example` 已为本地开启）；
+关闭开关只会停止创建，不会删除库里已有的账号。
+
+### 数据库文件与数据来源
+
+- `backend/meditour.db`（及 `-wal` / `-shm`）**不进仓库**：它是运行期产物，不同机器、
+  不同分支的状态不同，提交它会把本地测试数据、密码哈希和订单带进历史。
+  克隆后第一次启动自动创建。
+- 数据库内容来自 [seed/](seed/) 下的 JSON 文件，不是硬编码在 Python 里：
+  - `seed/base/`：最小可用目录，2 家医院、2 个套餐、4 个目的地、3 条德语示例译文；
+  - `seed/demo/`：更完整的演示目录，额外 6 家医院、20 个套餐、10 个目的地、64 条
+    de/fr 译文。两套合起来是 8 家医院、22 个套餐、14 个目的地、67 条译文。
+- 种子写入是幂等的：按自然键（医院/套餐 `name_en`、目的地 `id`、译文四元组）
+  判断是否已存在，只补缺失行，不修改、不删除已有数据，因此不会覆盖后台改过的内容。
+- 修改 JSON 后让改动生效（仍不清库、不删除文件里已移除的条目）：
+
+```bash
+python -m app.seed --sync          # 写 base + demo（是否含 demo 仍受 MEDITOUR_SEED_DEMO_DATA 控制）
+python -m app.seed --base --sync   # 只同步 base
+```
+
+- 启动时的自动播种由 `MEDITOUR_AUTO_SEED` 控制（开发默认开、生产默认关）；
+  demo 目录由 `MEDITOUR_SEED_DEMO_DATA` 控制（同上）。生产若要初始化基础目录，
+  请显式执行 `python -m app.seed --base`，不要依赖启动副作用。
 
 ### 一键运维脚本（Windows）
 
@@ -56,7 +86,8 @@ PID 写入 `backend/var/dev_server.pid`；重复 `start` 不会启动第二个�
 | `MEDITOUR_CURRENCY` | 否 | `EUR` | 种子套餐与订单金额使用的币种 |
 | `MEDITOUR_CORS_ORIGINS` | 否 | `http://localhost:8123,http://127.0.0.1:8123` | 允许的浏览器来源，逗号分隔 |
 | `MEDITOUR_SEED_DEMO_USER` | 否 | 关闭 | 设为 `1` 时创建演示账号 `demo@meditour.com / Demo123456`；生产环境不要开启，关闭开关不会删除已有账号 |
-| `MEDITOUR_SEED_DEMO_DATA` | 否 | 关闭 | 设为 `1` 时增量写入联调演示目录（+6 医院 / +20 套餐 / +10 目的地 / 40 条 de·fr 译文）；只插入不修改，生产环境不要开启 |
+| `MEDITOUR_AUTO_SEED` | 否 | 开发 `true` / 生产 `false` | 启动时是否自动写入种子；关闭后启动不写任何数据。生产如需初始化基础目录，显式执行 `python -m app.seed --base` |
+| `MEDITOUR_SEED_DEMO_DATA` | 否 | 开发 `true` / 生产 `false` | 除 `seed/base` 外是否再写入 `seed/demo`（+6 医院 / +20 套餐 / +10 目的地 / 64 条 de·fr 译文）；只增量插入、可重复执行，生产不要开启 |
 | `MEDITOUR_STAFF_EMAILS` | 否 | 空 | 员工邮箱白名单，逗号分隔；命中名单的账号登录时自动授予 `staff`，不会自动建号 |
 | `MEDITOUR_ACCESS_TOKEN_EXPIRE_DAYS` | 否 | `7` | access token 有效期（天） |
 | `MEDITOUR_REFRESH_TOKEN_EXPIRE_DAYS` | 否 | `30` | refresh token 有效期（天） |
@@ -409,7 +440,8 @@ SELECT 数，确认列表接口是常数查询而不是随条数增长。当前�
   - `lang=zh` 返回中文；`lang=en` 使用现有英文列；
   - `lang=de/fr` 先查 `content_translations` 表，没有译文时回退英文，再回退中文。
 - 译文存放在 `content_translations`（`entity_type` / `entity_id` / `lang` / `field` / `value`），没有给业务表平铺 `name_de`、`name_fr` 列；新增语言只需补数据，不改表结构。
-- 种子数据包含一条德语示例（膝关节置换套餐与协和医院），仅用于验证接口与回退逻辑，**不是可直接上线的人工译文**。
+- `seed/base` 包含少量德语示例（协和医院名称、膝关节置换套餐名称与描述），`seed/demo`
+  另有 de/fr 演示译文；它们仅用于验证接口与回退逻辑，**不是可直接上线的人工译文**。
 - 上线前必须由人工翻译并复核的字段：套餐 `name` / `description`、医院 `name` / `level`，以及任何医疗适应症、风险提示、价格与疗效相关文案。机器翻译只能作为草稿，不能冒充成品；未完成人工翻译的字段会按上述顺序回退，不会被机器生成的文本覆盖。
 - 人工译文通过 `scripts/import_translations.py` 批量导入（见下节），不走接口自动翻译。
 
@@ -952,34 +984,51 @@ python scripts/check_data_consistency.py --database-url sqlite:///./meditour.db
 
 未发现确定异常时退出码为 0，便于接入定时任务；脚本不自动修复任何数据。
 
-## 联调演示数据
+## 种子数据与联调演示目录
 
-默认种子只有 2 家医院、2 个套餐、4 个目的地，列表/筛选/分页看不出问题。设置
-`MEDITOUR_SEED_DEMO_DATA=1` 后，启动时会**增量**写入：
+种子内容全部是 [seed/](seed/) 下的 JSON 文件，可以直接用文本编辑器改，不需要懂 Python。
+两套目录按用途分开：
 
-| 类别 | 原有 | 新增 | 合计 |
+| 目录 | 用途 | 内容 | 何时写入 |
 | --- | --- | --- | --- |
-| 医院 | 2 | 6 | 8 |
-| 套餐 | 2 | 20 | 22 |
-| 目的地 | 4 | 10 | 14 |
-| de/fr 译文 | 3 条（仅德语） | 40 条（套餐 32 + 医院 8） | 43 |
+| `seed/base/` | 任何环境都能用的最小目录 | 2 医院 / 2 套餐 / 4 目的地 / 3 条德语示例译文 | `MEDITOUR_AUTO_SEED` 开启时；`python -m app.seed` 默认包含 |
+| `seed/demo/` | 本地演示、联调 | +6 医院 / +20 套餐 / +10 目的地 / 64 条 de/fr 译文 | 仅 `MEDITOUR_SEED_DEMO_DATA` 开启时（开发默认开、生产默认关） |
+
+两套合计：**8 家医院、22 个套餐、14 个目的地、67 条译文**。
 
 - 套餐覆盖 12 个分类（骨科、口腔、心血管、肿瘤、眼科、康养、生殖、整形、神经、
   消化、皮肤、儿科），价格 300–45000，疗程 3–30 天，便于验证价格区间筛选与排序。
-- 目的地合计 14 个，超过前端一页的展示量，可验证「加载更多」与搜索。
-- 已存在同名（`name_en`）或同 id 的条目会跳过；重复启动不会产生重复行。
-- 关闭开关**只停止写入，不会删除**已经写入的数据。生产环境不要开启。
-- 目的地接口当前只返回 `name` / `name_en`，没有 de/fr 字段（`destinations.py`
-  不在本批改动范围内），所以演示译文集中在套餐与医院；这是接口现状，不是数据缺失。
+- 目的地合计 14 个，超过前端一页的展示量，可验证「加载更多」与搜索；
+  `GET /api/v1/destinations?lang=de|fr` 会命中 demo 译文。
+- 文件结构：
+  - `hospitals.json`：`name` / `name_en` / `level`
+  - `packages.json`：`name` / `name_en` / `price` / `duration_days` / `category` /
+    `hospital_key`（引用医院 `name_en`）/ `description` / `description_en` /
+    `image_url`（可选）
+  - `destinations.json`：`id`（slug）/ `name` / `name_en` / `tagline` / `image_url` /
+    `search_terms` / `best_season` / `suggest_days` / `intro` / `experiences` / `tips` /
+    `sort_order`
+  - `translations.json`：`entity_type` / `entity_key`（医院的 `name_en`、套餐的
+    `name_en`、目的地的 `id`）/ `lang`（只接受 `de` / `fr`）/ `field` / `value`
+- 写入规则：默认只补缺，不修改已有行；`--sync` 才会用文件内容更新已有行，
+  但仍然只增不删。JSON 格式错误、`name_en` 重复、译文引用不存在实体会直接报出
+  文件名和行号，不会静默跳过。
+- 关闭 `MEDITOUR_AUTO_SEED` / `MEDITOUR_SEED_DEMO_DATA` **只停止写入，不会删除**
+  已经写入的数据。
 
 ```bash
-# 本地：写入演示目录后启动
-$env:MEDITOUR_SEED_DEMO_DATA="1"
-uvicorn app.main:app --reload
+# 本地：立即写入 base + demo（等价于启动时自动播种）
+python -m app.seed --demo
+
+# 改了 seed/*.json 后增量更新已有行（不清库、不删除已移除条目）
+python -m app.seed --sync
+
+# 生产：只初始化基础目录，不写演示内容
+python -m app.seed --base
 ```
 
-`tests/test_demo_seed.py` 在独立的内存库里验证：默认关闭时数量不变、开启后数量正确、
-重复执行幂等、关闭开关不删除数据。
+测试覆盖见 `tests/test_seed_files.py`（数据规模、四语覆盖、幂等与 `--sync`、坏文件报错）
+和 `tests/test_demo_seed.py`（默认关闭、开启后数量正确、重复执行不重复、关闭不删除）。
 
 ## 测试
 
@@ -989,7 +1038,7 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（153 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联（含会话吊销）、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、强制验证开关（未验证下单 403、确认后 201）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出/关闭开关/来源白名单、数据保留清理（dry-run 不写入、只删过期数据、软删除账号保留用户行与订单、邮件与上传临时文件清理）、前后端契约核对（11 个端点含目的地多语言响应的字段名/类型/可空性）、联调演示种子（默认关闭、数量与分类/价格覆盖、重复执行幂等）、列表接口查询次数为常数（订单/行程/套餐/医院/目的地/员工订单）、连接池容量与配置一致、SQLite WAL/busy_timeout/synchronous 实际生效、订单状态机终态锁死与时间戳（用户不能取消已确认、员工可取消、completed 不能退回 pending）、审计覆盖（取消/流转/改价/删除/导出）与查询过滤（操作类型/时间范围/权限）、注册按 IP 限流、找回密码邮箱/IP 双维度限流、验证邮件重发冷却、上线自检脚本的生产断言（密钥/文档/CORS/metrics/演示开关/SQLite/HTTPS 等）、备份文件 WAL 合并与恢复后边车清理。
+当前覆盖（157 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联（含会话吊销）、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、强制验证开关（未验证下单 403、确认后 201）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出/关闭开关/来源白名单、数据保留清理（dry-run 不写入、只删过期数据、软删除账号保留用户行与订单、邮件与上传临时文件清理）、前后端契约核对（11 个端点含目的地多语言响应的字段名/类型/可空性）、种子文件化（数据规模与四语覆盖、坏文件行号、重复启动幂等、`--sync` 增量更新不误删）、联调演示种子（默认关闭、数量与分类/价格覆盖、重复执行幂等）、列表接口查询次数为常数（订单/行程/套餐/医院/目的地/员工订单）、连接池容量与配置一致、SQLite WAL/busy_timeout/synchronous 实际生效、订单状态机终态锁死与时间戳（用户不能取消已确认、员工可取消、completed 不能退回 pending）、审计覆盖（取消/流转/改价/删除/导出）与查询过滤（操作类型/时间范围/权限）、注册按 IP 限流、找回密码邮箱/IP 双维度限流、验证邮件重发冷却、上线自检脚本的生产断言（密钥/文档/CORS/metrics/演示开关/SQLite/HTTPS 等）、备份文件 WAL 合并与恢复后边车清理。
 
 ## 接口验证脚本
 

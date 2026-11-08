@@ -1,0 +1,222 @@
+[
+  {
+    "name": "全髋关节置换手术",
+    "name_en": "Total Hip Replacement",
+    "price": 18000.0,
+    "duration_days": 18,
+    "category": "orthopedics",
+    "hospital_key": "West China Hospital",
+    "description": "采用进口髋关节假体，术后配合专业康复训练，帮助恢复行走能力。",
+    "description_en": "Imported hip prosthesis with a structured rehabilitation program to restore walking ability.",
+    "image_url": ""
+  },
+  {
+    "name": "脊柱融合手术",
+    "name_en": "Spinal Fusion Surgery",
+    "price": 22000.0,
+    "duration_days": 21,
+    "category": "orthopedics",
+    "hospital_key": "Peking Union Medical College Hospital",
+    "description": "针对腰椎间盘突出与椎体滑脱的微创融合方案，减少周围组织损伤。",
+    "description_en": "Minimally invasive fusion for disc herniation and spondylolisthesis with less tissue damage.",
+    "image_url": ""
+  },
+  {
+    "name": "All-on-4 全口种植",
+    "name_en": "All-on-4 Dental Implants",
+    "price": 8000.0,
+    "duration_days": 10,
+    "category": "dentistry",
+    "hospital_key": "Shanghai Ninth People's Hospital",
+    "description": "四颗种植体支撑整排固定假牙，适合多颗牙缺失患者。",
+    "description_en": "Four implants support a full fixed arch, suitable for patients with multiple missing teeth.",
+    "image_url": ""
+  },
+  {
+    "name": "隐形正畸",
+    "name_en": "Clear Aligner Orthodontics",
+    "price": 3600.0,
+    "duration_days": 30,
+    "category": "dentistry",
+    "hospital_key": "Peking University School of Stomatology",
+    "description": "数字化取模与隐形牙套方案，复诊周期灵活。",
+    "description_en": "Digital scanning with clear aligners and a flexible follow-up schedule.",
+    "image_url": ""
+  },
+  {
+    "name": "冷光美白",
+    "name_en": "Teeth Whitening",
+    "price": 300.0,
+    "duration_days": 3,
+    "category": "dentistry",
+    "hospital_key": "Shanghai Ninth People's Hospital",
+    "description": "诊室冷光美白，单次可见色阶提升，适合轻度色素沉着。",
+    "description_en": "In-office whitening with visible shade improvement for mild staining.",
+    "image_url": ""
+  },
+  {
+    "name": "冠状动脉搭桥手术",
+    "name_en": "Coronary Artery Bypass Graft",
+    "price": 32000.0,
+    "duration_days": 25,
+    "category": "cardiology",
+    "hospital_key": "Guangdong Provincial People's Hospital",
+    "description": "心外科团队完成搭桥手术，术后进入心脏监护与康复流程。",
+    "description_en": "Bypass surgery by a cardiac surgical team, followed by monitored recovery.",
+    "image_url": ""
+  },
+  {
+    "name": "心脏瓣膜置换",
+    "name_en": "Cardiac Valve Replacement",
+    "price": 38000.0,
+    "duration_days": 28,
+    "category": "cardiology",
+    "hospital_key": "West China Hospital",
+    "description": "提供机械瓣与生物瓣两种方案，术前由多学科团队评估。",
+    "description_en": "Mechanical or biological valve options with multidisciplinary pre-operative assessment.",
+    "image_url": ""
+  },
+  {
+    "name": "全身肿瘤筛查",
+    "name_en": "Comprehensive Cancer Screening",
+    "price": 1200.0,
+    "duration_days": 4,
+    "category": "oncology",
+    "hospital_key": "Fudan University Shanghai Cancer Center",
+    "description": "结合影像、肿瘤标志物与专科问诊的全身早筛方案。",
+    "description_en": "Whole-body early screening combining imaging, tumor markers and specialist consultation.",
+    "image_url": ""
+  },
+  {
+    "name": "质子治疗评估",
+    "name_en": "Proton Therapy Assessment",
+    "price": 45000.0,
+    "duration_days": 30,
+    "category": "oncology",
+    "hospital_key": "Fudan University Shanghai Cancer Center",
+    "description": "面向实体瘤患者的质子治疗适应症评估与定位准备。",
+    "description_en": "Proton therapy eligibility assessment and planning preparation for solid tumors.",
+    "image_url": ""
+  },
+  {
+    "name": "SMILE 全飞秒激光",
+    "name_en": "SMILE Laser Eye Surgery",
+    "price": 1600.0,
+    "duration_days": 5,
+    "category": "ophthalmology",
+    "hospital_key": "Beijing Tongren Hospital",
+    "description": "无瓣微创近视矫正，术后干眼风险较低，恢复快。",
+    "description_en": "Flap-free minimally invasive myopia correction with fast recovery.",
+    "image_url": ""
+  },
+  {
+    "name": "白内障超声乳化手术",
+    "name_en": "Cataract Surgery",
+    "price": 900.0,
+    "duration_days": 7,
+    "category": "ophthalmology",
+    "hospital_key": "Beijing Tongren Hospital",
+    "description": "超声乳化联合人工晶体植入，可选择多焦点晶体。",
+    "description_en": "Phacoemulsification with intraocular lens implantation, including multifocal options.",
+    "image_url": ""
+  },
+  {
+    "name": "全面体检套餐",
+    "name_en": "Full-Body Health Checkup",
+    "price": 800.0,
+    "duration_days": 3,
+    "category": "wellness",
+    "hospital_key": "Zhejiang University School of Medicine First Affiliated Hospital",
+    "description": "涵盖血检、影像与专科评估的一站式体检，出具中英文报告。",
+    "description_en": "One-stop checkup with labs, imaging and specialist review, report in Chinese and English.",
+    "image_url": ""
+  },
+  {
+    "name": "中医康养疗程",
+    "name_en": "Traditional Chinese Medicine Retreat",
+    "price": 2400.0,
+    "duration_days": 14,
+    "category": "wellness",
+    "hospital_key": "Zhejiang University School of Medicine First Affiliated Hospital",
+    "description": "针灸、推拿与中药调理结合的两周康养计划。",
+    "description_en": "Two-week wellness plan combining acupuncture, massage and herbal medicine.",
+    "image_url": ""
+  },
+  {
+    "name": "试管婴儿周期套餐",
+    "name_en": "IVF Cycle Package",
+    "price": 9500.0,
+    "duration_days": 21,
+    "category": "fertility",
+    "hospital_key": "Shanghai Ninth People's Hospital",
+    "description": "包含促排、取卵、胚胎培养与移植的一个完整 IVF 周期。",
+    "description_en": "One complete IVF cycle covering stimulation, retrieval, culture and transfer.",
+    "image_url": ""
+  },
+  {
+    "name": "鼻综合整形",
+    "name_en": "Rhinoplasty",
+    "price": 3200.0,
+    "duration_days": 10,
+    "category": "plastic",
+    "hospital_key": "Shanghai Ninth People's Hospital",
+    "description": "根据面部比例设计鼻部形态，术后提供随访与消肿管理。",
+    "description_en": "Nose reshaping designed around facial proportions with follow-up care.",
+    "image_url": ""
+  },
+  {
+    "name": "植发手术",
+    "name_en": "Hair Transplant",
+    "price": 2800.0,
+    "duration_days": 12,
+    "category": "plastic",
+    "hospital_key": "Shanghai Ninth People's Hospital",
+    "description": "FUE 无痕植发，按毛囊单位计价，术前进行供区评估。",
+    "description_en": "Scarless FUE transplant priced per graft, with donor-area assessment.",
+    "image_url": ""
+  },
+  {
+    "name": "卒中康复疗程",
+    "name_en": "Stroke Rehabilitation Program",
+    "price": 12500.0,
+    "duration_days": 30,
+    "category": "neurology",
+    "hospital_key": "Guangdong Provincial People's Hospital",
+    "description": "物理治疗、作业治疗与言语训练组成的四周康复计划。",
+    "description_en": "Four-week rehabilitation combining physiotherapy, occupational and speech therapy.",
+    "image_url": ""
+  },
+  {
+    "name": "胃肠镜检查",
+    "name_en": "Gastroscopy and Colonoscopy",
+    "price": 650.0,
+    "duration_days": 3,
+    "category": "gastroenterology",
+    "hospital_key": "West China Hospital",
+    "description": "无痛胃肠镜联合检查，发现息肉可当场处理。",
+    "description_en": "Painless combined gastroscopy and colonoscopy with same-session polyp removal.",
+    "image_url": ""
+  },
+  {
+    "name": "银屑病治疗疗程",
+    "name_en": "Psoriasis Treatment Program",
+    "price": 2100.0,
+    "duration_days": 14,
+    "category": "dermatology",
+    "hospital_key": "Zhejiang University School of Medicine First Affiliated Hospital",
+    "description": "光疗与系统用药联合方案，两周内评估皮损改善情况。",
+    "description_en": "Phototherapy combined with systemic medication, reviewed over two weeks.",
+    "image_url": ""
+  },
+  {
+    "name": "儿童心脏评估",
+    "name_en": "Pediatric Cardiac Assessment",
+    "price": 1500.0,
+    "duration_days": 6,
+    "category": "pediatrics",
+    "hospital_key": "Guangdong Provincial People's Hospital",
+    "description": "儿童心脏超声、心电图与专科问诊，提供中英文报告。",
+    "description_en": "Pediatric echocardiography, ECG and specialist consultation with bilingual report.",
+    "image_url": ""
+  }
+]

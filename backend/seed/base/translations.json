@@ -1,0 +1,23 @@
+[
+  {
+    "entity_type": "hospital",
+    "entity_key": "Peking Union Medical College Hospital",
+    "lang": "de",
+    "field": "name",
+    "value": "Peking-Union-Krankenhaus"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Knee Replacement Surgery",
+    "lang": "de",
+    "field": "description",
+    "value": "Durchgeführt von einem erfahrenen orthopädischen Team einer Top-Klinik mit importierten Gelenkimplantaten: weniger Schmerzen und mehr Mobilität."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Knee Replacement Surgery",
+    "lang": "de",
+    "field": "name",
+    "value": "Kniegelenkersatz (Knie-TEP)"
+  }
+]

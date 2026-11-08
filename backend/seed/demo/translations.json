@@ -1,0 +1,450 @@
+[
+  {
+    "entity_type": "destination",
+    "entity_key": "beijing",
+    "lang": "de",
+    "field": "name",
+    "value": "Peking"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "beijing",
+    "lang": "de",
+    "field": "tagline",
+    "value": "Kaiserstadt zwischen Geschichte und Moderne"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "beijing",
+    "lang": "fr",
+    "field": "name",
+    "value": "Pékin"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "beijing",
+    "lang": "fr",
+    "field": "tagline",
+    "value": "Capitale millénaire entre histoire et modernité"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "chengdu",
+    "lang": "de",
+    "field": "name",
+    "value": "Chengdu"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "chengdu",
+    "lang": "de",
+    "field": "tagline",
+    "value": "Langsam leben im Land des Überflusses"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "chengdu",
+    "lang": "fr",
+    "field": "name",
+    "value": "Chengdu"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "chengdu",
+    "lang": "fr",
+    "field": "tagline",
+    "value": "Vivre lentement au pays de l'abondance"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "guangzhou",
+    "lang": "de",
+    "field": "name",
+    "value": "Guangzhou"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "guangzhou",
+    "lang": "de",
+    "field": "tagline",
+    "value": "Dim Sum und Perlenfluss bei Nacht"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "guangzhou",
+    "lang": "fr",
+    "field": "name",
+    "value": "Canton"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "guangzhou",
+    "lang": "fr",
+    "field": "tagline",
+    "value": "Dim sum et rivière des Perles la nuit"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "hangzhou",
+    "lang": "de",
+    "field": "name",
+    "value": "Hangzhou"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "hangzhou",
+    "lang": "de",
+    "field": "tagline",
+    "value": "Paradies auf Erden am Westsee"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "hangzhou",
+    "lang": "fr",
+    "field": "name",
+    "value": "Hangzhou"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "hangzhou",
+    "lang": "fr",
+    "field": "tagline",
+    "value": "Le paradis terrestre au bord du lac de l'Ouest"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "shanghai",
+    "lang": "de",
+    "field": "name",
+    "value": "Shanghai"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "shanghai",
+    "lang": "de",
+    "field": "tagline",
+    "value": "Moderne Metropole am Huangpu"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "shanghai",
+    "lang": "fr",
+    "field": "name",
+    "value": "Shanghai"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "shanghai",
+    "lang": "fr",
+    "field": "tagline",
+    "value": "Métropole moderne au bord du Huangpu"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "xian",
+    "lang": "de",
+    "field": "name",
+    "value": "Xi'an"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "xian",
+    "lang": "de",
+    "field": "tagline",
+    "value": "Auf den Spuren der Tang-Dynastie"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "xian",
+    "lang": "fr",
+    "field": "name",
+    "value": "Xi'an"
+  },
+  {
+    "entity_type": "destination",
+    "entity_key": "xian",
+    "lang": "fr",
+    "field": "tagline",
+    "value": "Sur les traces de la dynastie Tang"
+  },
+  {
+    "entity_type": "hospital",
+    "entity_key": "Fudan University Shanghai Cancer Center",
+    "lang": "de",
+    "field": "name",
+    "value": "Krebszentrum der Fudan-Universität Shanghai"
+  },
+  {
+    "entity_type": "hospital",
+    "entity_key": "Fudan University Shanghai Cancer Center",
+    "lang": "fr",
+    "field": "name",
+    "value": "Centre anticancéreux de l'Université Fudan de Shanghai"
+  },
+  {
+    "entity_type": "hospital",
+    "entity_key": "Shanghai Ninth People's Hospital",
+    "lang": "de",
+    "field": "name",
+    "value": "Neuntes Volkskrankenhaus Shanghai"
+  },
+  {
+    "entity_type": "hospital",
+    "entity_key": "Shanghai Ninth People's Hospital",
+    "lang": "fr",
+    "field": "name",
+    "value": "Neuvième hôpital populaire de Shanghai"
+  },
+  {
+    "entity_type": "hospital",
+    "entity_key": "West China Hospital",
+    "lang": "de",
+    "field": "name",
+    "value": "Westchina-Krankenhaus"
+  },
+  {
+    "entity_type": "hospital",
+    "entity_key": "West China Hospital",
+    "lang": "fr",
+    "field": "name",
+    "value": "Hôpital West China"
+  },
+  {
+    "entity_type": "hospital",
+    "entity_key": "Zhejiang University School of Medicine First Affiliated Hospital",
+    "lang": "de",
+    "field": "name",
+    "value": "Erste angegliederte Klinik der Zhejiang-Universität"
+  },
+  {
+    "entity_type": "hospital",
+    "entity_key": "Zhejiang University School of Medicine First Affiliated Hospital",
+    "lang": "fr",
+    "field": "name",
+    "value": "Premier hôpital affilié de l'Université du Zhejiang"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "All-on-4 Dental Implants",
+    "lang": "de",
+    "field": "description",
+    "value": "Vier Implantate tragen einen festen Zahnbogen bei mehreren fehlenden Zähnen."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "All-on-4 Dental Implants",
+    "lang": "de",
+    "field": "name",
+    "value": "All-on-4 Zahnimplantate"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "All-on-4 Dental Implants",
+    "lang": "fr",
+    "field": "description",
+    "value": "Quatre implants soutiennent une arcade fixe en cas de dents manquantes."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "All-on-4 Dental Implants",
+    "lang": "fr",
+    "field": "name",
+    "value": "Implants dentaires All-on-4"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Comprehensive Cancer Screening",
+    "lang": "de",
+    "field": "description",
+    "value": "Ganzkörper-Früherkennung mit Bildgebung und Tumormarkern."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Comprehensive Cancer Screening",
+    "lang": "de",
+    "field": "name",
+    "value": "Umfassende Krebsvorsorge"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Comprehensive Cancer Screening",
+    "lang": "fr",
+    "field": "description",
+    "value": "Dépistage précoce complet associant imagerie et marqueurs tumoraux."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Comprehensive Cancer Screening",
+    "lang": "fr",
+    "field": "name",
+    "value": "Dépistage complet du cancer"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Coronary Artery Bypass Graft",
+    "lang": "de",
+    "field": "description",
+    "value": "Bypass-Operation durch ein herzchirurgisches Team mit überwachter Erholung."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Coronary Artery Bypass Graft",
+    "lang": "de",
+    "field": "name",
+    "value": "Koronare Bypass-Operation"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Coronary Artery Bypass Graft",
+    "lang": "fr",
+    "field": "description",
+    "value": "Pontage réalisé par une équipe chirurgicale cardiaque avec suivi post-opératoire."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Coronary Artery Bypass Graft",
+    "lang": "fr",
+    "field": "name",
+    "value": "Pontage coronarien"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "IVF Cycle Package",
+    "lang": "de",
+    "field": "description",
+    "value": "Ein vollständiger IVF-Zyklus mit Stimulation, Punktion, Kultur und Transfer."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "IVF Cycle Package",
+    "lang": "de",
+    "field": "name",
+    "value": "IVF-Zykluspaket"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "IVF Cycle Package",
+    "lang": "fr",
+    "field": "description",
+    "value": "Un cycle FIV complet : stimulation, ponction, culture et transfert."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "IVF Cycle Package",
+    "lang": "fr",
+    "field": "name",
+    "value": "Forfait cycle FIV"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Rhinoplasty",
+    "lang": "de",
+    "field": "description",
+    "value": "Individuelle Nasenformung mit Nachsorge und Abschwellmanagement."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Rhinoplasty",
+    "lang": "de",
+    "field": "name",
+    "value": "Nasenkorrektur"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Rhinoplasty",
+    "lang": "fr",
+    "field": "description",
+    "value": "Remodelage nasal personnalisé avec suivi et gestion de l'œdème."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Rhinoplasty",
+    "lang": "fr",
+    "field": "name",
+    "value": "Rhinoplastie"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "SMILE Laser Eye Surgery",
+    "lang": "de",
+    "field": "description",
+    "value": "Minimalinvasive Myopiekorrektur ohne Flap mit schneller Erholung."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "SMILE Laser Eye Surgery",
+    "lang": "de",
+    "field": "name",
+    "value": "SMILE-Laseroperation"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "SMILE Laser Eye Surgery",
+    "lang": "fr",
+    "field": "description",
+    "value": "Correction de la myopie sans volet, peu invasive et à récupération rapide."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "SMILE Laser Eye Surgery",
+    "lang": "fr",
+    "field": "name",
+    "value": "Chirurgie laser SMILE"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Stroke Rehabilitation Program",
+    "lang": "de",
+    "field": "description",
+    "value": "Vierwöchige Rehabilitation aus Physio-, Ergo- und Sprachtherapie."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Stroke Rehabilitation Program",
+    "lang": "de",
+    "field": "name",
+    "value": "Schlaganfall-Rehabilitation"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Stroke Rehabilitation Program",
+    "lang": "fr",
+    "field": "description",
+    "value": "Quatre semaines de kinésithérapie, ergothérapie et orthophonie."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Stroke Rehabilitation Program",
+    "lang": "fr",
+    "field": "name",
+    "value": "Programme de rééducation après AVC"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Total Hip Replacement",
+    "lang": "de",
+    "field": "description",
+    "value": "Importierte Hüftprothese mit strukturierter Rehabilitation für mehr Mobilität."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Total Hip Replacement",
+    "lang": "de",
+    "field": "name",
+    "value": "Totalendoprothese der Hüfte"
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Total Hip Replacement",
+    "lang": "fr",
+    "field": "description",
+    "value": "Prothèse de hanche importée avec un programme de rééducation structuré."
+  },
+  {
+    "entity_type": "package",
+    "entity_key": "Total Hip Replacement",
+    "lang": "fr",
+    "field": "name",
+    "value": "Prothèse totale de hanche"
+  }
+]

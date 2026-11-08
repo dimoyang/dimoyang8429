@@ -39,8 +39,9 @@ async def lifespan(_: FastAPI):
         Base.metadata.create_all(bind=engine)
     else:
         ensure_database_schema()
-    with SessionLocal() as db:
-        seed_data(db)
+    if settings.AUTO_SEED:
+        with SessionLocal() as db:
+            seed_data(db)
     yield
 
 

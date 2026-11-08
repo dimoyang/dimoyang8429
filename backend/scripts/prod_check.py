@@ -148,14 +148,16 @@ def check_metrics(config, *, production: bool) -> CheckResult:
 
 
 def check_demo_flags(config, *, production: bool) -> CheckResult:
+    auto_seed = bool(getattr(config, "AUTO_SEED", False))
     demo_user = bool(getattr(config, "SEED_DEMO_USER", False))
     demo_data = bool(getattr(config, "SEED_DEMO_DATA", False))
     name = "演示账号/演示数据开关"
-    if not demo_user and not demo_data:
-        return CheckResult(name, PASS, "两个开关均关闭")
+    if not auto_seed and not demo_user and not demo_data:
+        return CheckResult(name, PASS, "自动播种、演示账号、演示数据均关闭")
     enabled = [
         flag
         for flag, value in (
+            ("MEDITOUR_AUTO_SEED", auto_seed),
             ("MEDITOUR_SEED_DEMO_USER", demo_user),
             ("MEDITOUR_SEED_DEMO_DATA", demo_data),
         )
@@ -164,8 +166,9 @@ def check_demo_flags(config, *, production: bool) -> CheckResult:
     return _result(
         name,
         False,
-        f"{', '.join(enabled)} 处于开启状态，启动时会写入演示账号/目录数据",
-        "关闭开关；已写入的演示账号需手动删除（关闭开关不会自动清理）",
+        f"{', '.join(enabled)} 处于开启状态，启动时会写入目录/演示数据",
+        "关闭开关；确需初始化请显式执行 `python -m app.seed --base`，"
+        "并注意演示账号需手动删除（关闭开关不会清理）",
         warn_only=not production,
     )
 

@@ -48,8 +48,8 @@ def test_demo_seed_adds_catalog_and_is_idempotent(monkeypatch) -> None:
 
     # 新增 6 家医院、20 个套餐、10 个目的地。
     assert first[:3] == (8, 22, 14)
-    # 原有 3 条德语 + 演示的 40 条 de/fr 译文。
-    assert first[3] == 43
+    # 原有 3 条德语 + 演示的 40 条 hospital/package 译文 + 24 条目的地译文。
+    assert first[3] == 67
 
     # 重复执行不产生重复行。
     seed.seed_data(db)

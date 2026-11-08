@@ -1,0 +1,32 @@
+[
+  {
+    "name": "复旦大学附属肿瘤医院",
+    "name_en": "Fudan University Shanghai Cancer Center",
+    "level": "三级甲等"
+  },
+  {
+    "name": "四川大学华西医院",
+    "name_en": "West China Hospital",
+    "level": "三级甲等"
+  },
+  {
+    "name": "首都医科大学附属北京同仁医院",
+    "name_en": "Beijing Tongren Hospital",
+    "level": "三级甲等"
+  },
+  {
+    "name": "上海交通大学医学院附属第九人民医院",
+    "name_en": "Shanghai Ninth People's Hospital",
+    "level": "三级甲等"
+  },
+  {
+    "name": "广东省人民医院",
+    "name_en": "Guangdong Provincial People's Hospital",
+    "level": "三级甲等"
+  },
+  {
+    "name": "浙江大学医学院附属第一医院",
+    "name_en": "Zhejiang University School of Medicine First Affiliated Hospital",
+    "level": "三级甲等"
+  }
+]

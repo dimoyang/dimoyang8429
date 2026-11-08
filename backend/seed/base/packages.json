@@ -1,0 +1,24 @@
+[
+  {
+    "name": "膝关节置换手术",
+    "name_en": "Knee Replacement Surgery",
+    "price": 15000.0,
+    "duration_days": 21,
+    "category": "orthopedics",
+    "hospital_key": "Peking Union Medical College Hospital",
+    "description": "由三甲医院骨科专家团队主刀，采用进口人工关节假体，帮助患者摆脱关节疼痛、恢复行走能力。",
+    "description_en": "Performed by senior orthopedic specialists at a top-tier hospital with imported joint prostheses, helping patients relieve pain and regain mobility.",
+    "image_url": "https://agent.qianwen.com/service/8592df0f-6d1b-42/995b8d4bd28907d633b884c738865ca4"
+  },
+  {
+    "name": "微创种植牙",
+    "name_en": "Dental Implants",
+    "price": 2500.0,
+    "duration_days": 7,
+    "category": "dentistry",
+    "hospital_key": "Peking University School of Stomatology",
+    "description": "数字化导板种植技术，微创精准，采用进口种植体，让缺牙患者重获自然咀嚼与美观笑容。",
+    "description_en": "Digitally guided implant surgery with imported implants, minimally invasive and precise, restoring natural chewing and an aesthetic smile.",
+    "image_url": "https://agent.qianwen.com/service/da0776c0-90bf-40/43e2bbd5e2902157a3c287e6dff02659"
+  }
+]

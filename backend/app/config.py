@@ -52,10 +52,18 @@ class Settings:
         "MEDITOUR_SEED_DEMO_USER", ""
     ).strip().lower() in {"1", "true", "yes", "on"}
 
-    # 联调演示目录数据（额外医院/套餐/目的地与 de/fr 译文）。
-    # 默认关闭；开启后只做增量插入，不修改已有数据，生产环境不要开启。
+    # 首次启动自动播种：库为空时写入 seed/base；开发默认开、生产默认关。
+    # 生产如需初始化目录，建议显式执行 `python -m app.seed --base` 而不是靠启动副作用。
+    AUTO_SEED: bool = os.getenv(
+        "MEDITOUR_AUTO_SEED",
+        "false" if _ENVIRONMENT == "production" else "true",
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+    # 演示目录数据（额外医院/套餐/目的地与 de/fr 译文）。
+    # 开发默认开（拉下来就有像样的数据），生产默认关；开启时只增不删。
     SEED_DEMO_DATA: bool = os.getenv(
-        "MEDITOUR_SEED_DEMO_DATA", ""
+        "MEDITOUR_SEED_DEMO_DATA",
+        "false" if _ENVIRONMENT == "production" else "true",
     ).strip().lower() in {"1", "true", "yes", "on"}
 
     # 员工角色白名单（逗号分隔邮箱）。登录时命中名单会授予 staff，
