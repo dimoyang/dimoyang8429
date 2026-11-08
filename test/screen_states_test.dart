@@ -53,6 +53,20 @@ const _bookingJson = {
   'created_at': '2026-01-01T10:00:00',
 };
 
+/// 指定状态的最小订单数据，用于状态映射与取消流程测试。
+Map<String, Object> _orderJson({required int id, required String status}) {
+  return {
+    'id': id,
+    'order_no': 'MT2026010100$id',
+    'package_id': 1,
+    'appointment_date': '2026-02-01T09:00:00',
+    'total_price': 15000,
+    'currency': 'EUR',
+    'status': status,
+    'created_at': '2026-01-01T10:00:00',
+  };
+}
+
 void main() {
   final originalDio = ApiService.instance.dioForTesting;
 
@@ -219,6 +233,127 @@ void main() {
     expect(find.text('MT202601010000AB'), findsOneWidget);
     expect(find.text('待确认'), findsOneWidget);
   });
+
+  testWidgets('订单状态按语言映射并对未知状态兜底', (tester) async {
+    _installFakeApi(_bookingRoutes(bookings: [
+      _orderJson(id: 1, status: 'pending'),
+      _orderJson(id: 2, status: 'confirmed'),
+      _orderJson(id: 3, status: 'completed'),
+      _orderJson(id: 4, status: 'cancelled'),
+      _orderJson(id: 5, status: 'archived'),
+    ]));
+    final auth = await _loggedInAuth(tester);
+    _useTallScreen(tester);
+
+    await tester.pumpWidget(_app(home: const BookingsScreen(), auth: auth));
+    await _pumpFrames(tester);
+
+    expect(find.text('待确认'), findsOneWidget);
+    expect(find.text('已确认'), findsOneWidget);
+    expect(find.text('已完成'), findsOneWidget);
+    expect(find.text('已取消'), findsOneWidget);
+    // 未知状态不能裸露后端英文变量。
+    expect(find.text('archived'), findsNothing);
+    expect(find.text('未知状态'), findsOneWidget);
+    // 时间按当前语言格式化，不直接展示 ISO 字符串。
+    expect(find.textContaining('下单时间'), findsNWidgets(5));
+    expect(find.textContaining('T10:00:00'), findsNothing);
+    expect(find.textContaining('2026-01-01'), findsNothing);
+    // 仅待确认订单提供取消入口。
+    expect(find.widgetWithText(TextButton, '取消预约'), findsOneWidget);
+  });
+
+  testWidgets('取消待确认订单成功后刷新为已取消', (tester) async {
+    var cancelled = false;
+    var listCalls = 0;
+    _installFakeApi((options) {
+      if (options.method == 'POST' && options.path.contains('/cancel')) {
+        cancelled = true;
+        return _jsonBody(_orderJson(id: 7, status: 'cancelled'));
+      }
+      if (options.path.contains('/bookings')) {
+        listCalls++;
+        return _jsonBody([
+          _orderJson(id: 7, status: cancelled ? 'cancelled' : 'pending'),
+        ]);
+      }
+      return _bookingRoutes(bookings: <Object>[])(options);
+    });
+    final auth = await _loggedInAuth(tester);
+
+    await tester.pumpWidget(_app(home: const BookingsScreen(), auth: auth));
+    await _pumpFrames(tester);
+    expect(find.text('待确认'), findsOneWidget);
+    expect(listCalls, 1);
+
+    await tester.tap(find.widgetWithText(TextButton, '取消预约'));
+    await _pumpFrames(tester);
+    expect(find.text('确认取消'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, '确认取消'));
+    await _pumpFrames(tester);
+
+    expect(find.text('预约已取消'), findsOneWidget);
+    expect(find.text('已取消'), findsOneWidget);
+    expect(find.text('待确认'), findsNothing);
+    expect(listCalls, 2);
+  });
+
+  testWidgets('取消订单 409 提示当前状态不可取消', (tester) async {
+    var listCalls = 0;
+    _installFakeApi((options) {
+      if (options.method == 'POST' && options.path.contains('/cancel')) {
+        return _jsonBody(
+          {'detail': 'Only pending bookings can be cancelled'},
+          status: 409,
+        );
+      }
+      if (options.path.contains('/bookings')) {
+        listCalls++;
+        return _jsonBody([_orderJson(id: 7, status: 'pending')]);
+      }
+      return _bookingRoutes(bookings: <Object>[])(options);
+    });
+    final auth = await _loggedInAuth(tester);
+
+    await tester.pumpWidget(_app(home: const BookingsScreen(), auth: auth));
+    await _pumpFrames(tester);
+    await tester.tap(find.widgetWithText(TextButton, '取消预约'));
+    await _pumpFrames(tester);
+    await tester.tap(find.widgetWithText(FilledButton, '确认取消'));
+    await _pumpFrames(tester);
+
+    expect(find.text('该预约当前状态不可取消'), findsOneWidget);
+    expect(find.text('预约不存在或无权操作'), findsNothing);
+    // 状态冲突时刷新列表以同步最新状态。
+    expect(listCalls, 2);
+  });
+
+  testWidgets('取消订单 404 提示不存在或无权操作', (tester) async {
+    var listCalls = 0;
+    _installFakeApi((options) {
+      if (options.method == 'POST' && options.path.contains('/cancel')) {
+        return _jsonBody({'detail': 'Booking not found'}, status: 404);
+      }
+      if (options.path.contains('/bookings')) {
+        listCalls++;
+        return _jsonBody([_orderJson(id: 7, status: 'pending')]);
+      }
+      return _bookingRoutes(bookings: <Object>[])(options);
+    });
+    final auth = await _loggedInAuth(tester);
+
+    await tester.pumpWidget(_app(home: const BookingsScreen(), auth: auth));
+    await _pumpFrames(tester);
+    await tester.tap(find.widgetWithText(TextButton, '取消预约'));
+    await _pumpFrames(tester);
+    await tester.tap(find.widgetWithText(FilledButton, '确认取消'));
+    await _pumpFrames(tester);
+
+    expect(find.text('预约不存在或无权操作'), findsOneWidget);
+    expect(find.text('该预约当前状态不可取消'), findsNothing);
+    expect(listCalls, 2);
+  });
 }
 
 /// 订单页依赖的登录、当前用户与订单列表三个端点。
@@ -300,6 +435,13 @@ Widget _app({
 void _useNarrowScreen(WidgetTester tester) {
   tester.view.devicePixelRatio = 3.0;
   tester.view.physicalSize = const Size(320 * 3, 700 * 3);
+  addTearDown(tester.view.reset);
+}
+
+/// 加高视口，确保多张订单卡片都被 ListView 构建出来。
+void _useTallScreen(WidgetTester tester) {
+  tester.view.devicePixelRatio = 1.0;
+  tester.view.physicalSize = const Size(800, 1400);
   addTearDown(tester.view.reset);
 }
 

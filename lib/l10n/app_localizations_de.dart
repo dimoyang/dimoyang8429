@@ -336,6 +336,39 @@ class AppLocalizationsDe extends AppLocalizations {
   String get bookingsStatusCancelled => 'Storniert';
 
   @override
+  String get bookingsStatusUnknown => 'Unbekannter Status';
+
+  @override
+  String get bookingsCreatedAt => 'Bestellt am';
+
+  @override
+  String get bookingsCancel => 'Buchung stornieren';
+
+  @override
+  String get bookingsCancelTitle => 'Buchung stornieren';
+
+  @override
+  String get bookingsCancelBody =>
+      'Dies kann nicht rückgängig gemacht werden. Möchten Sie diese Buchung wirklich stornieren?';
+
+  @override
+  String get bookingsCancelConfirm => 'Stornieren';
+
+  @override
+  String get bookingsCancelDismiss => 'Behalten';
+
+  @override
+  String get bookingsCancelSuccess => 'Buchung storniert';
+
+  @override
+  String get bookingsCancelNotFound =>
+      'Buchung nicht gefunden oder kein Zugriff mehr';
+
+  @override
+  String get bookingsCancelConflict =>
+      'Diese Buchung kann nicht mehr storniert werden';
+
+  @override
   String get destinationSearchTitle => 'Reiseziele suchen';
 
   @override

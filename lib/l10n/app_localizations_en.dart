@@ -334,6 +334,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingsStatusCancelled => 'Cancelled';
 
   @override
+  String get bookingsStatusUnknown => 'Unknown status';
+
+  @override
+  String get bookingsCreatedAt => 'Booked on';
+
+  @override
+  String get bookingsCancel => 'Cancel booking';
+
+  @override
+  String get bookingsCancelTitle => 'Cancel booking';
+
+  @override
+  String get bookingsCancelBody =>
+      'This cannot be undone. Are you sure you want to cancel this booking?';
+
+  @override
+  String get bookingsCancelConfirm => 'Cancel booking';
+
+  @override
+  String get bookingsCancelDismiss => 'Keep';
+
+  @override
+  String get bookingsCancelSuccess => 'Booking cancelled';
+
+  @override
+  String get bookingsCancelNotFound =>
+      'This booking was not found or you no longer have access to it';
+
+  @override
+  String get bookingsCancelConflict =>
+      'This booking can no longer be cancelled';
+
+  @override
   String get destinationSearchTitle => 'Search Destinations';
 
   @override

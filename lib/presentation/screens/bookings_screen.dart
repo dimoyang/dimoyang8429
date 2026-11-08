@@ -34,6 +34,64 @@ class _BookingsScreenState extends State<BookingsScreen> {
     }
   }
 
+  /// 待确认订单取消：二次确认后调用后端，成功刷新列表。
+  ///
+  /// 后端 404（不存在或越权）与 409（状态已变化）需要给出不同提示，
+  /// 并刷新列表让用户看到最新状态；其余错误按通用文案提示。
+  Future<void> _cancel(BookingOrder order) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.bookingsCancelTitle),
+        content: Text(l10n.bookingsCancelBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.bookingsCancelDismiss),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.bookingsCancelConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      await BookingRepository.cancel(order.id);
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(l10n.bookingsCancelSuccess);
+      await _refresh();
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final message = switch (error) {
+        ApiBusinessException(statusCode: 404) => l10n.bookingsCancelNotFound,
+        ApiBusinessException(statusCode: 409) => l10n.bookingsCancelConflict,
+        _ => error.toLocalizedMessage(l10n),
+      };
+      _showSnackBar(message);
+      if (error is ApiBusinessException &&
+          (error.statusCode == 404 || error.statusCode == 409)) {
+        await _refresh();
+      }
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -97,6 +155,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
             itemBuilder: (context, index) => _BookingCard(
               order: orders[index],
               l10n: l10n,
+              onCancel:
+                  orders[index].isPending ? () => _cancel(orders[index]) : null,
             ),
           ),
         );
@@ -200,11 +260,22 @@ class _BookingCard extends StatelessWidget {
   final BookingOrder order;
   final AppLocalizations l10n;
 
-  const _BookingCard({required this.order, required this.l10n});
+  /// 仅待确认订单传入取消回调。
+  final VoidCallback? onCancel;
+
+  const _BookingCard({
+    required this.order,
+    required this.l10n,
+    this.onCancel,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // 日期按当前语言格式化（应用启动时已初始化 intl 日期符号）。
+    final dateFormat =
+        DateFormat.yMMMd(AppLocalizations.of(context).localeName);
     final appointment = order.appointmentDate;
+    final createdAt = order.createdAt;
 
     return Container(
       width: double.infinity,
@@ -241,7 +312,15 @@ class _BookingCard extends StatelessWidget {
             _InfoRow(
               icon: Icons.event_outlined,
               text: '${l10n.bookingsAppointmentDate}: '
-                  '${DateFormat.yMMMd(l10n.localeName).format(appointment)}',
+                  '${dateFormat.format(appointment)}',
+            ),
+          ],
+          if (createdAt != null) ...[
+            const SizedBox(height: 10),
+            _InfoRow(
+              icon: Icons.schedule_outlined,
+              text: '${l10n.bookingsCreatedAt}: '
+                  '${dateFormat.format(createdAt)}',
             ),
           ],
           const SizedBox(height: 10),
@@ -250,6 +329,29 @@ class _BookingCard extends StatelessWidget {
             text: '${l10n.bookingTotal}: '
                 '${order.currency} ${order.totalPrice.toStringAsFixed(0)}',
           ),
+          if (onCancel != null) ...[
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: onCancel,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.danger,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  minimumSize: const Size(0, 36),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  l10n.bookingsCancel,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -345,8 +447,12 @@ class _StatusChip extends StatelessWidget {
           const Color(0xFFFDECEC),
         );
       default:
-        // 未知状态直接展示后端原值，避免吞掉信息。
-        return (rawStatus, AppColors.ink2, const Color(0xFFEEF2F6));
+        // 后端出现未知状态时用本地化兜底，避免直接把英文变量暴露给用户。
+        return (
+          l10n.bookingsStatusUnknown,
+          AppColors.ink2,
+          const Color(0xFFEEF2F6)
+        );
     }
   }
 }

@@ -336,6 +336,39 @@ class AppLocalizationsFr extends AppLocalizations {
   String get bookingsStatusCancelled => 'Annulée';
 
   @override
+  String get bookingsStatusUnknown => 'Statut inconnu';
+
+  @override
+  String get bookingsCreatedAt => 'Réservé le';
+
+  @override
+  String get bookingsCancel => 'Annuler la réservation';
+
+  @override
+  String get bookingsCancelTitle => 'Annuler la réservation';
+
+  @override
+  String get bookingsCancelBody =>
+      'Cette action est irréversible. Voulez-vous vraiment annuler cette réservation ?';
+
+  @override
+  String get bookingsCancelConfirm => 'Annuler';
+
+  @override
+  String get bookingsCancelDismiss => 'Conserver';
+
+  @override
+  String get bookingsCancelSuccess => 'Réservation annulée';
+
+  @override
+  String get bookingsCancelNotFound =>
+      'Réservation introuvable ou accès refusé';
+
+  @override
+  String get bookingsCancelConflict =>
+      'Cette réservation ne peut plus être annulée';
+
+  @override
   String get destinationSearchTitle => 'Rechercher une destination';
 
   @override

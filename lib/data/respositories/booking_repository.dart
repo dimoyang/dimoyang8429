@@ -46,4 +46,13 @@ class BookingRepository {
     );
     return BookingResult.fromJson(data);
   }
+
+  /// 取消待确认订单。
+  ///
+  /// 后端语义：订单不存在或不属于当前用户返回 404，非待确认状态返回 409。
+  /// 两种错误都以 [ApiBusinessException] 抛出，由 UI 区分提示。
+  static Future<BookingOrder> cancel(int id) async {
+    final data = await ApiService.instance.cancelBooking(id);
+    return BookingOrder.fromJson(data);
+  }
 }

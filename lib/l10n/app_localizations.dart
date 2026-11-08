@@ -708,6 +708,66 @@ abstract class AppLocalizations {
   /// **'Cancelled'**
   String get bookingsStatusCancelled;
 
+  /// No description provided for @bookingsStatusUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown status'**
+  String get bookingsStatusUnknown;
+
+  /// No description provided for @bookingsCreatedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Booked on'**
+  String get bookingsCreatedAt;
+
+  /// No description provided for @bookingsCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel booking'**
+  String get bookingsCancel;
+
+  /// No description provided for @bookingsCancelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel booking'**
+  String get bookingsCancelTitle;
+
+  /// No description provided for @bookingsCancelBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This cannot be undone. Are you sure you want to cancel this booking?'**
+  String get bookingsCancelBody;
+
+  /// No description provided for @bookingsCancelConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel booking'**
+  String get bookingsCancelConfirm;
+
+  /// No description provided for @bookingsCancelDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep'**
+  String get bookingsCancelDismiss;
+
+  /// No description provided for @bookingsCancelSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking cancelled'**
+  String get bookingsCancelSuccess;
+
+  /// No description provided for @bookingsCancelNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This booking was not found or you no longer have access to it'**
+  String get bookingsCancelNotFound;
+
+  /// No description provided for @bookingsCancelConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This booking can no longer be cancelled'**
+  String get bookingsCancelConflict;
+
   /// No description provided for @destinationSearchTitle.
   ///
   /// In en, this message translates to:

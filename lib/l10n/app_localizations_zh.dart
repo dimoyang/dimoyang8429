@@ -321,6 +321,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get bookingsStatusCancelled => '已取消';
 
   @override
+  String get bookingsStatusUnknown => '未知状态';
+
+  @override
+  String get bookingsCreatedAt => '下单时间';
+
+  @override
+  String get bookingsCancel => '取消预约';
+
+  @override
+  String get bookingsCancelTitle => '取消预约';
+
+  @override
+  String get bookingsCancelBody => '取消后无法恢复，确定要取消这笔预约吗？';
+
+  @override
+  String get bookingsCancelConfirm => '确认取消';
+
+  @override
+  String get bookingsCancelDismiss => '保留';
+
+  @override
+  String get bookingsCancelSuccess => '预约已取消';
+
+  @override
+  String get bookingsCancelNotFound => '预约不存在或无权操作';
+
+  @override
+  String get bookingsCancelConflict => '该预约当前状态不可取消';
+
+  @override
   String get destinationSearchTitle => '搜索目的地';
 
   @override

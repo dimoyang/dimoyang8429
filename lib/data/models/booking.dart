@@ -62,6 +62,9 @@ class BookingOrder {
     this.createdAt,
   });
 
+  /// 后端只允许待确认订单取消。
+  bool get isPending => status.toLowerCase() == 'pending';
+
   factory BookingOrder.fromJson(Map<String, dynamic> json) {
     return BookingOrder(
       id: (json['id'] as num?)?.toInt() ?? 0,

@@ -161,4 +161,9 @@ class ApiService {
   Future<List<Map<String, dynamic>>> getMyBookings() {
     return _requestList(() => _dio.get<dynamic>('/bookings/'));
   }
+
+  /// 取消自己的待确认订单；后端仅允许 pending -> cancelled。
+  Future<Map<String, dynamic>> cancelBooking(int id) {
+    return _request(() => _dio.post<dynamic>('/bookings/$id/cancel'));
+  }
 }
