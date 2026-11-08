@@ -6,6 +6,7 @@ class StorageService {
   static const _keyFavoriteDestinations = 'favorite_destination_ids';
   static const _keyItineraries = 'travel_itineraries';
   static const _keyAuthToken = 'auth_token';
+  static const _keyRefreshToken = 'refresh_token';
   static const _keyCachedUser = 'cached_user';
 
   static Future<String?> getLanguageCode() async {
@@ -54,6 +55,21 @@ class StorageService {
   static Future<void> clearAuthToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyAuthToken);
+  }
+
+  static Future<String?> getRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyRefreshToken);
+  }
+
+  static Future<void> setRefreshToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyRefreshToken, token);
+  }
+
+  static Future<void> clearRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyRefreshToken);
   }
 
   static Future<String?> getCachedUser() async {

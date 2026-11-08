@@ -13,6 +13,10 @@ class AuthProvider extends ChangeNotifier {
   UserProfile? _user;
   bool _isInitialized = false;
 
+  /// 会话代际：登录/登出/会话清除时自增，用于丢弃过期的启动恢复结果。
+  /// （刷新令牌会让 token 变化，因此不能用 token 值判断。）
+  int _sessionEpoch = 0;
+
   UserProfile? get user => _user;
 
   bool get isLoggedIn => _user != null;
@@ -23,7 +27,7 @@ class AuthProvider extends ChangeNotifier {
   /// 本地有 token 则请求 /auth/me 恢复用户，失败静默清除（401 语义不变）。
   Future<void> init() async {
     _isInitialized = true;
-    // token 被拦截器清除（业务请求 401）时同步清空内存登录态。
+    // token 被拦截器清除（业务请求 401 / 刷新失败）时同步清空内存登录态。
     TokenStore.onSessionCleared = _handleSessionCleared;
     notifyListeners();
 
@@ -32,17 +36,17 @@ class AuthProvider extends ChangeNotifier {
     if (token == null) {
       return;
     }
+    final epoch = _sessionEpoch;
     try {
       final data = await ApiService.instance.getMe();
       // 恢复期间用户可能已登录或登出，避免旧请求覆盖新会话。
-      if (TokenStore.current != token) {
+      if (epoch != _sessionEpoch) {
         return;
       }
       _user = UserProfile.fromJson(data);
       await StorageService.setCachedUser(jsonEncode(_user!.toJson()));
     } on ApiException {
-      // 仅当 token 未被登录/登出替换时，才按失效处理。
-      if (TokenStore.current != token) {
+      if (epoch != _sessionEpoch) {
         return;
       }
       await _clearSession();
@@ -55,14 +59,19 @@ class AuthProvider extends ChangeNotifier {
     required String email,
     required String password,
   }) async {
-    final String token;
+    final AuthTokens tokens;
     try {
-      token = await ApiService.instance.login(email: email, password: password);
+      tokens =
+          await ApiService.instance.login(email: email, password: password);
     } on UnauthorizedException {
       // 登录表单的 401 是凭据错误，不是会话过期。
       throw const InvalidCredentialsException();
     }
-    await TokenStore.save(token);
+    _sessionEpoch++;
+    await TokenStore.save(
+      tokens.accessToken,
+      refreshToken: tokens.refreshToken.isEmpty ? null : tokens.refreshToken,
+    );
     final data = await ApiService.instance.getMe();
     _user = UserProfile.fromJson(data);
     await StorageService.setCachedUser(jsonEncode(_user!.toJson()));
@@ -95,13 +104,15 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _clearSession() async {
+    _sessionEpoch++;
     _user = null;
     await TokenStore.clear();
     await StorageService.clearCachedUser();
   }
 
-  /// token 被外部清除（如业务请求 401）时，同步清空内存登录态。
+  /// token 被外部清除（如业务请求 401、刷新失败）时，同步清空内存登录态。
   void _handleSessionCleared() {
+    _sessionEpoch++;
     if (_user == null) {
       return;
     }
