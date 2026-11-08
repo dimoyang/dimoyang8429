@@ -2,14 +2,15 @@
 
 import logging
 import secrets
-from datetime import timedelta
+from datetime import timedelta, timezone
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app import rate_limit
 from app.config import settings
@@ -27,6 +28,7 @@ from app.models import (
 from app.schemas import (
     ChangePasswordRequest,
     DeleteAccountRequest,
+    ItineraryResponse,
     LogoutRequest,
     PasswordResetConfirm,
     PasswordResetRequest,
@@ -357,6 +359,87 @@ def delete_account(
 
     db.commit()
     return {"detail": "Account deleted and personal data anonymized"}
+
+
+def _utc_z(value) -> str:
+    """数据库存 naive UTC；导出时补 Z 后缀，避免客户端按本地时间解析。"""
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _booking_export(booking: Booking) -> dict:
+    return {
+        "id": booking.id,
+        "order_no": booking.order_no,
+        "package_id": booking.package_id,
+        "package_name": booking.package_name,
+        "package_name_en": booking.package_name_en,
+        "appointment_date": booking.appointment_date.isoformat(timespec="seconds"),
+        "total_price": booking.total_price,
+        "currency": booking.currency,
+        "status": booking.status,
+        "created_at": _utc_z(booking.created_at),
+        "contact_name": booking.contact_name,
+        "contact_phone": booking.contact_phone,
+        "contact_email": booking.contact_email,
+        "notes": booking.notes,
+        "need_translator": booking.need_translator,
+        "need_accommodation": booking.need_accommodation,
+        "need_pickup": booking.need_pickup,
+    }
+
+
+@router.get("/export")
+def export_my_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """导出当前用户本人的账号、订单与行程数据（JSON 下载）。
+
+    只按 token 对应的 user_id 查询，不接受任何用户 id 参数，避免越权导出。
+    后端目前没有收藏表，因此 favorites 固定为空数组。
+    """
+    bookings = db.scalars(
+        select(Booking)
+        .options(joinedload(Booking.package))
+        .where(Booking.user_id == current_user.id)
+        .order_by(Booking.id)
+    ).all()
+    itineraries = db.scalars(
+        select(Itinerary)
+        .options(selectinload(Itinerary.days))
+        .where(Itinerary.user_id == current_user.id)
+        .order_by(Itinerary.id)
+    ).all()
+
+    payload = {
+        "exported_at": _utc_z(utcnow()),
+        "format_version": 1,
+        "account": {
+            "id": current_user.id,
+            "email": current_user.email,
+            "full_name": current_user.full_name,
+            "phone": current_user.phone,
+            "preferred_language": current_user.preferred_language,
+            "created_at": _utc_z(current_user.created_at),
+        },
+        "bookings": [_booking_export(booking) for booking in bookings],
+        "itineraries": [
+            ItineraryResponse.model_validate(itinerary).model_dump(mode="json")
+            for itinerary in itineraries
+        ],
+        # 后端没有收藏表；收藏目前只存在客户端本地。
+        "favorites": [],
+    }
+    return JSONResponse(
+        content=payload,
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="meditour-export-{current_user.id}.json"'
+            )
+        },
+    )
 
 
 @router.get("/me", response_model=UserResponse)
