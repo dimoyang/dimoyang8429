@@ -4,12 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:meditour_app/business/providers/destination_provider.dart';
 import 'package:meditour_app/business/providers/language_provider.dart';
 import 'package:meditour_app/core/constants/colors.dart';
-import 'package:meditour_app/data/respositories/destination_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/app_toast.dart';
 import 'package:meditour_app/presentation/widgets/destination_card.dart';
 import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:meditour_app/presentation/widgets/language_picker_sheet.dart';
+import 'package:meditour_app/presentation/widgets/offline_data_hint.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
 import 'package:meditour_app/presentation/widgets/skeleton.dart';
 
@@ -178,10 +178,10 @@ class HomeScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: Stack(
           children: [
-            const AspectRatio(
+            AspectRatio(
               aspectRatio: 16 / 10,
               child: RemoteImage(
-                url: DestinationRepository.heroImageUrl,
+                url: context.read<DestinationProvider>().heroImageUrl,
                 alt: 'Great Wall',
                 fallbackIcon: Icons.landscape_outlined,
               ),
@@ -375,7 +375,7 @@ class HomeScreen extends StatelessWidget {
       );
     }
 
-    return Padding(
+    final grid = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GridView.count(
         crossAxisCount: 2,
@@ -387,6 +387,20 @@ class HomeScreen extends StatelessWidget {
         children:
             destinations.map((d) => DestinationCard(destination: d)).toList(),
       ),
+    );
+
+    if (!destinationProvider.isOfflineFallback) {
+      return grid;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          child: OfflineDataHint(message: l10n.medicalOfflineHint),
+        ),
+        grid,
+      ],
     );
   }
 

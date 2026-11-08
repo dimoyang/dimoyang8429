@@ -8,6 +8,7 @@ import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/add_to_itinerary_sheet.dart';
 import 'package:meditour_app/presentation/widgets/back_button.dart';
 import 'package:meditour_app/presentation/widgets/destination_favorite_button.dart';
+import 'package:meditour_app/presentation/widgets/offline_data_hint.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
 import 'package:provider/provider.dart';
 import 'package:meditour_app/presentation/widgets/stat_tile.dart';
@@ -23,8 +24,8 @@ class DestinationDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final langCode = Localizations.localeOf(context).languageCode;
-    final destination =
-        context.watch<DestinationProvider>().findById(destinationId);
+    final destinationProvider = context.watch<DestinationProvider>();
+    final destination = destinationProvider.findById(destinationId);
 
     if (destination == null) {
       return Scaffold(
@@ -44,6 +45,12 @@ class DestinationDetailScreen extends StatelessWidget {
                   padding: EdgeInsets.zero,
                   children: [
                     _buildHero(context, destination, langCode),
+                    if (destinationProvider.isOfflineFallback)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                        child:
+                            OfflineDataHint(message: l10n.medicalOfflineHint),
+                      ),
                     Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(

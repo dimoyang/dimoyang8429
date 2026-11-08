@@ -7,6 +7,7 @@ import 'package:meditour_app/data/models/destination.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/destination_card.dart';
 import 'package:meditour_app/presentation/widgets/error_state.dart';
+import 'package:meditour_app/presentation/widgets/offline_data_hint.dart';
 import 'package:meditour_app/presentation/widgets/skeleton.dart';
 import 'package:provider/provider.dart';
 
@@ -178,6 +179,11 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
               ],
             ),
           ),
+          if (destinationProvider.isOfflineFallback)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: OfflineDataHint(message: l10n.medicalOfflineHint),
+            ),
           Expanded(
             child: _favoritesOnly && favorites.loadFailed
                 ? ErrorState(
