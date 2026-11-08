@@ -283,5 +283,8 @@
   "medicalEmptyBody": "当前没有可展示的医疗服务，请稍后重试。",
   "retry": "重试",
   "errorScreenTitle": "页面暂时无法显示",
-  "errorScreenBody": "出了点问题，请稍后重试。"
+  "errorScreenBody": "出了点问题，请稍后重试。",
+  "destinationsLoadFailed": "目的地加载失败",
+  "destinationsEmptyTitle": "暂无目的地",
+  "destinationsEmptyBody": "目的地内容上线后会显示在这里。"
 }

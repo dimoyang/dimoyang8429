@@ -857,4 +857,15 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get errorScreenBody =>
       'Etwas ist schiefgelaufen. Bitte versuchen Sie es gleich noch einmal.';
+
+  @override
+  String get destinationsLoadFailed =>
+      'Reiseziele konnten nicht geladen werden';
+
+  @override
+  String get destinationsEmptyTitle => 'Noch keine Reiseziele';
+
+  @override
+  String get destinationsEmptyBody =>
+      'Reiseziele erscheinen hier, sobald sie verfügbar sind.';
 }

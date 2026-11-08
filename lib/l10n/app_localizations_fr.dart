@@ -856,4 +856,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get errorScreenBody =>
       'Un problème est survenu. Veuillez réessayer dans un instant.';
+
+  @override
+  String get destinationsLoadFailed => 'Échec du chargement des destinations';
+
+  @override
+  String get destinationsEmptyTitle => 'Aucune destination pour le moment';
+
+  @override
+  String get destinationsEmptyBody =>
+      'Les destinations apparaîtront ici dès qu\'elles seront disponibles.';
 }

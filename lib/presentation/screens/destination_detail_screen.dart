@@ -1,14 +1,15 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:meditour_app/business/providers/destination_provider.dart';
 import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/data/models/destination.dart';
-import 'package:meditour_app/data/respositories/destination_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/add_to_itinerary_sheet.dart';
 import 'package:meditour_app/presentation/widgets/back_button.dart';
 import 'package:meditour_app/presentation/widgets/destination_favorite_button.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
+import 'package:provider/provider.dart';
 import 'package:meditour_app/presentation/widgets/stat_tile.dart';
 import 'package:meditour_app/presentation/widgets/detail_bottom_bar.dart';
 
@@ -22,7 +23,8 @@ class DestinationDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final langCode = Localizations.localeOf(context).languageCode;
-    final destination = DestinationRepository.findById(destinationId);
+    final destination =
+        context.watch<DestinationProvider>().findById(destinationId);
 
     if (destination == null) {
       return Scaffold(

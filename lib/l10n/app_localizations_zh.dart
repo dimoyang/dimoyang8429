@@ -809,4 +809,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorScreenBody => '出了点问题，请稍后重试。';
+
+  @override
+  String get destinationsLoadFailed => '目的地加载失败';
+
+  @override
+  String get destinationsEmptyTitle => '暂无目的地';
+
+  @override
+  String get destinationsEmptyBody => '目的地内容上线后会显示在这里。';
 }

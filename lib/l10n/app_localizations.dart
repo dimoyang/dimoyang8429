@@ -1679,6 +1679,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Something went wrong. Please try again in a moment.'**
   String get errorScreenBody;
+
+  /// No description provided for @destinationsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load destinations'**
+  String get destinationsLoadFailed;
+
+  /// No description provided for @destinationsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No destinations yet'**
+  String get destinationsEmptyTitle;
+
+  /// No description provided for @destinationsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Destinations will appear here once they are available.'**
+  String get destinationsEmptyBody;
 }
 
 class _AppLocalizationsDelegate

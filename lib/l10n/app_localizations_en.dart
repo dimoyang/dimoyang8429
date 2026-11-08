@@ -848,4 +848,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorScreenBody =>
       'Something went wrong. Please try again in a moment.';
+
+  @override
+  String get destinationsLoadFailed => 'Failed to load destinations';
+
+  @override
+  String get destinationsEmptyTitle => 'No destinations yet';
+
+  @override
+  String get destinationsEmptyBody =>
+      'Destinations will appear here once they are available.';
 }

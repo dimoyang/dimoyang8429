@@ -283,5 +283,8 @@
   "medicalEmptyBody": "Aucun service médical n'est disponible pour le moment. Veuillez réessayer plus tard.",
   "retry": "Réessayer",
   "errorScreenTitle": "Cette page n'a pas pu se charger",
-  "errorScreenBody": "Un problème est survenu. Veuillez réessayer dans un instant."
+  "errorScreenBody": "Un problème est survenu. Veuillez réessayer dans un instant.",
+  "destinationsLoadFailed": "Échec du chargement des destinations",
+  "destinationsEmptyTitle": "Aucune destination pour le moment",
+  "destinationsEmptyBody": "Les destinations apparaîtront ici dès qu'elles seront disponibles."
 }

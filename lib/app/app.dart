@@ -4,6 +4,7 @@ import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:meditour_app/app/router.dart';
 import 'package:meditour_app/business/providers/auth_provider.dart';
+import 'package:meditour_app/business/providers/destination_provider.dart';
 import 'package:meditour_app/business/providers/favorites_provider.dart';
 import 'package:meditour_app/business/providers/itinerary_provider.dart';
 import 'package:meditour_app/business/providers/language_provider.dart';
@@ -31,6 +32,9 @@ class MeditourApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => AuthProvider()..init(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => DestinationProvider()..init(),
         ),
       ],
       child: Consumer<LanguageProvider>(

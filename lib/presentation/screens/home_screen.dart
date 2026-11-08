@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:meditour_app/business/providers/destination_provider.dart';
 import 'package:meditour_app/business/providers/language_provider.dart';
 import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/data/respositories/destination_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/widgets/app_toast.dart';
 import 'package:meditour_app/presentation/widgets/destination_card.dart';
+import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:meditour_app/presentation/widgets/language_picker_sheet.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
+import 'package:meditour_app/presentation/widgets/skeleton.dart';
 
 /// 首页：中国旅行门户。
 class HomeScreen extends StatelessWidget {
@@ -325,7 +328,53 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildDestinationGrid(BuildContext context) {
-    final destinations = DestinationRepository.destinations;
+    final l10n = AppLocalizations.of(context);
+    final destinationProvider = context.watch<DestinationProvider>();
+    final destinations = destinationProvider.destinations;
+
+    if (destinationProvider.isInitialLoading) {
+      return _buildGridSkeleton(context, l10n);
+    }
+
+    if (destinations.isEmpty) {
+      if (destinationProvider.hasError) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: SizedBox(
+            height: 260,
+            child: ErrorState(
+              title: l10n.destinationsLoadFailed,
+              message: l10n.errorUnknown,
+              onRetry: () => context.read<DestinationProvider>().refresh(
+                    lang: Localizations.localeOf(context).languageCode,
+                  ),
+            ),
+          ),
+        );
+      }
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Column(
+          children: [
+            Text(
+              l10n.destinationsEmptyTitle,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppColors.ink2,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              l10n.destinationsEmptyBody,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: AppColors.ink3),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GridView.count(
@@ -337,6 +386,30 @@ class HomeScreen extends StatelessWidget {
         childAspectRatio: destinationCardAspectRatio(context),
         children:
             destinations.map((d) => DestinationCard(destination: d)).toList(),
+      ),
+    );
+  }
+
+  /// 目的地网格加载骨架：与真实宫格同列数、同宽高比。
+  Widget _buildGridSkeleton(BuildContext context, AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: SkeletonArea(
+        label: l10n.loading,
+        child: GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: destinationCardAspectRatio(context),
+          children: const [
+            SkeletonDestinationCard(),
+            SkeletonDestinationCard(),
+            SkeletonDestinationCard(),
+            SkeletonDestinationCard(),
+          ],
+        ),
       ),
     );
   }

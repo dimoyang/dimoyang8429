@@ -290,5 +290,8 @@
   "medicalEmptyBody": "No medical services are available right now. Please try again later.",
   "retry": "Retry",
   "errorScreenTitle": "This page couldn't load",
-  "errorScreenBody": "Something went wrong. Please try again in a moment."
+  "errorScreenBody": "Something went wrong. Please try again in a moment.",
+  "destinationsLoadFailed": "Failed to load destinations",
+  "destinationsEmptyTitle": "No destinations yet",
+  "destinationsEmptyBody": "Destinations will appear here once they are available."
 }

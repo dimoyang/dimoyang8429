@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:meditour_app/business/providers/destination_provider.dart';
 import 'package:meditour_app/business/providers/favorites_provider.dart';
 import 'package:meditour_app/core/constants/colors.dart';
-import 'package:meditour_app/data/respositories/destination_repository.dart';
 import 'package:meditour_app/core/services/recent_search_store.dart';
 import 'package:meditour_app/data/models/destination.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
@@ -106,7 +106,9 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final favorites = context.watch<FavoritesProvider>();
-    final destinations = _filterDestinations(favorites);
+    final destinationProvider = context.watch<DestinationProvider>();
+    final destinations = _filterDestinations(favorites, destinationProvider);
+    final hasQuery = _searchController.text.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.pageBg,
@@ -145,7 +147,7 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                     ),
                   ),
                 ),
-                if (_searchController.text.trim().isEmpty && _recentSearches.isNotEmpty) ...[
+                if (!hasQuery && _recentSearches.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   _buildRecentSearches(l10n),
                 ],
@@ -189,10 +191,12 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
                     : destinations.isEmpty
                         ? _EmptySearchResult(
                             favoritesOnly: _favoritesOnly,
-                            hasQuery: _searchController.text.trim().isNotEmpty,
-                            suggestions: _searchController.text.trim().isEmpty
-                                ? const []
-                                : _suggestions(),
+                            hasQuery: hasQuery,
+                            suggestions: hasQuery
+                                ? _suggestions(
+                                    destinationProvider.destinations,
+                                  )
+                                : const [],
                             onSuggestion: _applyQuery,
                             onClearQuery: _clearQuery,
                             onShowAll: () =>
@@ -285,10 +289,10 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
   }
 
   /// 无结果时的可点击建议：取当前语言下的热门目的地名称。
-  List<String> _suggestions() {
+  List<String> _suggestions(List<Destination> destinations) {
     final langCode = Localizations.localeOf(context).languageCode;
     final names = <String>[];
-    for (final destination in DestinationRepository.destinations) {
+    for (final destination in destinations) {
       final name = destination.getName(langCode).trim();
       if (name.isEmpty || names.contains(name)) {
         continue;
@@ -329,10 +333,13 @@ class _DestinationSearchScreenState extends State<DestinationSearchScreen> {
     );
   }
 
-  List<Destination> _filterDestinations(FavoritesProvider favorites) {
+  List<Destination> _filterDestinations(
+    FavoritesProvider favorites,
+    DestinationProvider destinationProvider,
+  ) {
     final query = _searchController.text.trim().toLowerCase();
 
-    return DestinationRepository.destinations.where((destination) {
+    return destinationProvider.destinations.where((destination) {
       if (_favoritesOnly && !favorites.isFavorite(destination.id)) {
         return false;
       }
