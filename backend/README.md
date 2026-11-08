@@ -56,6 +56,11 @@ uvicorn app.main:app --reload --port 8000
 | `MEDITOUR_UPLOAD_MAX_BYTES` | 否 | `5242880`（5 MiB） | 单张图片大小上限，超出返回 413 |
 | `MEDITOUR_MAX_REQUEST_BYTES` | 否 | `10485760`（10 MiB） | 全局请求体上限，超出由中间件返回 413；必须大于上传上限 |
 | `MEDITOUR_MEDIA_BASE_URL` | 否 | 空 | 媒体对外域名/CDN；留空时上传接口返回站内相对路径 |
+| `MEDITOUR_DB_POOL_SIZE` | 否 | `20` | 连接池常驻连接数；与 `_MAX_OVERFLOW` 之和应不小于单进程同步请求线程数（见「连接池与单机容量」） |
+| `MEDITOUR_DB_MAX_OVERFLOW` | 否 | `20` | 连接池允许的临时溢出连接数 |
+| `MEDITOUR_DB_POOL_TIMEOUT` | 否 | `10` | 拿不到连接时最多排队秒数；超过直接报 `QueuePool limit ... timed out` |
+| `MEDITOUR_DB_SQLITE_WAL` | 否 | `true` | 文件型 SQLite 是否开启 WAL；只影响本地 SQLite，对 PostgreSQL 无效 |
+| `MEDITOUR_DB_SQLITE_BUSY_TIMEOUT_MS` | 否 | `15000` | SQLite 写锁等待毫秒数；写冲突排队而非立刻 `database is locked` |
 
 本地可把变量写进 `backend/.env`（已被 `.gitignore` 忽略）；生产环境请通过运行环境注入，不要提交 `.env`。
 
@@ -656,7 +661,7 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（114 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、强制验证开关（未验证下单 403、确认后 201）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出/关闭开关/来源白名单、数据保留清理（dry-run 不写入、只删过期数据、软删除账号保留用户行与订单、邮件与上传临时文件清理）、前后端契约核对（11 个端点的字段名/类型/可空性）、联调演示种子（默认关闭、数量与分类/价格覆盖、重复执行幂等）、列表接口查询次数为常数（订单/行程/套餐/医院/目的地/员工订单）。
+当前覆盖（116 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id、邮箱验证（注册发信、多语言、不阻断登录、一次性/过期/重发作废旧令牌、防枚举响应）、强制验证开关（未验证下单 403、确认后 201）、会话列表不含令牌、单设备吊销即时失效、越权吊销 404、退出所有设备、/metrics 输出/关闭开关/来源白名单、数据保留清理（dry-run 不写入、只删过期数据、软删除账号保留用户行与订单、邮件与上传临时文件清理）、前后端契约核对（11 个端点的字段名/类型/可空性）、联调演示种子（默认关闭、数量与分类/价格覆盖、重复执行幂等）、列表接口查询次数为常数（订单/行程/套餐/医院/目的地/员工订单）、连接池容量与配置一致、SQLite WAL/busy_timeout/synchronous 实际生效。
 
 ## 接口验证脚本
 
@@ -753,6 +758,10 @@ python scripts/concurrency_probe.py --threads 12 \
   --staff-email probe-staff@meditour.com --staff-password ProbeStaff123456
 ```
 
+默认单请求超时为 **45 秒**（`DEFAULT_TIMEOUT`），必须大于服务端连接池等待时间
+（默认 `pool_timeout=10s`）。如果客户端先超时，会把服务端的 500 截断成 `network` 错误，
+看起来像“没有 5xx”，实际掩盖了问题；需要复现连接池耗尽时不要调小 `--timeout`。
+
 本机（SQLite，12 线程，修复后）的真实输出：
 
 ```text
@@ -786,41 +795,120 @@ cleanup: DELETE /auth/account -> 200
 - 该脚本不测吞吐量、不构造慢查询；SQLite 的写并发受全局写锁限制，结果不能直接外推到
   PostgreSQL。限流计数仍是进程内状态，多 worker 部署前需要换成共享存储。
 
-### 100 并发实测
+### 100 并发实测（修复连接池之后）
 
 ```bash
-python scripts/concurrency_probe.py --threads 100 --timeout 40 \
+# 默认客户端超时 45s，足以等到服务端的真实响应，避免客户端先超时掩盖 500。
+python scripts/concurrency_probe.py --threads 100 \
   --staff-email probe-staff@meditour.com --staff-password ProbeStaff123456
 ```
 
-本机（SQLite，单 uvicorn worker，默认连接池 `pool_size=5 + max_overflow=10`）：
+本机（SQLite，单 uvicorn worker，连接池 `pool_size=20 + max_overflow=20`，
+WAL + `busy_timeout=15000`）：
 
 ```text
-[login-rate-limit] requests=100 | 401: 5, 429: 95 | errors=0 (0%) | p50=56ms p95=1490ms max=1490ms
-[booking-create] requests=100 | 201: 1, 409: 99 | errors=0 (0%) | p50=323ms p95=1867ms max=1867ms
-[booking-cancel] requests=100 | 200: 1, 409: 99 | errors=0 (0%) | p50=258ms p95=1754ms max=1754ms
-[bookings-list] requests=100 | 200: 100 | errors=0 (0%) | p50=156ms p95=3081ms max=3081ms
-[refresh-token] requests=100 | 200: 1, 401: 99 | errors=0 (0%) | p50=516ms p95=2954ms max=2954ms
-[upload] requests=100 | 201: 100 | errors=0 (0%) | p50=1299ms p95=10959ms max=10959ms
+[login-rate-limit] requests=100 | 401: 5, 429: 95 | errors(5xx/network)=0 (0%) | p50=201ms p95=297ms max=307ms
+[booking-create] requests=100 | 201: 1, 409: 99 | errors(5xx/network)=0 (0%) | p50=365ms p95=552ms max=560ms
+[booking-cancel] requests=100 | 200: 1, 409: 99 | errors(5xx/network)=0 (0%) | p50=389ms p95=596ms max=609ms
+[bookings-list] requests=100 | 200: 100 | errors(5xx/network)=0 (0%) | p50=398ms p95=577ms max=581ms
+[refresh-token] requests=100 | 200: 1, 401: 99 | errors(5xx/network)=0 (0%) | p50=199ms p95=360ms max=366ms
+[upload] requests=100 | 201: 100 | errors(5xx/network)=0 (0%) | p50=437ms p95=708ms max=720ms
   upload success=100 unique_paths=100
-[staff-price-update] requests=100 | 200: 64, 500: 33, network: 3 | errors=36 (36%) | p50=30502ms p95=30753ms max=30753ms
-  final GET failed: status=0 ...
+[staff-price-update] requests=100 | 200: 100 | errors(5xx/network)=0 (0%) | p50=428ms p95=644ms max=653ms
+  original=15061.0 final=15134.0 in_submitted=True
+  restore original price -> 200
 ```
 
-结论与异常说明：
+修复前后对比（同一台机器、同一脚本、同一 100 并发）：
 
-- 用户侧关键路径（下单、订单列表、刷新令牌）100 并发下**没有 5xx**：下单仍只有 1 个
-  201、其余 409；刷新令牌仍只有 1 个 200、其余 401；列表 100 个全部 200。
-- `staff-price-update` 出现 33 个 500 + 3 个客户端超时。服务端日志确认异常为
+| 场景 | 修复前（池 5 + 10） | 修复后（池 20 + 20，WAL） |
+| --- | --- | --- |
+| `staff-price-update` | `200:64, 500:33, network:3`，错误率 36%，p50 30502ms / p95 30753ms | `200:100`，错误率 0%，p50 428ms / p95 644ms / max 653ms |
+| `booking-create` | `201:1, 409:99`，p50 323ms / p95 1867ms | `201:1, 409:99`，p50 365ms / p95 552ms / max 560ms |
+| `bookings-list` | `200:100`，p50 156ms / p95 3081ms | `200:100`，p50 398ms / p95 577ms / max 581ms |
+| `refresh-token` | `200:1, 401:99`，p50 516ms / p95 2954ms | `200:1, 401:99`，p50 199ms / p95 360ms / max 366ms |
+| `upload` | `201:100`，p50 1299ms / p95 10959ms | `201:100`（路径唯一 100），p50 437ms / p95 708ms / max 720ms |
+| `login-rate-limit` | `401:5, 429:95`，p50 56ms / p95 1490ms | `401:5, 429:95`，p50 201ms / p95 297ms / max 307ms |
+
+- 修复前的 33 个 500 + 3 个客户端超时，服务端日志确认是
   `QueuePool limit of size 5 overflow 10 reached, connection timed out, timeout 30.00`：
-  默认连接池最多 15 条连接，而 uvicorn 线程池可同时跑 40 个同步请求，100 个并发写请求
-  在连接池排队超过 30 秒后失败（成功的 64 个也多花了约 30 秒）。
-- 这是**连接池耗尽**，不是业务逻辑错误；SQLite 本身也只允许单写者，单纯调大连接池
-  会让锁竞争更严重。生产部署到 PostgreSQL 时应按 worker 数调整
-  `pool_size` / `max_overflow` / `pool_timeout`（当前未做成配置项，默认值见
-  `app/database.py`），并把同步 worker 数与数据库连接预算对齐。
-- 复现时用 `--timeout 40` 才能看到真实的 500（默认 15 秒会先被客户端超时截断）。
-  连接池状态可随时从 `/metrics` 的 `meditour_db_pool_*` 读取。
+  池里最多 15 条连接，而 uvicorn 同步线程池可同时跑 40 个请求，排队超过 30 秒必然失败。
+  修复后 100 并发**没有任何 5xx 或网络错误**，业务语义也没变（下单仍只有 1 个 201、
+  取消仍只有 1 个 200、刷新令牌仍只有 1 个 200、改价最终值是提交值之一）。
+- 修复后延迟的 p50 比修复前高（如列表 156ms → 398ms），是因为修复前大量请求直接失败或
+  立即返回，不构成有效对比；同口径应看“成功请求”的 p95：列表 3081ms → 577ms，
+  上传 10959ms → 708ms。
+- 这次修复不是“SQLite 变快了”，而是**不再把连接池耗尽误当成业务失败**；SQLite 依旧是
+  单写者，并发写只是排队。
+
+## 连接池与单机容量
+
+### 默认值怎么来的
+
+配置项见 `app/config.py`，实现见 `app/database.py`：
+
+| 配置 | 默认值 | 作用 |
+| --- | --- | --- |
+| `MEDITOUR_DB_POOL_SIZE` | `20` | 常驻连接数 |
+| `MEDITOUR_DB_MAX_OVERFLOW` | `20` | 峰值临时连接数 |
+| `MEDITOUR_DB_POOL_TIMEOUT` | `10` | 排队等连接的上限（秒） |
+| `MEDITOUR_DB_SQLITE_WAL` | `true` | 文件型 SQLite 开启 WAL |
+| `MEDITOUR_DB_SQLITE_BUSY_TIMEOUT_MS` | `15000` | SQLite 写锁等待上限（毫秒） |
+
+推导依据（不是拍脑袋）：
+
+1. uvicorn 单进程默认用 anyio 的同步线程池执行同步端点，默认 **40 个线程**；
+2. 每个在途请求最多占用 **1 条连接**（`get_db` 在请求结束时归还）；
+3. 因此池容量必须满足 `pool_size + max_overflow >= 40`，否则 40 个线程里必然有线程
+   在池里排队，排队超过 `pool_timeout` 就抛 `QueuePool limit ... timed out`——这正是
+   修复前“40 个 worker 抢 15 条连接”的成因；
+4. 默认取 `20 + 20 = 40`：常驻 20 条覆盖稳态并发，峰值再溢出 20 条；`pool_timeout=10s`
+   小于 SQLite 的 `busy_timeout=15s`，保证先暴露连接池问题而不是让客户端等 30 秒。
+
+部署时按 worker 数计算：
+
+```text
+每进程池容量 = MEDITOUR_DB_POOL_SIZE + MEDITOUR_DB_MAX_OVERFLOW
+进程所需连接数 = uvicorn --workers 数 × 每进程池容量
+数据库 max_connections >= 进程所需连接数 + 运维余量
+```
+
+例如 `--workers 4`、默认池：`4 × 40 = 160`，PostgreSQL 的 `max_connections` 至少留到
+`200`。每个 worker 进程有**独立**的连接池，不会共享；`pool_timeout` 保持小于
+`busy_timeout`。如果同步线程数被显式调大（anyio 的线程限制），池容量要同步跟上。
+
+### SQLite 的改善与上限
+
+- `journal_mode=WAL`：读操作不再被写事务阻塞，读与写可以并行；这是本次列表/上传
+  p95 大幅下降的主要原因之一。
+- `busy_timeout=15000`：写冲突时等待最多 15 秒再报错，把“立刻 `database is locked`”
+  变成“排队”。配合驱动的 `timeout` 参数一起设置。
+- `synchronous=NORMAL`：WAL 下少一次 fsync，崩溃最多丢失最后一个事务。
+
+**上限没有变**：SQLite 任何时刻只允许一个写者，WAL 只是让读不被写阻塞、让写冲突排队。
+上面的数字说明的是“100 并发下不报错、延迟可接受”，**不是**“SQLite 支持高写并发”。
+需要真正的写并发时应切换 PostgreSQL（见「PostgreSQL 切换脚手架（未验证）」）。
+
+### 当前单机容量（实测）
+
+同一台机器、单 uvicorn worker、文件型 SQLite、上述默认配置，用同一脚本逐级加压：
+
+| 并发 | 结果 | 下单 p95 | 列表 p95 | 改价 p95 | 上传 p95 | 登录 p95 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 100 | 0 错误 / 0 5xx | 552ms | 577ms | 644ms | 708ms | 297ms |
+| 150 | 0 错误 / 0 5xx | 806ms | 749ms | 1049ms | 1202ms | — |
+| 300 | 0 错误 / 0 5xx | 1583ms | 1457ms | 2024ms | 2369ms | 835ms |
+
+结论（给上线决策用）：
+
+- 这台机器、这个配置下，**100–300 并发都不再出现 5xx**；劣化表现为延迟线性上升，
+  不是报错。写路径（改价/下单）比读路径更早劣化，因为 SQLite 单写者要串行化。
+- 经验阈值：**~100 并发**内写路径 p95 < 0.7s，可视为舒适区；**~150 并发**写路径
+  p95 约 1s，属于可接受但已开始排队；**300 并发**写路径 p95 约 2s，延迟明显，
+  不适合作为常态容量。
+- 这是**单进程 + SQLite** 的数字，不能外推到多 worker：多 worker 下 SQLite 的写锁
+  竞争会更严重，而 PostgreSQL 会好很多。上线前应在目标数据库上重跑本脚本。
+- 未测量项：长连接/流式响应、超大图片、慢查询、磁盘 IO 抖动；这些都会改变上述阈值。
 
 ## 健康检查
 

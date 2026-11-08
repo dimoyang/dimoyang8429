@@ -39,7 +39,8 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8000/api/v1"
-DEFAULT_TIMEOUT = 15.0
+# 必须大于服务端连接池等待时间（默认 10s），否则客户端先超时会掩盖真实的 500。
+DEFAULT_TIMEOUT = 45.0
 # 由 --timeout 覆盖；http_call 的默认参数在运行时读取它。
 HTTP_TIMEOUT = DEFAULT_TIMEOUT
 
@@ -172,7 +173,10 @@ def main() -> int:
         "--timeout",
         type=float,
         default=DEFAULT_TIMEOUT,
-        help="单请求超时秒数；观察连接池排队时可调大（默认 15）",
+        help=(
+            "单请求超时秒数（默认 45）。必须大于服务端连接池等待时间，"
+            "否则客户端先超时会掩盖真实的 500。"
+        ),
     )
     parser.add_argument(
         "--password", default="ProbePass123456", help="临时用户密码"

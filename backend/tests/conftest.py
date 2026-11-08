@@ -9,8 +9,11 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
 TEST_DB = BACKEND_DIR / "test_meditour.db"
-if TEST_DB.exists():
-    TEST_DB.unlink()
+# WAL 模式会额外产生 -wal / -shm，清理时一并删除，确保每次会话都是新库。
+for _suffix in ("", "-wal", "-shm"):
+    _path = TEST_DB.with_name(TEST_DB.name + _suffix)
+    if _path.exists():
+        _path.unlink()
 
 os.environ.setdefault(
     "MEDITOUR_SECRET_KEY", "test-secret-key-for-pytest-32-bytes-minimum"

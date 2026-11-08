@@ -96,6 +96,22 @@ class Settings:
         if ip.strip()
     ]
 
+    # 数据库连接池。默认 20 + 20 = 40，对应 uvicorn/anyio 默认的 40 个同步
+    # 请求线程：即使 40 个线程同时持有一个连接也不会在池里排队。部署时按
+    # worker 数调整，公式见 README「连接池与单机容量」。
+    DB_POOL_SIZE: int = int(os.getenv("MEDITOUR_DB_POOL_SIZE", "20"))
+    DB_MAX_OVERFLOW: int = int(os.getenv("MEDITOUR_DB_MAX_OVERFLOW", "20"))
+    DB_POOL_TIMEOUT: int = int(os.getenv("MEDITOUR_DB_POOL_TIMEOUT", "10"))
+
+    # SQLite 专用：WAL 允许读写并行，busy_timeout 让写冲突排队而不是立刻报错。
+    # 这两项只改善单机 SQLite 的排队行为，不会让它支持高写并发。
+    DB_SQLITE_WAL: bool = os.getenv(
+        "MEDITOUR_DB_SQLITE_WAL", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    DB_SQLITE_BUSY_TIMEOUT_MS: int = int(
+        os.getenv("MEDITOUR_DB_SQLITE_BUSY_TIMEOUT_MS", "15000")
+    )
+
     # 数据保留期（天）。清理脚本 scripts/cleanup_data.py 读取这些值。
     TOKEN_RETENTION_DAYS: int = int(
         os.getenv("MEDITOUR_TOKEN_RETENTION_DAYS", "30")

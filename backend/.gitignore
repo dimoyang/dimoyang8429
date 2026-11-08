@@ -2,6 +2,9 @@
 __pycache__/
 .env
 *.db
+# SQLite WAL 模式产生的旁路文件
+*.db-wal
+*.db-shm
 .pytest_cache/
 # 开发环境 file 邮件后端的输出目录与测试 outbox
 var/
