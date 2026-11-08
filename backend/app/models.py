@@ -9,9 +9,11 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -182,3 +184,38 @@ class PasswordResetToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class ContentTranslation(Base):
+    """多语言内容：按实体 + 字段存译文，避免为每种语言平铺列。
+
+    en / zh 仍以业务表的 name/name_en 等列为主；本表存放 de/fr 等额外语言。
+    回退顺序为 请求语言 → en → zh。
+    """
+
+    __tablename__ = "content_translations"
+    __table_args__ = (
+        UniqueConstraint(
+            "entity_type",
+            "entity_id",
+            "lang",
+            "field",
+            name="uq_content_translation_entity_lang_field",
+        ),
+        Index(
+            "ix_content_translations_lookup",
+            "entity_type",
+            "entity_id",
+            "lang",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entity_type: Mapped[str] = mapped_column(String(40))
+    entity_id: Mapped[int] = mapped_column(Integer)
+    lang: Mapped[str] = mapped_column(String(8))
+    field: Mapped[str] = mapped_column(String(60))
+    value: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=utcnow, onupdate=utcnow
+    )

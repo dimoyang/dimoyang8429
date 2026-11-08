@@ -4,7 +4,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import Destination, Hospital, MedicalPackage, User
+from app.models import (
+    ContentTranslation,
+    Destination,
+    Hospital,
+    MedicalPackage,
+    User,
+)
 from app.security import hash_password
 
 DEMO_EMAIL = "demo@meditour.com"
@@ -99,7 +105,79 @@ def seed_data(db: Session) -> None:
 
     db.commit()
 
+    _seed_translations(db)
     _seed_destinations(db)
+
+
+def _seed_translations(db: Session) -> None:
+    """德语示例译文，仅用于验证多语言接口与回退逻辑。
+
+    这是演示数据，不是可直接上线的人工译文；生产内容必须由人工翻译并复核。
+    """
+    package = db.scalar(
+        select(MedicalPackage).where(
+            MedicalPackage.name_en == "Knee Replacement Surgery"
+        )
+    )
+    hospital = db.scalar(
+        select(Hospital).where(
+            Hospital.name_en == "Peking Union Medical College Hospital"
+        )
+    )
+
+    entries: list[tuple[str, int, str, str, str]] = []
+    if package is not None:
+        entries.extend(
+            [
+                (
+                    "package",
+                    package.id,
+                    "de",
+                    "name",
+                    "Kniegelenkersatz (Knie-TEP)",
+                ),
+                (
+                    "package",
+                    package.id,
+                    "de",
+                    "description",
+                    "Durchgeführt von einem erfahrenen orthopädischen Team "
+                    "einer Top-Klinik mit importierten Gelenkimplantaten: "
+                    "weniger Schmerzen und mehr Mobilität.",
+                ),
+            ]
+        )
+    if hospital is not None:
+        entries.append(
+            (
+                "hospital",
+                hospital.id,
+                "de",
+                "name",
+                "Peking-Union-Krankenhaus",
+            )
+        )
+
+    for entity_type, entity_id, lang, field, value in entries:
+        exists = db.scalar(
+            select(ContentTranslation.id).where(
+                ContentTranslation.entity_type == entity_type,
+                ContentTranslation.entity_id == entity_id,
+                ContentTranslation.lang == lang,
+                ContentTranslation.field == field,
+            )
+        )
+        if exists is None:
+            db.add(
+                ContentTranslation(
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    lang=lang,
+                    field=field,
+                    value=value,
+                )
+            )
+    db.commit()
 
 
 def _seed_destinations(db: Session) -> None:
