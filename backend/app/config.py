@@ -39,6 +39,11 @@ class Settings:
         if origin.strip()
     ]
 
+    # 演示账号默认不创建，只有显式开启时才写入种子数据（生产环境不要开启）。
+    SEED_DEMO_USER: bool = os.getenv(
+        "MEDITOUR_SEED_DEMO_USER", ""
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
 
 settings = Settings()
 

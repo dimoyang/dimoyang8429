@@ -20,6 +20,7 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 启动时会自动执行数据库迁移并写入幂等种子数据（医院、套餐、目的地等）。
+演示账号仅在 `MEDITOUR_SEED_DEMO_USER=1` 时创建（`.env.example` 已为本地开启）；关闭开关只会停止创建，不会删除库里已有的账号。
 接口文档：`http://127.0.0.1:8000/docs`。
 
 ## 环境变量
@@ -30,6 +31,7 @@ uvicorn app.main:app --reload --port 8000
 | `DATABASE_URL` | 否 | `sqlite:///backend/meditour.db` | SQLAlchemy 连接串 |
 | `MEDITOUR_CURRENCY` | 否 | `EUR` | 种子套餐与订单金额使用的币种 |
 | `MEDITOUR_CORS_ORIGINS` | 否 | `http://localhost:8123,http://127.0.0.1:8123` | 允许的浏览器来源，逗号分隔 |
+| `MEDITOUR_SEED_DEMO_USER` | 否 | 关闭 | 设为 `1` 时创建演示账号 `demo@meditour.com / Demo123456`；生产环境不要开启，关闭开关不会删除已有账号 |
 
 本地可把变量写进 `backend/.env`（已被 `.gitignore` 忽略）；生产环境请通过运行环境注入，不要提交 `.env`。
 

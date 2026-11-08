@@ -12,7 +12,10 @@ DEMO_PASSWORD = "Demo123456"
 
 
 def seed_data(db: Session) -> None:
-    if db.scalar(select(User).where(User.email == DEMO_EMAIL)) is None:
+    # 演示账号由开关控制；关闭时也不会删除数据库中已存在的账号。
+    if settings.SEED_DEMO_USER and db.scalar(
+        select(User).where(User.email == DEMO_EMAIL)
+    ) is None:
         db.add(
             User(
                 email=DEMO_EMAIL,

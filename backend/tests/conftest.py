@@ -14,6 +14,8 @@ if TEST_DB.exists():
 os.environ.setdefault("MEDITOUR_SECRET_KEY", "test-secret-key-for-pytest")
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{TEST_DB.as_posix()}")
 os.environ.setdefault("MEDITOUR_TESTING", "1")
+# 固定关闭演示账号，避免开发者本地 .env 开启开关后影响断言。
+os.environ["MEDITOUR_SEED_DEMO_USER"] = "0"
 
 import pytest
 from fastapi.testclient import TestClient
