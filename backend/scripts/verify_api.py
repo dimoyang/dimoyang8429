@@ -514,6 +514,24 @@ def main() -> int:
         f"page=2 首条 id={two_items[0].get('id') if two_items else None}，"
         f"total={total}",
     )
+    checker.check(
+        api.get("/medical/packages?page=0").status == 422,
+        "page < 1 返回 422",
+    )
+    checker.check(
+        api.get("/medical/packages?page_size=101").status == 422,
+        "page_size > 100 返回 422",
+    )
+    beyond = api.get("/medical/packages?page=99&page_size=100")
+    beyond_body = beyond.body if isinstance(beyond.body, dict) else {}
+    checker.check(
+        beyond.status == 200
+        and beyond_body.get("items") == []
+        and is_int(beyond_body.get("total"))
+        and beyond_body.get("total") >= 1,
+        "超出末页 items 为空但 total 保留",
+        f"实际 {beyond.status} {fmt(beyond.body, 120)}",
+    )
 
     # 5. /medical/hospitals
     checker.section(5, "/medical/hospitals 必须为裸数组")
@@ -1328,6 +1346,13 @@ def main() -> int:
             and is_int(staff_list_body.get("page_size")),
             "员工订单列表返回分页结构",
             f"实际 {staff_list.status} {fmt(staff_list.body, 200)}",
+        )
+        checker.check(
+            api.get(
+                "/staff/bookings?page_size=101", token=staff_token
+            ).status
+            == 422,
+            "员工列表 page_size 上限为 100",
         )
         checker.check(
             staff_item is not None,

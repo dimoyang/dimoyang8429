@@ -5,7 +5,6 @@
 应在此处增加过滤条件而不是靠前端隐藏。
 """
 
-import math
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -15,6 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.deps import require_staff
 from app.models import AuditLog, Booking, User
+from app.pagination import PageParams, pagination
 from app.schemas import (
     BookingStatusUpdate,
     StaffBookingDetail,
@@ -43,8 +43,7 @@ def _get_booking(db: Session, booking_id: int) -> Booking:
 
 @router.get("/bookings", response_model=StaffBookingPage)
 def list_bookings(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    paging: PageParams = Depends(pagination),
     status_filter: Literal["pending", "confirmed", "completed", "cancelled"] | None = Query(
         None, alias="status", description="按订单状态过滤"
     ),
@@ -63,16 +62,16 @@ def list_bookings(
         bookings_stmt.order_by(
             Booking.created_at.desc(), Booking.id.desc()
         )
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+        .offset(paging.offset)
+        .limit(paging.page_size)
     ).all()
 
     return StaffBookingPage(
         items=[StaffBookingListItem.model_validate(item) for item in bookings],
         total=total,
-        page=page,
-        page_size=page_size,
-        pages=math.ceil(total / page_size) if total else 0,
+        page=paging.page,
+        page_size=paging.page_size,
+        pages=paging.pages(total),
     )
 
 

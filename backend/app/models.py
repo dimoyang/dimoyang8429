@@ -79,10 +79,18 @@ class MedicalPackage(Base):
 
 class Booking(Base):
     __tablename__ = "bookings"
+    __table_args__ = (
+        # 用户订单常按状态查询；复合索引前缀也能服务仅按 user_id 的查询。
+        Index("ix_bookings_user_status", "user_id", "status"),
+        # 员工列表：按状态过滤 + 按创建时间倒序。
+        Index("ix_bookings_status_created_at", "status", "created_at"),
+        # 员工列表不筛选状态时的全局时间排序。
+        Index("ix_bookings_created_at", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     order_no: Mapped[str] = mapped_column(String(40), unique=True, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     package_id: Mapped[int] = mapped_column(ForeignKey("medical_packages.id"))
     appointment_date: Mapped[datetime] = mapped_column(DateTime)
     contact_name: Mapped[str] = mapped_column(String(120))
@@ -131,9 +139,13 @@ class Destination(Base):
 
 class Itinerary(Base):
     __tablename__ = "itineraries"
+    __table_args__ = (
+        # 列表按用户过滤并按出发日期排序；前缀可服务仅按 user_id 的查询。
+        Index("ix_itineraries_user_start", "user_id", "start_date"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     title: Mapped[str] = mapped_column(String(160))
     start_date: Mapped[date] = mapped_column(Date)
     end_date: Mapped[date] = mapped_column(Date)
@@ -225,6 +237,9 @@ class ContentTranslation(Base):
 
     en / zh 仍以业务表的 name/name_en 等列为主；本表存放 de/fr 等额外语言。
     回退顺序为 请求语言 → en → zh。
+
+    唯一约束 (entity_type, entity_id, lang, field) 的索引前缀已经覆盖
+    (entity_type, entity_id, lang) 查询，因此不再单独建重复索引。
     """
 
     __tablename__ = "content_translations"
@@ -235,12 +250,6 @@ class ContentTranslation(Base):
             "lang",
             "field",
             name="uq_content_translation_entity_lang_field",
-        ),
-        Index(
-            "ix_content_translations_lookup",
-            "entity_type",
-            "entity_id",
-            "lang",
         ),
     )
 

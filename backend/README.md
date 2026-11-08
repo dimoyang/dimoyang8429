@@ -89,6 +89,32 @@ uvicorn app.main:app --reload --port 8000
   - 目标值不是 `confirmed` / `completed`：422（请求体校验失败）。
 - 普通用户即使拥有订单本身，也不能调用以上员工接口修改状态（测试覆盖 403）。
 
+## 分页约定与索引
+
+统一分页规则（`app/pagination.py`）：
+
+- `page` 从 1 开始；`page_size` 默认 20、上限 100；越界统一返回 422。
+- 返回分页结构的列表统一为 `{items, total, page, page_size, pages}`。
+- 当前适用：`/medical/packages`、`/staff/bookings`。
+
+受 Flutter 现有契约限制，以下端点必须保持裸数组，**不能**改成 `{items: ...}`：
+`/medical/hospitals`（前端按数组解析）、`/bookings/`、`/itineraries`、`/destinations`。
+这些列表如需分页，只能新增端点或做 API 版本化。
+
+索引（迁移 `e3f5a7c9b1d2`）：
+
+| 表 | 索引 | 用途 |
+| --- | --- | --- |
+| `bookings` | `ix_bookings_user_status (user_id, status)` | 用户订单/状态过滤，前缀覆盖仅 `user_id` 的查询 |
+| `bookings` | `ix_bookings_status_created_at (status, created_at)` | 员工按状态过滤并按时间排序 |
+| `bookings` | `ix_bookings_created_at (created_at)` | 员工不筛选状态时的时间排序 |
+| `itineraries` | `ix_itineraries_user_start (user_id, start_date)` | 行程按用户过滤并按出发日期排序 |
+| `content_translations` | 唯一约束 `(entity_type, entity_id, lang, field)` | 查询前缀已包含 `entity_type + entity_id + lang` |
+
+同时清理重复索引：`ix_bookings_user_id`、`ix_itineraries_user_id`（复合索引前缀已覆盖）
+与 `ix_content_translations_lookup`（与唯一约束前缀重复）。`order_no`、`token_hash`、
+`jti` 等唯一索引保留，用于等值查找。
+
 ## 认证与令牌
 
 - `POST /api/v1/auth/login` 返回 `access_token` 与 `refresh_token`，原有字段含义不变。
@@ -182,11 +208,11 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（49 项）：预约字段与校验分支、重复提交、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、日志脱敏与 request id。
+当前覆盖（52 项）：预约字段与校验分支、重复提交、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、日志脱敏与 request id。
 
 ## 接口验证脚本
 
-`scripts/verify_api.py` 只用 Python 标准库，覆盖注册、登录（含限流）、鉴权、健康检查、套餐、医院、订单创建/校验/列表/取消、令牌刷新与登出、CORS、request id、错误体形状、账号闭环、多语言回退、数据导出与员工订单操作（默认 104 项断言；提供 `--staff-email/--staff-password` 时额外验证员工接口，共 121 项）。
+`scripts/verify_api.py` 只用 Python 标准库，覆盖注册、登录（含限流）、鉴权、健康检查、套餐、医院、订单创建/校验/列表/取消、令牌刷新与登出、CORS、request id、错误体形状、账号闭环、多语言回退、数据导出、分页边界与员工订单操作（默认 107 项断言；提供 `--staff-email/--staff-password` 时额外验证员工接口，共 125 项）。
 
 ```bash
 # 先启动后端，再执行

@@ -122,6 +122,24 @@ def test_staff_flow_masks_list_and_reveals_detail(client, auth_headers) -> None:
     assert body["total"] >= 1
     assert body["pages"] >= 1
 
+    # 员工列表与套餐列表共用同一套分页边界。
+    assert (
+        client.get(
+            "/api/v1/staff/bookings",
+            params={"page": 0},
+            headers=staff_headers,
+        ).status_code
+        == 422
+    )
+    assert (
+        client.get(
+            "/api/v1/staff/bookings",
+            params={"page_size": 101},
+            headers=staff_headers,
+        ).status_code
+        == 422
+    )
+
     item = next(item for item in body["items"] if item["id"] == booking["id"])
     assert "notes" not in item
     assert item["contact_phone"] != "+8613800001234"
