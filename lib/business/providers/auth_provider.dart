@@ -18,20 +18,32 @@ class AuthProvider extends ChangeNotifier {
 
   bool get isInitialized => _isInitialized;
 
-  /// 启动恢复：本地有 token 则请求 /auth/me 恢复用户，失败静默清除。
+  /// 启动恢复：先标记初始化完成，避免阻塞首屏；会话恢复在后台完成后再通知。
+  /// 本地有 token 则请求 /auth/me 恢复用户，失败静默清除（401 语义不变）。
   Future<void> init() async {
+    _isInitialized = true;
+    notifyListeners();
+
     await TokenStore.restore();
     final token = TokenStore.current;
-    if (token != null) {
-      try {
-        final data = await ApiService.instance.getMe();
-        _user = UserProfile.fromJson(data);
-        await StorageService.setCachedUser(jsonEncode(_user!.toJson()));
-      } on ApiException {
-        await _clearSession();
-      }
+    if (token == null) {
+      return;
     }
-    _isInitialized = true;
+    try {
+      final data = await ApiService.instance.getMe();
+      // 恢复期间用户可能已登录或登出，避免旧请求覆盖新会话。
+      if (TokenStore.current != token) {
+        return;
+      }
+      _user = UserProfile.fromJson(data);
+      await StorageService.setCachedUser(jsonEncode(_user!.toJson()));
+    } on ApiException {
+      // 仅当 token 未被登录/登出替换时，才按失效处理。
+      if (TokenStore.current != token) {
+        return;
+      }
+      await _clearSession();
+    }
     notifyListeners();
   }
 
