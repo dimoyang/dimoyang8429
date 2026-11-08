@@ -20,6 +20,8 @@ class DestinationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final langCode = Localizations.localeOf(context).languageCode;
     final name = destination.getName(langCode);
+    // de/fr 拉取后 name 已是译文，避免把同一名称重复显示成副标题。
+    final secondaryName = destination.name;
 
     return Semantics(
       button: true,
@@ -65,9 +67,11 @@ class DestinationCard extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                       children: [
-                        if (langCode != 'zh')
+                        if (langCode != 'zh' &&
+                            secondaryName.isNotEmpty &&
+                            secondaryName != name)
                           TextSpan(
-                            text: '  ${destination.name}',
+                            text: '  $secondaryName',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.7),
                               fontSize: 11,

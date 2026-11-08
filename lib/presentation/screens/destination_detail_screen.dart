@@ -139,19 +139,22 @@ class DestinationDetailScreen extends StatelessWidget {
   }
 
   Widget _buildTitleRow(Destination destination, String langCode) {
+    final localizedName = destination.getName(langCode);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
       children: [
         Flexible(
           child: Text(
-            destination.getName(langCode),
+            localizedName,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
           ),
         ),
-        if (langCode != 'zh') ...[
+        if (langCode != 'zh' &&
+            destination.name.isNotEmpty &&
+            destination.name != localizedName) ...[
           const SizedBox(width: 10),
           Flexible(
             child: Text(

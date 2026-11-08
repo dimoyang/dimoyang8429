@@ -282,7 +282,7 @@ class DestinationRepository {
       final loaded = <Destination>[];
       for (final item in data) {
         try {
-          loaded.add(Destination.fromJson(item));
+          loaded.add(Destination.fromJson(item, lang: lang));
         } on TypeError {
           throw const ResponseParseException();
         }

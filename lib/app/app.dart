@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
@@ -33,8 +35,16 @@ class MeditourApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => AuthProvider()..init(),
         ),
-        ChangeNotifierProvider(
-          create: (_) => DestinationProvider()..init(),
+        ChangeNotifierProxyProvider<LanguageProvider, DestinationProvider>(
+          create: (_) => DestinationProvider(),
+          update: (_, language, destination) {
+            final provider = destination ?? DestinationProvider();
+            // 语言切换后按新语言重新拉取；同名语言不会重复请求。
+            unawaited(provider.syncLanguage(
+              language.currentLocale.languageCode,
+            ));
+            return provider;
+          },
         ),
       ],
       child: Consumer<LanguageProvider>(
