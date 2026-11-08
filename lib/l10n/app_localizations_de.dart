@@ -612,6 +612,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Anmeldung abgelaufen. Bitte erneut anmelden.';
 
   @override
+  String get errorInvalidCredentials => 'E-Mail oder Passwort ist falsch.';
+
+  @override
   String get errorServer =>
       'Server ist ausgelastet. Bitte später erneut versuchen.';
 

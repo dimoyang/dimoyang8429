@@ -1224,6 +1224,12 @@ abstract class AppLocalizations {
   /// **'Login expired. Please log in again.'**
   String get errorUnauthorized;
 
+  /// No description provided for @errorInvalidCredentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect email or password.'**
+  String get errorInvalidCredentials;
+
   /// No description provided for @errorServer.
   ///
   /// In en, this message translates to:

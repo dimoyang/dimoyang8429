@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -22,6 +23,8 @@ class AuthProvider extends ChangeNotifier {
   /// 本地有 token 则请求 /auth/me 恢复用户，失败静默清除（401 语义不变）。
   Future<void> init() async {
     _isInitialized = true;
+    // token 被拦截器清除（业务请求 401）时同步清空内存登录态。
+    TokenStore.onSessionCleared = _handleSessionCleared;
     notifyListeners();
 
     await TokenStore.restore();
@@ -52,8 +55,13 @@ class AuthProvider extends ChangeNotifier {
     required String email,
     required String password,
   }) async {
-    final token =
-        await ApiService.instance.login(email: email, password: password);
+    final String token;
+    try {
+      token = await ApiService.instance.login(email: email, password: password);
+    } on UnauthorizedException {
+      // 登录表单的 401 是凭据错误，不是会话过期。
+      throw const InvalidCredentialsException();
+    }
     await TokenStore.save(token);
     final data = await ApiService.instance.getMe();
     _user = UserProfile.fromJson(data);
@@ -68,12 +76,16 @@ class AuthProvider extends ChangeNotifier {
     String? fullName,
     String preferredLanguage = 'en',
   }) async {
-    await ApiService.instance.register(
-      email: email,
-      password: password,
-      fullName: fullName,
-      preferredLanguage: preferredLanguage,
-    );
+    try {
+      await ApiService.instance.register(
+        email: email,
+        password: password,
+        fullName: fullName,
+        preferredLanguage: preferredLanguage,
+      );
+    } on UnauthorizedException {
+      throw const InvalidCredentialsException();
+    }
     await login(email: email, password: password);
   }
 
@@ -86,5 +98,23 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     await TokenStore.clear();
     await StorageService.clearCachedUser();
+  }
+
+  /// token 被外部清除（如业务请求 401）时，同步清空内存登录态。
+  void _handleSessionCleared() {
+    if (_user == null) {
+      return;
+    }
+    _user = null;
+    unawaited(StorageService.clearCachedUser());
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    if (TokenStore.onSessionCleared == _handleSessionCleared) {
+      TokenStore.onSessionCleared = null;
+    }
+    super.dispose();
   }
 }

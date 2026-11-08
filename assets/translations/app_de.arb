@@ -208,6 +208,7 @@
   "bookingPackageNotFound": "Diese Leistung ist nicht mehr verfügbar. Bitte gehen Sie zurück und wählen Sie eine andere.",
   "errorNetwork": "Netzwerk nicht verfügbar. Bitte Verbindung prüfen und erneut versuchen.",
   "errorUnauthorized": "Anmeldung abgelaufen. Bitte erneut anmelden.",
+  "errorInvalidCredentials": "E-Mail oder Passwort ist falsch.",
   "errorServer": "Server ist ausgelastet. Bitte später erneut versuchen.",
   "errorUnknown": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
   "errorRequest": "Die Anfrage konnte nicht abgeschlossen werden. Bitte prüfen Sie Ihre Angaben und versuchen Sie es erneut.",

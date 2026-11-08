@@ -8,6 +8,9 @@ class TokenStore {
   static String? _token;
   static bool _restored = false;
 
+  /// 会话被清除时的同步回调，由 [AuthProvider] 注册，用于同步内存登录态。
+  static void Function()? onSessionCleared;
+
   /// 当前 token（未恢复持久化值前可能为 null）。
   static String? get current => _token;
 
@@ -27,9 +30,13 @@ class TokenStore {
   }
 
   static Future<void> clear() async {
+    final hadToken = _token != null;
     _token = null;
     _restored = true;
     await StorageService.clearAuthToken();
+    if (hadToken) {
+      onSessionCleared?.call();
+    }
   }
 
   /// 仅测试用：清空内存态，模拟冷启动。
@@ -37,5 +44,6 @@ class TokenStore {
   static void resetForTesting() {
     _token = null;
     _restored = false;
+    onSessionCleared = null;
   }
 }

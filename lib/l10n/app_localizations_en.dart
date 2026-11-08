@@ -607,6 +607,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorUnauthorized => 'Login expired. Please log in again.';
 
   @override
+  String get errorInvalidCredentials => 'Incorrect email or password.';
+
+  @override
   String get errorServer => 'Server is busy. Please try again later.';
 
   @override

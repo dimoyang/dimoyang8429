@@ -612,6 +612,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorUnauthorized => 'Session expirée. Veuillez vous reconnecter.';
 
   @override
+  String get errorInvalidCredentials => 'E-mail ou mot de passe incorrect.';
+
+  @override
   String get errorServer => 'Serveur occupé. Veuillez réessayer plus tard.';
 
   @override

@@ -208,6 +208,7 @@
   "bookingPackageNotFound": "Ce service n'est plus disponible. Veuillez revenir en arrière et en choisir un autre.",
   "errorNetwork": "Réseau indisponible. Veuillez vérifier votre connexion et réessayer.",
   "errorUnauthorized": "Session expirée. Veuillez vous reconnecter.",
+  "errorInvalidCredentials": "E-mail ou mot de passe incorrect.",
   "errorServer": "Serveur occupé. Veuillez réessayer plus tard.",
   "errorUnknown": "Une erreur est survenue. Veuillez réessayer.",
   "errorRequest": "La demande n'a pas pu aboutir. Vérifiez vos informations et réessayez.",

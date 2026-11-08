@@ -68,6 +68,15 @@ class UnauthorizedException extends ApiException {
   String toLocalizedMessage(AppLocalizations l10n) => l10n.errorUnauthorized;
 }
 
+/// 登录/注册表单场景的 401：凭据错误，而非会话过期。
+class InvalidCredentialsException extends ApiException {
+  const InvalidCredentialsException();
+
+  @override
+  String toLocalizedMessage(AppLocalizations l10n) =>
+      l10n.errorInvalidCredentials;
+}
+
 /// 其余 4xx：统一映射为用户友好文案，不直接展示后端原始 detail。
 class ApiBusinessException extends ApiException {
   final int statusCode;

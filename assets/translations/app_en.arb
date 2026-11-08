@@ -215,6 +215,7 @@
   "bookingPackageNotFound": "This service is no longer available. Please go back and pick another one.",
   "errorNetwork": "Network unavailable. Please check your connection and try again.",
   "errorUnauthorized": "Login expired. Please log in again.",
+  "errorInvalidCredentials": "Incorrect email or password.",
   "errorServer": "Server is busy. Please try again later.",
   "errorUnknown": "Something went wrong. Please try again.",
   "errorRequest": "We couldn't complete this request. Please check your details and try again.",

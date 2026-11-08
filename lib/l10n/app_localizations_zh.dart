@@ -583,6 +583,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorUnauthorized => '登录已过期，请重新登录。';
 
   @override
+  String get errorInvalidCredentials => '邮箱或密码错误。';
+
+  @override
   String get errorServer => '服务器繁忙，请稍后重试。';
 
   @override
