@@ -297,7 +297,9 @@ def request_password_reset(
         )
         db.commit()
         try:
-            send_password_reset(user.email, raw_token)
+            send_password_reset(
+                user.email, raw_token, user.preferred_language
+            )
         except Exception:
             # 发信失败也不能改变响应，否则会暴露邮箱是否存在。
             logger.exception("password_reset_email_failed")

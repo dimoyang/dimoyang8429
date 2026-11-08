@@ -70,6 +70,14 @@ class Settings:
             str(BASE_DIR / "var" / "mail_outbox.log"),
         )
     )
+    # file 后端把完整邮件（HTML+纯文本）落成 .eml 便于本地预览；
+    # outbox 只保留一行索引（含 token，供开发脚本读取）。
+    MAIL_PREVIEW_DIR: Path = Path(
+        os.getenv(
+            "MEDITOUR_MAIL_PREVIEW_DIR",
+            str(BASE_DIR / "var" / "mail_preview"),
+        )
+    )
     PUBLIC_BASE_URL: str = os.getenv(
         "MEDITOUR_PUBLIC_BASE_URL", "http://localhost:8123"
     )

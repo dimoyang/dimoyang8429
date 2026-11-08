@@ -26,6 +26,10 @@ if TEST_OUTBOX.exists():
     TEST_OUTBOX.unlink()
 os.environ.setdefault("MEDITOUR_MAIL_BACKEND", "file")
 os.environ.setdefault("MEDITOUR_MAIL_OUTBOX", str(TEST_OUTBOX))
+# 邮件预览（.eml）也放 var/ 下，避免在仓库根留下未忽略的文件。
+TEST_MAIL_PREVIEW = BACKEND_DIR / "var" / "test_mail_preview"
+shutil.rmtree(TEST_MAIL_PREVIEW, ignore_errors=True)
+os.environ["MEDITOUR_MAIL_PREVIEW_DIR"] = str(TEST_MAIL_PREVIEW)
 os.environ.setdefault("MEDITOUR_RESET_TOKEN_EXPIRE_MINUTES", "30")
 
 # 上传目录固定到 var/ 下的测试目录（var/ 已被 gitignore），避免污染开发目录。
@@ -84,3 +88,9 @@ def mail_outbox() -> Path:
 def upload_dir() -> Path:
     """测试专用的本地上传目录。"""
     return TEST_UPLOADS
+
+
+@pytest.fixture(scope="session")
+def mail_preview_dir() -> Path:
+    """file 邮件后端生成的 .eml 目录。"""
+    return TEST_MAIL_PREVIEW
