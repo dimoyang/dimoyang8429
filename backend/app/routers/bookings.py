@@ -88,3 +88,34 @@ def list_my_bookings(
             .order_by(Booking.id.desc())
         ).all()
     )
+
+
+@router.post("/{booking_id}/cancel", response_model=BookingResponse)
+def cancel_booking(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Booking:
+    """取消自己的待处理订单；仅允许 pending -> cancelled。"""
+    booking = db.scalar(
+        select(Booking)
+        .options(joinedload(Booking.package))
+        .where(Booking.id == booking_id, Booking.user_id == current_user.id)
+    )
+    if booking is None:
+        # 不区分“不存在”和“属于别人”，避免泄露他人订单是否存在。
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Booking not found",
+        )
+    if booking.status != "pending":
+        # 请求本身合法，但与资源当前状态冲突，因此用 409 而不是 422。
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Only pending bookings can be cancelled (current status: {booking.status})",
+        )
+
+    booking.status = "cancelled"
+    db.commit()
+    db.refresh(booking)
+    return booking

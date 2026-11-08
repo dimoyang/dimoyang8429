@@ -593,6 +593,31 @@ def main() -> int:
             fmt(created_item.get("created_at")),
         )
 
+    cancel = api.post_json(
+        f"/bookings/{created_body.get('id')}/cancel", {}, token=token
+    )
+    cancel_body = cancel.body if isinstance(cancel.body, dict) else {}
+    checker.check(
+        cancel.status == 200 and cancel_body.get("status") == "cancelled",
+        "取消自己的 pending 订单返回 cancelled",
+        f"实际 {cancel.status} status={cancel_body.get('status')}",
+    )
+    checker.check(
+        all(field in cancel_body for field in ("id", "order_no", "package_id", "total_price", "currency")),
+        "取消响应保留既有字段",
+    )
+
+    cancel_again = api.post_json(
+        f"/bookings/{created_body.get('id')}/cancel", {}, token=token
+    )
+    checker.check(
+        cancel_again.status == 409
+        and isinstance(cancel_again.body, dict)
+        and isinstance(cancel_again.body.get("detail"), str),
+        "重复取消返回 409 且 detail 为字符串",
+        f"实际 {cancel_again.status} {fmt(cancel_again.body)}",
+    )
+
     # 8. CORS 预检
     checker.section(8, "CORS 预检")
     origin = "http://localhost:8123"

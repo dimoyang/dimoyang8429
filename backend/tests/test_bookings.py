@@ -120,3 +120,58 @@ def test_duplicate_pending_booking_is_rejected(client, auth_headers) -> None:
         headers=auth_headers,
     )
     assert other_date.status_code == 201
+
+
+def test_cancel_pending_booking_and_reject_second_cancel(
+    client, auth_headers
+) -> None:
+    created = client.post(
+        "/api/v1/bookings/",
+        json=booking_payload(appointment_date=future_iso(65)),
+        headers=auth_headers,
+    )
+    booking_id = created.json()["id"]
+
+    cancelled = client.post(
+        f"/api/v1/bookings/{booking_id}/cancel", headers=auth_headers
+    )
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] == "cancelled"
+    # 响应字段保持向后兼容。
+    for field in ("id", "order_no", "package_id", "total_price", "currency"):
+        assert field in cancelled.json()
+
+    again = client.post(
+        f"/api/v1/bookings/{booking_id}/cancel", headers=auth_headers
+    )
+    assert again.status_code == 409
+    assert isinstance(again.json()["detail"], str)
+
+
+def test_cannot_cancel_another_users_booking(client, auth_headers) -> None:
+    created = client.post(
+        "/api/v1/bookings/",
+        json=booking_payload(appointment_date=future_iso(66)),
+        headers=auth_headers,
+    )
+    booking_id = created.json()["id"]
+
+    email = "cancel-other@meditour.com"
+    client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "Other123456"},
+    )
+    login = client.post(
+        "/api/v1/auth/login",
+        data={"username": email, "password": "Other123456"},
+    )
+    other_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    response = client.post(
+        f"/api/v1/bookings/{booking_id}/cancel", headers=other_headers
+    )
+    assert response.status_code == 404
+
+    assert (
+        client.post(f"/api/v1/bookings/{booking_id}/cancel").status_code == 401
+    )
