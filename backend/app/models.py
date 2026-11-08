@@ -73,6 +73,11 @@ class MedicalPackage(Base):
     description_en: Mapped[str] = mapped_column(Text, default="")
     category: Mapped[str] = mapped_column(String(60), default="")
     hospital_id: Mapped[int] = mapped_column(ForeignKey("hospitals.id"))
+    # 上下架开关：false 时不出现在公开列表，也不能被新预约引用。
+    # 已存在的历史订单不受影响（订单金额是下单时的快照）。
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="1"
+    )
 
     hospital: Mapped[Hospital] = relationship(back_populates="packages")
 

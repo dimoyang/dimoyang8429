@@ -47,6 +47,12 @@ def create_booking(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Medical package not found",
         )
+    if not package.is_active:
+        # 下架套餐对用户不可见，因此同样按 404 处理，避免暴露其存在。
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Medical package is not available for booking",
+        )
 
     # 同一用户对同一套餐、同一预约时间只允许存在一个待处理订单。
     # 精确到秒级预约时间意味着不同日期的正常预约不受影响。

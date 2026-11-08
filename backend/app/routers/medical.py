@@ -26,7 +26,8 @@ def _localized(translated: str | None, chinese: str, english: str, lang: str) ->
     response_model=PackagePage,
     summary="套餐分页列表",
     description=(
-        "公开接口。分页参数 `page`（≥1）与 `page_size`（默认 20，上限 100）。"
+        "公开接口。仅返回在售（`is_active=true`）套餐。"
+        "分页参数 `page`（≥1）与 `page_size`（默认 20，上限 100）。"
         "可选 `lang=zh|en|de|fr`；不传 `lang` 时响应与旧版本完全一致"
         "（`name` 为中文、`name_en` 为英文）。"
     ),
@@ -41,9 +42,13 @@ def list_packages(
     ),
     db: Session = Depends(get_db),
 ) -> PackagePage:
-    total = db.scalar(select(func.count()).select_from(MedicalPackage)) or 0
+    active_filter = MedicalPackage.is_active.is_(True)
+    total = db.scalar(
+        select(func.count()).select_from(MedicalPackage).where(active_filter)
+    ) or 0
     items = db.scalars(
         select(MedicalPackage)
+        .where(active_filter)
         .order_by(MedicalPackage.id)
         .offset(paging.offset)
         .limit(paging.page_size)

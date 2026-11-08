@@ -14,6 +14,8 @@ from pydantic import (
     model_validator,
 )
 
+from app.config import settings
+
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -91,10 +93,67 @@ class PackageResponse(BaseModel):
     description_en: str
     category: str
     hospital_id: int
+    is_active: bool
 
 
 class PackagePage(BaseModel):
     items: list[PackageResponse]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
+class PackageCreate(BaseModel):
+    """员工创建套餐。currency 缺省取全局单一币种配置。"""
+
+    name: str = Field(min_length=1, max_length=160)
+    name_en: str = Field(default="", max_length=160)
+    price: float = Field(gt=0)
+    currency: str = Field(
+        default_factory=lambda: settings.DEFAULT_CURRENCY,
+        min_length=3,
+        max_length=8,
+    )
+    duration_days: int = Field(default=1, ge=1)
+    image_url: str = Field(default="", max_length=500)
+    description: str = ""
+    description_en: str = ""
+    category: str = Field(default="", max_length=60)
+    hospital_id: int
+    is_active: bool = True
+
+
+class PackageUpdate(BaseModel):
+    """员工局部更新套餐；未提供的字段保持不变。"""
+
+    name: str | None = Field(default=None, min_length=1, max_length=160)
+    name_en: str | None = Field(default=None, max_length=160)
+    price: float | None = Field(default=None, gt=0)
+    currency: str | None = Field(default=None, min_length=3, max_length=8)
+    duration_days: int | None = Field(default=None, ge=1)
+    image_url: str | None = Field(default=None, max_length=500)
+    description: str | None = None
+    description_en: str | None = None
+    category: str | None = Field(default=None, max_length=60)
+    hospital_id: int | None = None
+    is_active: bool | None = None
+
+
+class HospitalCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=160)
+    name_en: str = Field(default="", max_length=160)
+    level: str = Field(default="", max_length=40)
+
+
+class HospitalUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=160)
+    name_en: str | None = Field(default=None, max_length=160)
+    level: str | None = Field(default=None, max_length=40)
+
+
+class HospitalPage(BaseModel):
+    items: list[HospitalResponse]
     total: int
     page: int
     page_size: int
@@ -313,6 +372,58 @@ class DestinationResponse(BaseModel):
     intro: str
     experiences: list[DestinationExperience] = Field(default_factory=list)
     tips: list[str] = Field(default_factory=list)
+
+
+class StaffDestinationResponse(DestinationResponse):
+    """员工侧额外返回排序值，便于调整首页展示顺序。"""
+
+    sort_order: int
+
+
+class DestinationCreate(BaseModel):
+    """新建目的地。id 是与前端一致的 slug，创建后不可修改。"""
+
+    id: str = Field(
+        min_length=1,
+        max_length=40,
+        pattern=r"^[a-z0-9][a-z0-9-]*$",
+        description="slug，仅小写字母、数字与连字符，例如 beijing",
+    )
+    name: str = Field(min_length=1, max_length=120)
+    name_en: str = Field(min_length=1, max_length=120)
+    tagline: str = Field(default="", max_length=200)
+    image_url: str = Field(default="", max_length=500)
+    search_terms: list[str] = Field(default_factory=list)
+    best_season: str = Field(default="", max_length=80)
+    suggest_days: str = Field(default="", max_length=40)
+    intro: str = ""
+    experiences: list[DestinationExperience] = Field(default_factory=list)
+    tips: list[str] = Field(default_factory=list)
+    sort_order: int = 0
+
+
+class DestinationUpdate(BaseModel):
+    """局部更新目的地；不接受 id，slug 是稳定标识。"""
+
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    name_en: str | None = Field(default=None, min_length=1, max_length=120)
+    tagline: str | None = Field(default=None, max_length=200)
+    image_url: str | None = Field(default=None, max_length=500)
+    search_terms: list[str] | None = None
+    best_season: str | None = Field(default=None, max_length=80)
+    suggest_days: str | None = Field(default=None, max_length=40)
+    intro: str | None = None
+    experiences: list[DestinationExperience] | None = None
+    tips: list[str] | None = None
+    sort_order: int | None = None
+
+
+class DestinationPage(BaseModel):
+    items: list[StaffDestinationResponse]
+    total: int
+    page: int
+    page_size: int
+    pages: int
 
 
 class ItineraryDayPayload(BaseModel):
