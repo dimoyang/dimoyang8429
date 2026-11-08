@@ -393,6 +393,77 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tap the heart on a destination to keep it here.';
 
   @override
+  String get medicalFilterCategory => 'Category';
+
+  @override
+  String get medicalPriceFilter => 'Price';
+
+  @override
+  String get medicalSortFilter => 'Sort';
+
+  @override
+  String get medicalFilterAll => 'All';
+
+  @override
+  String get medicalPriceAll => 'Any price';
+
+  @override
+  String get medicalPriceUnder5000 => 'Under 5,000';
+
+  @override
+  String get medicalPriceBetween => '5,000 – 10,000';
+
+  @override
+  String get medicalPriceOver10000 => 'Over 10,000';
+
+  @override
+  String get medicalSortRecommended => 'Recommended';
+
+  @override
+  String get medicalSortPriceAsc => 'Price: low to high';
+
+  @override
+  String get medicalSortPriceDesc => 'Price: high to low';
+
+  @override
+  String get medicalFilteredEmptyTitle => 'No matching services';
+
+  @override
+  String get medicalFilteredEmptyBody =>
+      'None of the services loaded so far match these filters. Adjust or clear them to see more.';
+
+  @override
+  String get medicalClearFilters => 'Clear filters';
+
+  @override
+  String get medicalPageLimitHint =>
+      'Filters and sorting apply only to the loaded page (up to 100 services).';
+
+  @override
+  String get medicalCategoryOrthopedics => 'Orthopedics';
+
+  @override
+  String get medicalCategoryDentistry => 'Dentistry';
+
+  @override
+  String get medicalCategoryCheckup => 'Health checkup';
+
+  @override
+  String get searchRecentTitle => 'Recent searches';
+
+  @override
+  String get searchRecentClear => 'Clear';
+
+  @override
+  String get searchRecentRemove => 'Remove this search';
+
+  @override
+  String get searchShowAll => 'Search all destinations';
+
+  @override
+  String get searchSuggestionsLabel => 'Try a popular destination';
+
+  @override
   String get addToFavorites => 'Save destination';
 
   @override

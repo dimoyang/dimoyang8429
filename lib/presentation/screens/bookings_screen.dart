@@ -7,6 +7,7 @@ import 'package:meditour_app/core/network/api_exception.dart';
 import 'package:meditour_app/data/models/booking.dart';
 import 'package:meditour_app/data/respositories/booking_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
+import 'package:meditour_app/presentation/widgets/app_toast.dart';
 import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:meditour_app/presentation/widgets/skeleton.dart';
 import 'package:provider/provider.dart';
@@ -68,7 +69,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
       if (!mounted) {
         return;
       }
-      _showSnackBar(l10n.bookingsCancelSuccess);
+      AppToast.success(context, l10n.bookingsCancelSuccess);
       await _refresh();
     } on ApiException catch (error) {
       if (!mounted) {
@@ -79,18 +80,12 @@ class _BookingsScreenState extends State<BookingsScreen> {
         ApiBusinessException(statusCode: 409) => l10n.bookingsCancelConflict,
         _ => error.toLocalizedMessage(l10n),
       };
-      _showSnackBar(message);
+      AppToast.error(context, message);
       if (error is ApiBusinessException &&
           (error.statusCode == 404 || error.statusCode == 409)) {
         await _refresh();
       }
     }
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-    );
   }
 
   @override

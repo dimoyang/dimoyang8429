@@ -10,6 +10,7 @@ import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/core/network/api_exception.dart';
 import 'package:meditour_app/core/services/export_saver.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
+import 'package:meditour_app/presentation/widgets/app_toast.dart';
 import 'package:meditour_app/presentation/widgets/language_picker_sheet.dart';
 import 'package:meditour_app/presentation/widgets/section_label.dart';
 import 'package:provider/provider.dart';
@@ -230,7 +231,7 @@ Future<void> _exportData(BuildContext context) async {
       return;
     }
     navigator.pop();
-    _showSnackBar(
+    AppToast.error(
       context,
       e is ApiException ? e.toLocalizedMessage(l10n) : l10n.exportFailed,
     );
@@ -247,7 +248,7 @@ Future<void> _exportData(BuildContext context) async {
     return;
   }
   if (saved) {
-    _showSnackBar(context, l10n.exportDownloaded);
+    AppToast.success(context, l10n.exportDownloaded);
     return;
   }
   await _showExportPreview(context, json);
@@ -309,19 +310,13 @@ Future<void> _showExportPreview(BuildContext context, String json) async {
               Navigator.of(dialogContext).pop();
             }
             if (context.mounted) {
-              _showSnackBar(context, l10n.exportCopied);
+              AppToast.success(context, l10n.exportCopied);
             }
           },
           child: Text(l10n.exportCopy),
         ),
       ],
     ),
-  );
-}
-
-void _showSnackBar(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
   );
 }
 

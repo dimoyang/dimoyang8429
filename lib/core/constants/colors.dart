@@ -19,8 +19,8 @@ class AppColors {
   /// 正文墨色
   static const Color ink = Color(0xFF1E293B);
 
-  /// 次要文字
-  static const Color ink2 = Color(0xFF64748B);
+  /// 次要文字（在 pageBg 上对比度 ≥ 4.5:1）
+  static const Color ink2 = Color(0xFF5F7086);
 
   /// 弱化文字（白底对比度 ≥ 4.5:1，用于小字号辅助信息）
   static const Color ink3 = Color(0xFF5F6D80);

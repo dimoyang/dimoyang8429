@@ -5,6 +5,7 @@ import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/core/network/api_exception.dart';
 import 'package:meditour_app/core/utils/validators.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
+import 'package:meditour_app/presentation/widgets/app_toast.dart';
 import 'package:meditour_app/presentation/widgets/form_field.dart';
 import 'package:provider/provider.dart';
 
@@ -137,12 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toLocalizedMessage(l10n)),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, e.toLocalizedMessage(l10n));
     } finally {
       if (mounted) {
         setState(() => _submitting = false);

@@ -8,7 +8,16 @@ import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:meditour_app/presentation/widgets/service_card.dart';
 import 'package:meditour_app/presentation/widgets/skeleton.dart';
 
+/// 价格筛选区间。
+enum _PriceFilter { all, under5000, between5000And10000, over10000 }
+
+/// 排序方式。
+enum _SortOption { recommended, priceAsc, priceDesc }
+
 /// 健康之旅列表页（医疗服务隐藏入口）
+///
+/// 筛选与排序只作用于当前已加载的一页数据（后端 `page_size` 上限 100），
+/// 不额外请求后端参数，因此页面会明确提示这一限制。
 class MedicalListScreen extends StatefulWidget {
   const MedicalListScreen({super.key});
 
@@ -19,6 +28,16 @@ class MedicalListScreen extends StatefulWidget {
 class _MedicalListScreenState extends State<MedicalListScreen> {
   late Future<List<MedicalService>> _future = ServiceRepository.getServices();
 
+  /// 筛选状态保存在页面 State 中：进入详情再返回、下拉刷新都不会重置。
+  String? _category;
+  _PriceFilter _priceFilter = _PriceFilter.all;
+  _SortOption _sortOption = _SortOption.recommended;
+
+  bool get _hasActiveFilters =>
+      _category != null ||
+      _priceFilter != _PriceFilter.all ||
+      _sortOption != _SortOption.recommended;
+
   Future<void> _refresh() async {
     setState(() {
       _future = ServiceRepository.getServices(forceRemote: true);
@@ -28,6 +47,14 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
     } catch (_) {
       // 错误由 FutureBuilder 以错误态呈现。
     }
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _category = null;
+      _priceFilter = _PriceFilter.all;
+      _sortOption = _SortOption.recommended;
+    });
   }
 
   /// 加载骨架：间距、卡片高度与真实列表一致，避免加载完成时大幅跳动。
@@ -92,6 +119,48 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
     );
   }
 
+  /// 有数据但被筛选为空：与「本来就没有数据」区分，并给出清除入口。
+  Widget _buildFilteredEmptyState(AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 34),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.filter_alt_off_outlined,
+            size: 46,
+            color: AppColors.ink3,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            l10n.medicalFilteredEmptyTitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.ink,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.medicalFilteredEmptyBody,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13,
+              height: 1.5,
+              color: AppColors.ink2,
+            ),
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: _clearFilters,
+            icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+            label: Text(l10n.medicalClearFilters),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -122,6 +191,10 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
           if (services.isEmpty) {
             return _buildEmptyState(l10n);
           }
+
+          final categories = _categoriesOf(services);
+          final visible = _applyFilters(services);
+
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
@@ -129,6 +202,19 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 26),
               children: [
+                _buildFilterBar(l10n, categories),
+                if (services.length >= 100) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.medicalPageLimitHint,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.5,
+                      color: AppColors.ink3,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 14),
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -166,16 +252,203 @@ class _MedicalListScreenState extends State<MedicalListScreen> {
                   ),
                 ],
                 const SizedBox(height: 14),
-                ...services.map(
-                  (service) => Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: ServiceCard(service: service),
+                if (visible.isEmpty)
+                  _buildFilteredEmptyState(l10n)
+                else
+                  ...visible.map(
+                    (service) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: ServiceCard(service: service),
+                    ),
                   ),
-                ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  /// 分类筛选、价格区间筛选与排序控件。
+  Widget _buildFilterBar(
+    AppLocalizations l10n,
+    List<String> categories,
+  ) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (categories.isNotEmpty)
+            _FilterChipRow(
+              label: l10n.medicalFilterCategory,
+              children: [
+                ChoiceChip(
+                  label: Text(l10n.medicalFilterAll),
+                  selected: _category == null,
+                  onSelected: (_) => setState(() => _category = null),
+                ),
+                for (final category in categories)
+                  ChoiceChip(
+                    label: Text(_categoryLabel(l10n, category)),
+                    selected: _category == category,
+                    onSelected: (_) => setState(() => _category = category),
+                  ),
+              ],
+            ),
+          _FilterChipRow(
+            label: l10n.medicalPriceFilter,
+            children: [
+              ChoiceChip(
+                label: Text(l10n.medicalPriceAll),
+                selected: _priceFilter == _PriceFilter.all,
+                onSelected: (_) =>
+                    setState(() => _priceFilter = _PriceFilter.all),
+              ),
+              ChoiceChip(
+                label: Text(l10n.medicalPriceUnder5000),
+                selected: _priceFilter == _PriceFilter.under5000,
+                onSelected: (_) =>
+                    setState(() => _priceFilter = _PriceFilter.under5000),
+              ),
+              ChoiceChip(
+                label: Text(l10n.medicalPriceBetween),
+                selected: _priceFilter == _PriceFilter.between5000And10000,
+                onSelected: (_) => setState(
+                  () => _priceFilter = _PriceFilter.between5000And10000,
+                ),
+              ),
+              ChoiceChip(
+                label: Text(l10n.medicalPriceOver10000),
+                selected: _priceFilter == _PriceFilter.over10000,
+                onSelected: (_) =>
+                    setState(() => _priceFilter = _PriceFilter.over10000),
+              ),
+            ],
+          ),
+          _FilterChipRow(
+            label: l10n.medicalSortFilter,
+            children: [
+              ChoiceChip(
+                label: Text(l10n.medicalSortRecommended),
+                selected: _sortOption == _SortOption.recommended,
+                onSelected: (_) =>
+                    setState(() => _sortOption = _SortOption.recommended),
+              ),
+              ChoiceChip(
+                label: Text(l10n.medicalSortPriceAsc),
+                selected: _sortOption == _SortOption.priceAsc,
+                onSelected: (_) =>
+                    setState(() => _sortOption = _SortOption.priceAsc),
+              ),
+              ChoiceChip(
+                label: Text(l10n.medicalSortPriceDesc),
+                selected: _sortOption == _SortOption.priceDesc,
+                onSelected: (_) =>
+                    setState(() => _sortOption = _SortOption.priceDesc),
+              ),
+            ],
+          ),
+          if (_hasActiveFilters)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _clearFilters,
+                icon: const Icon(Icons.clear, size: 16),
+                label: Text(l10n.medicalClearFilters),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primaryDark,
+                  minimumSize: const Size(0, 36),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 保留原始顺序的分类列表。
+  List<String> _categoriesOf(List<MedicalService> services) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final service in services) {
+      if (service.category.isEmpty || !seen.add(service.category)) {
+        continue;
+      }
+      result.add(service.category);
+    }
+    return result;
+  }
+
+  /// 已知分类码走本地化名称，未知分类回退后端标签。
+  String _categoryLabel(AppLocalizations l10n, String category) {
+    return switch (category) {
+      'orthopedics' => l10n.medicalCategoryOrthopedics,
+      'dentistry' => l10n.medicalCategoryDentistry,
+      'checkup' => l10n.medicalCategoryCheckup,
+      _ => category,
+    };
+  }
+
+  List<MedicalService> _applyFilters(List<MedicalService> services) {
+    final filtered = services.where((service) {
+      if (_category != null && service.category != _category) {
+        return false;
+      }
+      return switch (_priceFilter) {
+        _PriceFilter.all => true,
+        _PriceFilter.under5000 => service.basePrice < 5000,
+        _PriceFilter.between5000And10000 =>
+          service.basePrice >= 5000 && service.basePrice <= 10000,
+        _PriceFilter.over10000 => service.basePrice > 10000,
+      };
+    }).toList();
+
+    switch (_sortOption) {
+      case _SortOption.recommended:
+        break;
+      case _SortOption.priceAsc:
+        filtered.sort((a, b) => a.basePrice.compareTo(b.basePrice));
+      case _SortOption.priceDesc:
+        filtered.sort((a, b) => b.basePrice.compareTo(a.basePrice));
+    }
+    return filtered;
+  }
+}
+
+/// 一行筛选标签（标题 + 可横向滚动的选项）。
+class _FilterChipRow extends StatelessWidget {
+  final String label;
+  final List<Widget> children;
+
+  const _FilterChipRow({required this.label, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.ink2,
+              ),
+            ),
+            const SizedBox(width: 10),
+            ...children,
+          ],
+        ),
       ),
     );
   }

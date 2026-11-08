@@ -816,6 +816,144 @@ abstract class AppLocalizations {
   /// **'Tap the heart on a destination to keep it here.'**
   String get favoriteEmptyBody;
 
+  /// No description provided for @medicalFilterCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get medicalFilterCategory;
+
+  /// No description provided for @medicalPriceFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get medicalPriceFilter;
+
+  /// No description provided for @medicalSortFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get medicalSortFilter;
+
+  /// No description provided for @medicalFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get medicalFilterAll;
+
+  /// No description provided for @medicalPriceAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Any price'**
+  String get medicalPriceAll;
+
+  /// No description provided for @medicalPriceUnder5000.
+  ///
+  /// In en, this message translates to:
+  /// **'Under 5,000'**
+  String get medicalPriceUnder5000;
+
+  /// No description provided for @medicalPriceBetween.
+  ///
+  /// In en, this message translates to:
+  /// **'5,000 – 10,000'**
+  String get medicalPriceBetween;
+
+  /// No description provided for @medicalPriceOver10000.
+  ///
+  /// In en, this message translates to:
+  /// **'Over 10,000'**
+  String get medicalPriceOver10000;
+
+  /// No description provided for @medicalSortRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get medicalSortRecommended;
+
+  /// No description provided for @medicalSortPriceAsc.
+  ///
+  /// In en, this message translates to:
+  /// **'Price: low to high'**
+  String get medicalSortPriceAsc;
+
+  /// No description provided for @medicalSortPriceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Price: high to low'**
+  String get medicalSortPriceDesc;
+
+  /// No description provided for @medicalFilteredEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching services'**
+  String get medicalFilteredEmptyTitle;
+
+  /// No description provided for @medicalFilteredEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'None of the services loaded so far match these filters. Adjust or clear them to see more.'**
+  String get medicalFilteredEmptyBody;
+
+  /// No description provided for @medicalClearFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get medicalClearFilters;
+
+  /// No description provided for @medicalPageLimitHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters and sorting apply only to the loaded page (up to 100 services).'**
+  String get medicalPageLimitHint;
+
+  /// No description provided for @medicalCategoryOrthopedics.
+  ///
+  /// In en, this message translates to:
+  /// **'Orthopedics'**
+  String get medicalCategoryOrthopedics;
+
+  /// No description provided for @medicalCategoryDentistry.
+  ///
+  /// In en, this message translates to:
+  /// **'Dentistry'**
+  String get medicalCategoryDentistry;
+
+  /// No description provided for @medicalCategoryCheckup.
+  ///
+  /// In en, this message translates to:
+  /// **'Health checkup'**
+  String get medicalCategoryCheckup;
+
+  /// No description provided for @searchRecentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent searches'**
+  String get searchRecentTitle;
+
+  /// No description provided for @searchRecentClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get searchRecentClear;
+
+  /// No description provided for @searchRecentRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this search'**
+  String get searchRecentRemove;
+
+  /// No description provided for @searchShowAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Search all destinations'**
+  String get searchShowAll;
+
+  /// No description provided for @searchSuggestionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a popular destination'**
+  String get searchSuggestionsLabel;
+
   /// No description provided for @addToFavorites.
   ///
   /// In en, this message translates to:

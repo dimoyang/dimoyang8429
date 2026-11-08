@@ -5,6 +5,7 @@ import 'package:meditour_app/business/providers/language_provider.dart';
 import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/data/respositories/destination_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
+import 'package:meditour_app/presentation/widgets/app_toast.dart';
 import 'package:meditour_app/presentation/widgets/destination_card.dart';
 import 'package:meditour_app/presentation/widgets/language_picker_sheet.dart';
 import 'package:meditour_app/presentation/widgets/remote_image.dart';
@@ -355,9 +356,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   void _showToast(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-    );
+    AppToast.info(context, message);
   }
 }
 

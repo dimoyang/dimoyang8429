@@ -395,6 +395,77 @@ class AppLocalizationsDe extends AppLocalizations {
       'Tippen Sie auf das Herz eines Reiseziels, um es hier zu speichern.';
 
   @override
+  String get medicalFilterCategory => 'Kategorie';
+
+  @override
+  String get medicalPriceFilter => 'Preis';
+
+  @override
+  String get medicalSortFilter => 'Sortierung';
+
+  @override
+  String get medicalFilterAll => 'Alle';
+
+  @override
+  String get medicalPriceAll => 'Alle Preise';
+
+  @override
+  String get medicalPriceUnder5000 => 'Unter 5.000';
+
+  @override
+  String get medicalPriceBetween => '5.000 – 10.000';
+
+  @override
+  String get medicalPriceOver10000 => 'Über 10.000';
+
+  @override
+  String get medicalSortRecommended => 'Empfohlen';
+
+  @override
+  String get medicalSortPriceAsc => 'Preis: aufsteigend';
+
+  @override
+  String get medicalSortPriceDesc => 'Preis: absteigend';
+
+  @override
+  String get medicalFilteredEmptyTitle => 'Keine passenden Leistungen';
+
+  @override
+  String get medicalFilteredEmptyBody =>
+      'Keine der bisher geladenen Leistungen passt zu diesen Filtern. Passen Sie sie an oder setzen Sie sie zurück.';
+
+  @override
+  String get medicalClearFilters => 'Filter zurücksetzen';
+
+  @override
+  String get medicalPageLimitHint =>
+      'Filter und Sortierung gelten nur für die geladene Seite (bis zu 100 Leistungen).';
+
+  @override
+  String get medicalCategoryOrthopedics => 'Orthopädie';
+
+  @override
+  String get medicalCategoryDentistry => 'Zahnmedizin';
+
+  @override
+  String get medicalCategoryCheckup => 'Vorsorgeuntersuchung';
+
+  @override
+  String get searchRecentTitle => 'Letzte Suchen';
+
+  @override
+  String get searchRecentClear => 'Löschen';
+
+  @override
+  String get searchRecentRemove => 'Diese Suche entfernen';
+
+  @override
+  String get searchShowAll => 'Alle Reiseziele durchsuchen';
+
+  @override
+  String get searchSuggestionsLabel => 'Beliebte Reiseziele';
+
+  @override
   String get addToFavorites => 'Reiseziel speichern';
 
   @override

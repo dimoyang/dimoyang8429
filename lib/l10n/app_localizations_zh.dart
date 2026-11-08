@@ -375,6 +375,75 @@ class AppLocalizationsZh extends AppLocalizations {
   String get favoriteEmptyBody => '点击目的地上的爱心，即可在这里快速找到。';
 
   @override
+  String get medicalFilterCategory => '分类';
+
+  @override
+  String get medicalPriceFilter => '价格';
+
+  @override
+  String get medicalSortFilter => '排序';
+
+  @override
+  String get medicalFilterAll => '全部';
+
+  @override
+  String get medicalPriceAll => '不限价格';
+
+  @override
+  String get medicalPriceUnder5000 => '5,000 以下';
+
+  @override
+  String get medicalPriceBetween => '5,000 – 10,000';
+
+  @override
+  String get medicalPriceOver10000 => '10,000 以上';
+
+  @override
+  String get medicalSortRecommended => '推荐排序';
+
+  @override
+  String get medicalSortPriceAsc => '价格从低到高';
+
+  @override
+  String get medicalSortPriceDesc => '价格从高到低';
+
+  @override
+  String get medicalFilteredEmptyTitle => '没有符合筛选的服务';
+
+  @override
+  String get medicalFilteredEmptyBody => '当前已加载的服务中没有符合这些条件的结果，可调整或清除筛选。';
+
+  @override
+  String get medicalClearFilters => '清除筛选';
+
+  @override
+  String get medicalPageLimitHint => '筛选与排序仅作用于当前已加载的页面（最多 100 项服务）。';
+
+  @override
+  String get medicalCategoryOrthopedics => '骨科';
+
+  @override
+  String get medicalCategoryDentistry => '牙科';
+
+  @override
+  String get medicalCategoryCheckup => '体检';
+
+  @override
+  String get searchRecentTitle => '最近搜索';
+
+  @override
+  String get searchRecentClear => '清空';
+
+  @override
+  String get searchRecentRemove => '删除这条搜索记录';
+
+  @override
+  String get searchShowAll => '在全部目的地中搜索';
+
+  @override
+  String get searchSuggestionsLabel => '试试热门目的地';
+
+  @override
   String get addToFavorites => '收藏目的地';
 
   @override

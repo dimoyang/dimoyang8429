@@ -9,6 +9,7 @@ import 'package:meditour_app/data/models/medical_service.dart';
 import 'package:meditour_app/data/respositories/booking_repository.dart';
 import 'package:meditour_app/data/respositories/service_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
+import 'package:meditour_app/presentation/widgets/app_toast.dart';
 import 'package:meditour_app/presentation/widgets/error_state.dart';
 import 'package:meditour_app/presentation/widgets/form_field.dart';
 import 'package:meditour_app/presentation/widgets/skeleton.dart';
@@ -425,21 +426,15 @@ class _BookingScreenState extends State<BookingScreen> {
         return;
       }
       if (e is ApiBusinessException && e.statusCode == 404) {
-        _showSnackBar(l10n.bookingPackageNotFound);
+        AppToast.error(context, l10n.bookingPackageNotFound);
       } else {
-        _showSnackBar(e.toLocalizedMessage(l10n));
+        AppToast.error(context, e.toLocalizedMessage(l10n));
       }
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
       }
     }
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-    );
   }
 
   void _showLoginRequiredDialog(AppLocalizations l10n) {

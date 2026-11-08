@@ -395,6 +395,77 @@ class AppLocalizationsFr extends AppLocalizations {
       'Touchez le cœur d\'une destination pour la retrouver ici.';
 
   @override
+  String get medicalFilterCategory => 'Catégorie';
+
+  @override
+  String get medicalPriceFilter => 'Prix';
+
+  @override
+  String get medicalSortFilter => 'Tri';
+
+  @override
+  String get medicalFilterAll => 'Tous';
+
+  @override
+  String get medicalPriceAll => 'Tous les prix';
+
+  @override
+  String get medicalPriceUnder5000 => 'Moins de 5 000';
+
+  @override
+  String get medicalPriceBetween => '5 000 – 10 000';
+
+  @override
+  String get medicalPriceOver10000 => 'Plus de 10 000';
+
+  @override
+  String get medicalSortRecommended => 'Recommandé';
+
+  @override
+  String get medicalSortPriceAsc => 'Prix croissant';
+
+  @override
+  String get medicalSortPriceDesc => 'Prix décroissant';
+
+  @override
+  String get medicalFilteredEmptyTitle => 'Aucun service correspondant';
+
+  @override
+  String get medicalFilteredEmptyBody =>
+      'Aucun des services déjà chargés ne correspond à ces filtres. Modifiez-les ou effacez-les pour en voir plus.';
+
+  @override
+  String get medicalClearFilters => 'Effacer les filtres';
+
+  @override
+  String get medicalPageLimitHint =>
+      'Les filtres et le tri ne s\'appliquent qu\'à la page chargée (jusqu\'à 100 services).';
+
+  @override
+  String get medicalCategoryOrthopedics => 'Orthopédie';
+
+  @override
+  String get medicalCategoryDentistry => 'Dentisterie';
+
+  @override
+  String get medicalCategoryCheckup => 'Bilan de santé';
+
+  @override
+  String get searchRecentTitle => 'Recherches récentes';
+
+  @override
+  String get searchRecentClear => 'Effacer';
+
+  @override
+  String get searchRecentRemove => 'Supprimer cette recherche';
+
+  @override
+  String get searchShowAll => 'Rechercher dans toutes les destinations';
+
+  @override
+  String get searchSuggestionsLabel => 'Essayez une destination populaire';
+
+  @override
   String get addToFavorites => 'Enregistrer la destination';
 
   @override

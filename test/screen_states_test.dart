@@ -15,6 +15,7 @@ import 'package:meditour_app/data/respositories/service_repository.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
 import 'package:meditour_app/presentation/screens/bookings_screen.dart';
 import 'package:meditour_app/presentation/screens/medical_list_screen.dart';
+import 'package:meditour_app/presentation/widgets/service_card.dart';
 import 'package:meditour_app/presentation/widgets/skeleton.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -392,6 +393,85 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('医疗列表按分类筛选且刷新后不重置', (tester) async {
+    _installFakeApi(_medicalRoutes());
+    await tester.pumpWidget(_app(home: const MedicalListScreen()));
+    await _pumpFrames(tester);
+    expect(find.byType(ServiceCard), findsNWidgets(2));
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '牙科'));
+    await tester.pump();
+
+    expect(find.byType(ServiceCard), findsOneWidget);
+    expect(find.text('微创种植牙'), findsOneWidget);
+    expect(find.text('膝关节置换手术'), findsNothing);
+
+    // 下拉刷新只更新数据，不应把用户选择的分类重置。
+    await tester.drag(find.byType(ListView), const Offset(0, 260));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await _pumpFrames(tester);
+
+    expect(find.byType(ServiceCard), findsOneWidget);
+    expect(find.text('微创种植牙'), findsOneWidget);
+  });
+
+  testWidgets('医疗列表筛空时显示筛选空态并可清除', (tester) async {
+    _installFakeApi(_medicalRoutes());
+    await tester.pumpWidget(_app(home: const MedicalListScreen()));
+    await _pumpFrames(tester);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '骨科'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(ChoiceChip, '5,000 以下'));
+    await tester.pump();
+
+    // 与「后端本来就没有数据」的空态文案区分。
+    expect(find.text('没有符合筛选的服务'), findsOneWidget);
+    expect(find.text('暂无可预约服务'), findsNothing);
+
+    await tester.tap(find.text('清除筛选').last);
+    await tester.pump();
+
+    expect(find.text('没有符合筛选的服务'), findsNothing);
+    expect(find.byType(ServiceCard), findsNWidgets(2));
+  });
+
+  testWidgets('医疗列表按价格排序', (tester) async {
+    _installFakeApi(_medicalRoutes());
+    _useTallScreen(tester);
+    await tester.pumpWidget(_app(home: const MedicalListScreen()));
+    await _pumpFrames(tester);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '价格从低到高'));
+    await tester.pump();
+    expect(_visibleServiceNames(tester), ['微创种植牙', '膝关节置换手术']);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '价格从高到低'));
+    await tester.pump();
+    expect(_visibleServiceNames(tester), ['膝关节置换手术', '微创种植牙']);
+  });
+}
+
+/// 健康之旅列表的两条样例数据。
+ResponseBody Function(RequestOptions) _medicalRoutes() {
+  return (options) {
+    if (options.path.contains('/medical/packages')) {
+      return _jsonBody({
+        'items': [_packageJson, _packageJson2],
+      });
+    }
+    return _jsonBody(<Object>[]);
+  };
+}
+
+/// 当前列表顺序下的服务名称，用于验证排序结果。
+List<String> _visibleServiceNames(WidgetTester tester) {
+  return tester
+      .widgetList<ServiceCard>(find.byType(ServiceCard))
+      .map((card) => card.service.nameZh)
+      .toList();
 }
 
 /// 订单页依赖的登录、当前用户与订单列表三个端点。

@@ -5,6 +5,7 @@ import 'package:meditour_app/core/constants/colors.dart';
 import 'package:meditour_app/core/network/api_exception.dart';
 import 'package:meditour_app/core/utils/route_location.dart';
 import 'package:meditour_app/l10n/app_localizations.dart';
+import 'package:meditour_app/presentation/widgets/app_toast.dart';
 import 'package:meditour_app/presentation/widgets/form_field.dart';
 import 'package:provider/provider.dart';
 
@@ -151,9 +152,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-    );
+    AppToast.error(context, message);
   }
 
   Future<void> _showReLoginDialog(String message) async {
