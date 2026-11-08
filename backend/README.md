@@ -59,6 +59,8 @@ uvicorn app.main:app --reload --port 8000
   - 不存在或属于他人：404（不暴露他人订单是否存在）。
   - 当前状态不是 `pending`：409。请求本身合法，但与资源当前状态冲突，因此用 409 而非 422；422 仅用于请求体校验失败。
   - 取消后 `status` 变为 `cancelled`，其余响应字段保持不变。
+  - 取消使用条件更新（仅当 `status='pending'` 时生效）；并发取消同一订单只有一个
+    返回 200，其余按状态冲突返回 409，不会出现多个请求都“成功取消”。
 
 ## 订单运营与员工角色
 
@@ -296,6 +298,8 @@ python scripts/import_translations.py var/translations.csv
 ## 登录限流
 
 同一 IP + 账号在 300 秒内失败 5 次后，登录返回 429 并带 `Retry-After`；成功登录会清零计数。
+「检查阈值 + 预占失败名额」在同一个进程锁内完成，因此并发失败时最多只有 5 个请求
+进入密码校验并返回 401，其余直接 429，不会出现多个请求同时穿过阈值的情况。
 限流状态是**进程内**的：多 worker / 多实例部署时各进程独立计数，重启后清零，也无法防止攻击者用大量账号轮换撞库。生产多进程部署应换成 Redis 等共享存储，并配合网关层限流。
 副作用是攻击者可能故意失败 5 次导致某个账号短暂无法登录；当前窗口只有 5 分钟，如需更强防护可加验证码或按 IP 维度限流。
 
@@ -511,7 +515,7 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（88 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id。
+当前覆盖（90 项）：预约字段与校验分支、重复提交、并发重复下单只产生一个 pending、并发取消只成功一次、取消流转与越权、并发登录只放行阈值内的失败、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、安全中间件（请求体上限、安全响应头与 HSTS 条件、500 兜底形状）、重置邮件多语言模板与 `.eml` 生成、邮件日志不含令牌/链接、日志脱敏与 request id。
 
 ## 接口验证脚本
 
@@ -561,15 +565,15 @@ python scripts/concurrency_probe.py --threads 12 \
 本机（SQLite，12 线程，修复后）的真实输出：
 
 ```text
-[login-rate-limit] requests=12 | 401: 7, 429: 5 | errors(5xx/network)=0 (0%) | p50=50ms p95=53ms max=53ms
-[booking-create] requests=12 | 201: 1, 409: 11 | errors(5xx/network)=0 (0%) | p50=154ms p95=173ms max=173ms
-[booking-cancel] requests=12 | 200: 7, 409: 5 | errors(5xx/network)=0 (0%) | p50=223ms p95=295ms max=295ms
+[login-rate-limit] requests=12 | 401: 5, 429: 7 | errors(5xx/network)=0 (0%) | p50=39ms p95=44ms max=44ms
+[booking-create] requests=12 | 201: 1, 409: 11 | errors(5xx/network)=0 (0%) | p50=100ms p95=122ms max=122ms
+[booking-cancel] requests=12 | 200: 1, 409: 11 | errors(5xx/network)=0 (0%) | p50=96ms p95=137ms max=137ms
 [bookings-list] requests=12 | 200: 12 | errors(5xx/network)=0 (0%) | p50=70ms p95=77ms max=77ms
-[refresh-token] requests=12 | 200: 1, 401: 11 | errors(5xx/network)=0 (0%) | p50=136ms p95=177ms max=177ms
-[upload] requests=12 | 201: 12 | errors(5xx/network)=0 (0%) | p50=111ms p95=120ms max=120ms
+[refresh-token] requests=12 | 200: 1, 401: 11 | errors(5xx/network)=0 (0%) | p50=90ms p95=171ms max=171ms
+[upload] requests=12 | 201: 12 | errors(5xx/network)=0 (0%) | p50=58ms p95=74ms max=74ms
   upload success=12 unique_paths=12
-[staff-price-update] requests=12 | 200: 12 | errors(5xx/network)=0 (0%) | p50=230ms p95=355ms max=355ms
-  original=15000.0 final=15009.0 in_submitted=True
+[staff-price-update] requests=12 | 200: 12 | errors(5xx/network)=0 (0%) | p50=176ms p95=279ms max=279ms
+  original=15000.0 final=15008.0 in_submitted=True
   restore original price -> 200
 cleanup: DELETE /auth/account -> 200
 ```
@@ -579,21 +583,17 @@ cleanup: DELETE /auth/account -> 200
 - **重复预约已修复**：`booking-create` 从修复前的 `201: 3, 409: 9` 变为
   `201: 1, 409: 11`。应用层预检查之外由部分唯一索引兜底，`IntegrityError` 统一转成
   既有形状的 409。
+- **并发取消已修复**：`booking-cancel` 从 `200: 7, 409: 5` 变为 `200: 1, 409: 11`。
+  取消改为条件更新（`UPDATE ... WHERE id=? AND user_id=? AND status='pending'`），
+  `rowcount=0` 时回查区分 404（不存在/非本人）与 409（状态已变），错误体形状不变。
+- **登录限流已修复**：从 `401: 7, 429: 5` 变为 `401: 5, 429: 7`。检查阈值与预占名额
+  在同一把锁内完成，并发下只有 5 个请求进入密码校验，其余直接 429。
 - `refresh-token` 只有 1 个 200，其余 401，说明 refresh 轮换在并发下仍只成功一次。
 - `upload` 12 个请求全部 201，12 个返回路径互不重复。
 - `staff-price-update` 12 个 PATCH 全部 200，最终价格是提交值之一（最后提交者胜出），
   恢复原价成功；没有 5xx 或半写状态。
-- **已知缺陷（本次未修）：并发取消不是原子的。** `booking-cancel` 出现 7 个 200、
-  5 个 409，本应只有 1 个 200。原因是取消也是「读状态 → 改状态 → 提交」，多个请求
-  都读到 `pending` 后各自提交成功；最终状态仍是 `cancelled`，没有脏数据或 5xx，但
-  状态码语义不准确。建议改为条件更新
-  （`UPDATE ... SET status='cancelled' WHERE id=? AND user_id=? AND status='pending'`，
-  `rowcount=0` 时返回 409）。
-- 登录限流并发下出现 7 个 401（阈值是 5 次失败）：多个请求在计数落库前同时通过阈值
-  检查，属于限流器自身的计数竞态，最终仍有请求被 429 拦截；不影响安全边界，但严格
-  限流需要原子计数（数据库或 Redis）。
 - 该脚本不测吞吐量、不构造慢查询；SQLite 的写并发受全局写锁限制，结果不能直接外推到
-  PostgreSQL。
+  PostgreSQL。限流计数仍是进程内状态，多 worker 部署前需要换成共享存储。
 
 ## 健康检查
 
