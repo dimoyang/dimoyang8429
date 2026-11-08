@@ -30,6 +30,18 @@ const _packageJson = {
   'image_url': 'https://example.com/knee.png',
 };
 
+const _packageJson2 = {
+  'id': 2,
+  'name': '微创种植牙',
+  'name_en': 'Dental Implants',
+  'price': 2500,
+  'currency': 'EUR',
+  'duration_days': 7,
+  'category': 'dentistry',
+  'description': '数字化导板种植技术。',
+  'image_url': 'https://example.com/dental.png',
+};
+
 const _bookingJson = {
   'id': 7,
   'order_no': 'MT202601010000AB',
@@ -166,6 +178,31 @@ void main() {
 
     expect(find.text('MT202601010000AB'), findsOneWidget);
     expect(find.text('待确认'), findsOneWidget);
+  });
+
+  testWidgets('医疗列表在少量条目时仍可下拉刷新', (tester) async {
+    var packageCalls = 0;
+    _installFakeApi((options) {
+      if (options.path.contains('/medical/packages')) {
+        packageCalls++;
+        return _jsonBody({
+          'items': [_packageJson, _packageJson2],
+        });
+      }
+      return _jsonBody(<Object>[]);
+    });
+
+    await tester.pumpWidget(_app(home: const MedicalListScreen()));
+    await _pumpFrames(tester);
+    expect(packageCalls, 1);
+
+    // 两条样例数据不足一屏，依赖 AlwaysScrollableScrollPhysics 才能下拉刷新。
+    await tester.drag(find.byType(ListView), const Offset(0, 260));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await _pumpFrames(tester);
+
+    expect(packageCalls, greaterThan(1));
   });
 
   testWidgets('订单页在 320dp 与 1.3 倍字号下不溢出', (tester) async {
