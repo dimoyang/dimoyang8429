@@ -40,6 +40,10 @@ uvicorn app.main:app --reload --port 8000
 | `MEDITOUR_MAIL_BACKEND` | 否 | `file` | 邮件实现：`file`（开发，写 outbox 文件）或 `smtp`（生产） |
 | `MEDITOUR_MAIL_OUTBOX` | 否 | `backend/var/mail_outbox.log` | `file` 后端的输出文件，已被 `.gitignore` 忽略 |
 | `MEDITOUR_SMTP_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_FROM` / `_STARTTLS` | 否 | 空 / `587` / 空 / 空 / `no-reply@meditour.local` / 开 | `smtp` 后端配置位 |
+| `MEDITOUR_STORAGE_BACKEND` | 否 | `local` | 上传存储后端；`local` 落本机磁盘，`s3` 为预留位（未实现时显式报错） |
+| `MEDITOUR_UPLOAD_DIR` | 否 | `backend/var/uploads` | 本地上传目录（已被 `.gitignore` 忽略） |
+| `MEDITOUR_UPLOAD_MAX_BYTES` | 否 | `5242880`（5 MiB） | 单张图片大小上限，超出返回 413 |
+| `MEDITOUR_MEDIA_BASE_URL` | 否 | 空 | 媒体对外域名/CDN；留空时上传接口返回站内相对路径 |
 
 本地可把变量写进 `backend/.env`（已被 `.gitignore` 忽略）；生产环境请通过运行环境注入，不要提交 `.env`。
 
@@ -89,13 +93,57 @@ uvicorn app.main:app --reload --port 8000
   - 目标值不是 `confirmed` / `completed`：422（请求体校验失败）。
 - 普通用户即使拥有订单本身，也不能调用以上员工接口修改状态（测试覆盖 403）。
 
+## 内容运营（员工）
+
+员工可维护套餐、医院与目的地，全部在 `/api/v1/staff/*` 下，非 `staff` 一律 403。
+
+| 资源 | 列表 | 详情 | 创建 | 更新 | 删除 |
+| --- | --- | --- | --- | --- | --- |
+| 套餐 | `GET /staff/packages` | `GET /staff/packages/{id}` | `POST /staff/packages` | `PATCH` | `DELETE` |
+| 医院 | `GET /staff/hospitals` | `GET /staff/hospitals/{id}` | `POST /staff/hospitals` | `PATCH` | `DELETE` |
+| 目的地 | `GET /staff/destinations` | `GET /staff/destinations/{slug}` | `POST /staff/destinations` | `PATCH` | `DELETE` |
+
+- 套餐新增 `is_active`。`PATCH /staff/packages/{id}` 传 `{"is_active": false}` 即下架：
+  公开 `GET /medical/packages` 不再返回该套餐，`POST /bookings/` 对它返回 404
+  （`Medical package is not available for booking`）。员工列表默认包含下架套餐，
+  传 `include_inactive=false` 只看在售。
+- 订单价格是快照：`bookings.total_price` 在下单时写入，之后调价不影响历史订单。
+  测试 `test_price_change_does_not_affect_existing_booking` 同时校验用户侧列表与员工侧详情；
+  新订单才使用新价格。注意 `package_name` 仍实时取自套餐关系，改名会改变历史订单的
+  展示名称（价格与币种不受影响）。
+- 删除保护（不会级联删除业务数据）：
+  - 套餐已有订单 → 409，应改为下架；
+  - 医院仍有套餐 → 409，需先迁移或删除套餐；
+  - 目的地仍被任意行程（整体或按天）引用 → 409。
+- 目的地 `id` 是前端使用的 slug（小写字母、数字、连字符），创建后不可修改；
+  重复 slug 返回 409，格式不合法返回 422。员工目的地列表额外返回 `sort_order`。
+  公开的 `/destinations` 端点未改动。
+- 员工侧写接口放在 `app/routers/staff_content.py`，与公开只读的 `destinations.py` 分离。
+
+## 图片上传
+
+`POST /api/v1/staff/uploads`（需要 `staff`），`multipart/form-data` 的 `file` 字段。
+
+- 仅接受 JPEG / PNG / WebP，并读取文件头校验真实格式；声明类型与内容不符返回 415。
+- 默认上限 5 MiB（`MEDITOUR_UPLOAD_MAX_BYTES`），超出返回 413；空文件返回 422。
+- 文件名由服务端生成（uuid4 + 服务端判定的扩展名），**完全不使用客户端文件名**，
+  避免路径穿越与重名；按 UTC 日期分目录：`var/uploads/YYYY/MM/DD/<32位hex>.png`。
+- 返回 `{"url", "path", "filename", "size", "content_type"}`。`url` 在未配置
+  `MEDITOUR_MEDIA_BASE_URL` 时是站内相对路径（如 `/media/uploads/2026/11/08/....png`），
+  配置后返回绝对地址，可直接交给前端 `Image.network`。
+- 后端用 `StaticFiles` 在 `/media/uploads` 直接提供文件。
+- **当前实现只能单机使用**：文件写在本机磁盘，多实例部署时请求落到另一台机器会 404。
+  多实例必须改用对象存储（`app/storage.py` 的 `s3` 预留位，未实现时显式报错）或把
+  上传目录挂到共享卷。缩略图/压缩/病毒扫描尚未实现，生产接入前需要补齐。
+
 ## 分页约定与索引
 
 统一分页规则（`app/pagination.py`）：
 
 - `page` 从 1 开始；`page_size` 默认 20、上限 100；越界统一返回 422。
 - 返回分页结构的列表统一为 `{items, total, page, page_size, pages}`。
-- 当前适用：`/medical/packages`、`/staff/bookings`。
+- 当前适用：`/medical/packages`、`/staff/bookings`、`/staff/packages`、
+  `/staff/hospitals`、`/staff/destinations`。
 
 受 Flutter 现有契约限制，以下端点必须保持裸数组，**不能**改成 `{items: ...}`：
 `/medical/hospitals`（前端按数组解析）、`/bookings/`、`/itineraries`、`/destinations`。
@@ -158,6 +206,76 @@ uvicorn app.main:app --reload --port 8000
 - 译文存放在 `content_translations`（`entity_type` / `entity_id` / `lang` / `field` / `value`），没有给业务表平铺 `name_de`、`name_fr` 列；新增语言只需补数据，不改表结构。
 - 种子数据包含一条德语示例（膝关节置换套餐与协和医院），仅用于验证接口与回退逻辑，**不是可直接上线的人工译文**。
 - 上线前必须由人工翻译并复核的字段：套餐 `name` / `description`、医院 `name` / `level`，以及任何医疗适应症、风险提示、价格与疗效相关文案。机器翻译只能作为草稿，不能冒充成品；未完成人工翻译的字段会按上述顺序回退，不会被机器生成的文本覆盖。
+- 人工译文通过 `scripts/import_translations.py` 批量导入（见下节），不走接口自动翻译。
+
+## 人工翻译批量导入
+
+`scripts/import_translations.py` 把人工翻译结果导入 `content_translations`。
+
+为什么用 CSV 而不是 JSON：翻译/运营人员直接用 Excel/Numbers 维护，导出 CSV 即可；
+五列扁平结构没有嵌套，JSON 需要处理层级、引号与转义，对非工程人员更容易出错，
+也不利于逐行 review。
+
+```csv
+entity_type,entity_id,lang,field,value
+package,1,fr,name,Remplacement du genou
+package,1,fr,description,"Intervention réalisée par une équipe expérimentée, avec prothèse importée."
+hospital,1,fr,name,Hôpital Peking Union
+```
+
+```bash
+cd backend
+python scripts/import_translations.py var/translations.csv --dry-run   # 只校验并统计
+python scripts/import_translations.py var/translations.csv
+```
+
+- 两阶段执行：先全量校验（缺列、非法语言码、空值、未知实体、未知字段、文件内重复
+  唯一键），任一行有错就打印**全部问题与行号**并退出码 1，**不写入任何一行**；
+  全部通过后才按 `(entity_type, entity_id, lang, field)` 幂等 upsert。
+- 语言码必须在 `zh/en/de/fr` 内，但**不接受 `en` / `zh`**：这两类主数据在业务表列
+  （`name` / `name_en` 等）中维护，写进翻译表不会被公开接口读取，属于“看似生效”的死数据。
+- 字段白名单：`package` 的 `name` / `description`、`hospital` 的 `name`。
+  `destination` 暂不支持——`content_translations.entity_id` 是整数，而目的地主键是 slug。
+- 重复执行同一文件不会产生重复行或额外更新；文件内同一唯一键出现两次会直接报错，
+  避免“后一行覆盖前一行”的静默行为。
+
+本机演练（演练库 `backend/var/drill/`，已被 `.gitignore` 忽略）真实输出：
+
+```text
+> python scripts\import_translations.py var\drill\translations-sample.csv --dry-run
+预演完成（未写库）
+  文件: var\drill\translations-sample.csv
+  总行数: 3
+  新增: 3
+  更新: 0
+  未变化: 0
+
+> python scripts\import_translations.py var\drill\translations-sample.csv
+导入完成
+  文件: var\drill\translations-sample.csv
+  总行数: 3
+  新增: 3
+  更新: 0
+  未变化: 0
+
+# 再执行同一文件：幂等
+导入完成
+  文件: var\drill\translations-sample.csv
+  总行数: 3
+  新增: 0
+  更新: 0
+  未变化: 3
+
+> python scripts\import_translations.py var\drill\translations-bad.csv
+导入失败，共 3 处问题：
+第 2 行: 不支持的语言码 'es'，允许: de, fr
+第 3 行: value 不能为空
+第 4 行: package id=999999 不存在
+# 退出码 1，库内没有任何新增或修改
+```
+
+与其它脚本一致，执行前需要设置 `MEDITOUR_SECRET_KEY`（或 `backend/.env`），
+并且数据库已执行到最新迁移。
 
 ## 用户数据导出
 
@@ -189,14 +307,16 @@ uvicorn app.main:app --reload --port 8000
 | 400 | 请求格式合法，但业务前置条件不满足 | `POST /auth/password-reset/confirm` 令牌不存在、已使用或已过期（统一 `Invalid or expired reset token`）；`POST /auth/change-password` 当前密码错误；`DELETE /auth/account` 密码错误 |
 | 401 | 未认证或凭据失效 | 任意需要 Bearer 的端点：缺少/为空/无效/过期/已吊销的 access token、`token_version` 不匹配、账号已注销（`Not authenticated` 或 `Invalid or expired token`，带 `WWW-Authenticate: Bearer`）；`POST /auth/login` 邮箱或密码错误（含已注销账号）；`POST /auth/refresh` refresh token 无效、过期、重复使用或所属用户失效；`POST /auth/logout` access/refresh token 无效，或 refresh token 不属于当前用户 |
 | 403 | 已认证但权限不足 | 非 `staff` 角色访问 `/staff/*` 端点，`detail="Staff privileges required"`。普通用户即使拥有该订单也不能借此修改状态 |
-| 404 | 资源不存在，或存在但不属于当前用户 | `POST /bookings/` 套餐不存在；`POST /bookings/{id}/cancel`、`GET /staff/bookings/{id}`、`PATCH /staff/bookings/{id}/status` 订单不存在（用户侧与不存在/属于他人共用一个 404）；`GET/PUT/DELETE /itineraries/{id}` 行程不存在或属于他人；`GET /destinations/{id}` 目的地不存在 |
-| 409 | 与资源当前状态冲突 | `POST /auth/register` 邮箱已注册；`POST /bookings/` 同用户同套餐同预约时间已有 `pending` 订单；`POST /bookings/{id}/cancel` 当前状态不是 `pending`；`PATCH /staff/bookings/{id}/status` 跳过中间状态或对已结束订单再流转 |
-| 422 | 请求体或查询参数校验失败 | 字段缺失/类型错误、邮箱格式、密码长度（6–72）、`notes` 超过 2000 字、预约时间不在未来、`contact_phone` 非 7–15 位、行程日期/目的地/每日编号不合法；分页 `page < 1`、`page_size < 1` 或 `> 100`；员工列表 `status` 不在 `pending/confirmed/completed/cancelled`；员工改状态的目标值不是 `confirmed/completed`；`lang` 不在 `zh/en/de/fr`（`detail` 为字符串 `Unsupported lang; supported values: ...`，其余为字段错误数组） |
+| 404 | 资源不存在，或存在但不属于当前用户 | `POST /bookings/` 套餐不存在**或已下架**（下架套餐按不存在处理，不暴露其存在）；`POST /bookings/{id}/cancel`、`GET /staff/bookings/{id}`、`PATCH /staff/bookings/{id}/status` 订单不存在（用户侧与不存在/属于他人共用一个 404）；`GET/PUT/DELETE /itineraries/{id}` 行程不存在或属于他人；`GET /destinations/{id}` 目的地不存在；`/staff/packages|hospitals|destinations/{id}` 目标不存在 |
+| 409 | 与资源当前状态冲突 | `POST /auth/register` 邮箱已注册；`POST /bookings/` 同用户同套餐同预约时间已有 `pending` 订单；`POST /bookings/{id}/cancel` 当前状态不是 `pending`；`PATCH /staff/bookings/{id}/status` 跳过中间状态或对已结束订单再流转；员工删除套餐时仍有订单、删除医院时仍有套餐、删除目的地时仍被行程引用；创建目的地时 slug 已存在 |
+| 413 | 上传文件超过大小上限 | `POST /staff/uploads`：文件大于 `MEDITOUR_UPLOAD_MAX_BYTES`（默认 5 MiB），`detail` 为限制字节数 |
+| 415 | 上传文件类型不受支持 | `POST /staff/uploads`：声明类型不是 JPEG/PNG/WebP，或文件头与声明类型不符（防止把非图片改成 `.png` 后缀上传） |
+| 422 | 请求体或查询参数校验失败 | 字段缺失/类型错误、邮箱格式、密码长度（6–72）、`notes` 超过 2000 字、预约时间不在未来、`contact_phone` 非 7–15 位、行程日期/目的地/每日编号不合法；分页 `page < 1`、`page_size < 1` 或 `> 100`；员工列表 `status` 不在 `pending/confirmed/completed/cancelled`；员工改状态的目标值不是 `confirmed/completed`；员工创建/更新套餐时 `hospital_id` 指向不存在的医院、`price ≤ 0`、`duration_days < 1`；目的地 slug 不符合 `^[a-z0-9][a-z0-9-]*$`；上传空文件；`lang` 不在 `zh/en/de/fr`（`detail` 为字符串 `Unsupported lang; supported values: ...`，其余为字段错误数组） |
 | 429 | 触发登录限流 | 仅 `POST /auth/login`：同一 IP + 邮箱 300 秒内失败 5 次，响应带 `Retry-After` 秒数；成功登录会清零计数 |
 | 503 | 依赖服务不可用 | 仅 `GET /health`：数据库 `SELECT 1` 失败，返回 `{"status":"error","database":"unavailable"}`（不是 `detail` 结构） |
 | 500 | 未预期的服务端异常 | 未做自定义处理，由 FastAPI/Starlette 默认返回；响应体不是 `{"detail": ...}`，前端应按未知错误处理并上报 |
 
-成功状态码：`200` 常规读取/更新/登录/刷新/登出/改密/重置密码/导出；`201` 注册、创建订单、创建行程；`204` 删除行程（无响应体）。
+成功状态码：`200` 常规读取/更新/登录/刷新/登出/改密/重置密码/导出；`201` 注册、创建订单、创建行程、创建套餐/医院/目的地、上传图片；`204` 删除行程、删除套餐/医院/目的地（无响应体）。
 
 ## 数据库迁移
 
@@ -295,11 +415,11 @@ python -m pytest -q
 ```
 
 测试使用独立的 `test_meditour.db`，每次会话开始时重建，不依赖本地开发库，也不访问外部网络。
-当前覆盖（52 项）：预约字段与校验分支、重复提交、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、日志脱敏与 request id。
+当前覆盖（77 项）：预约字段与校验分支、重复提交、取消流转与越权、登录限流、令牌刷新/轮换/登出吊销、旧令牌兼容、找回密码（一次性/过期/防枚举）、修改密码后令牌失效、注销账号的匿名化与级联、多语言回退、数据导出隔离、员工角色授予与订单状态流转/越权、员工列表字段裁剪、详情访问审计、分页边界与索引存在性、员工内容 CRUD 与删除保护、套餐下架后公开列表隐藏且不可预约、改价不影响历史订单快照、图片上传的类型/大小/随机文件名校验、翻译 CSV 导入的幂等与错误行号、日志脱敏与 request id。
 
 ## 接口验证脚本
 
-`scripts/verify_api.py` 只用 Python 标准库，覆盖注册、登录（含限流）、鉴权、健康检查、套餐、医院、订单创建/校验/列表/取消、令牌刷新与登出、CORS、request id、错误体形状、账号闭环、多语言回退、数据导出、分页边界与员工订单操作（默认 107 项断言；提供 `--staff-email/--staff-password` 时额外验证员工接口，共 125 项）。
+`scripts/verify_api.py` 只用 Python 标准库，覆盖注册、登录（含限流）、鉴权、健康检查、套餐、医院、订单创建/校验/列表/取消、令牌刷新与登出、CORS、request id、错误体形状、账号闭环、多语言回退、数据导出、分页边界与员工订单操作（默认 107 项断言；提供 `--staff-email/--staff-password` 时额外验证员工接口，共 125 项）。本批新增的员工内容运营与图片上传端点由 pytest 覆盖，尚未加入该脚本。
 
 ```bash
 # 先启动后端，再执行
